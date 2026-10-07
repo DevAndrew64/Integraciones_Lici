@@ -11319,6 +11319,9 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   const [saveNombre,setSaveNombre]=useState('');
   const [saving,setSaving]=useState(false);
   const [saveMsg,setSaveMsg]=useState('');
+  // Módulo 2 del puente (Enviar a Contratos): su propio estado, para no mezclarlo con el de "Exportar costos".
+  const [enviandoContratos,setEnviandoContratos]=useState(false);
+  const [envioContratos,setEnvioContratos]=useState<{ok:boolean;texto:string}|null>(null);
 
   // ── BORRADOR / AUTOSAVE (localStorage) ────────────────────────────────────
   // Clave por usuario (tomado de la sesión en sessionStorage) para que el
@@ -14606,6 +14609,27 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       setSaveMsg(MENSAJE_EXPORTACION_EXITOSA);
     }catch{setSaveMsg('No se pudo conectar para generar el archivo Excel.');}
     finally{setSaving(false);}
+  }
+
+  /**
+   * Módulo 2 del puente — envía a Contratos los datos de la oferta (`POST /api/costos-estructura/{id}/enviar-a-contratos`).
+   * Mismas condiciones que "Exportar costos" (guardar antes) y exige abrir los costos desde la ficha de la solicitud: ahí el
+   * `solicitudId` es explícito. Hoy el puente responde en modo prueba (valida y NO escribe en Contratos).
+   */
+  async function enviarAContratos(){
+    setEnvioContratos(null);
+    if(!costoEstructuraIdActual){setEnvioContratos({ok:false,texto:'Debes guardar la información de la estructura de costos antes de enviarla a Contratos.'});return;}
+    if(!solicitudProceso?.id){setEnvioContratos({ok:false,texto:'Abre los costos desde la ficha de la solicitud para enviarlos a Contratos.'});return;}
+    if(modulosConCambiosSinGuardar.length>0){setEnvioContratos({ok:false,texto:`Guarde los cambios de ${modulosConCambiosSinGuardar.join(', ')} antes de enviar a Contratos.`});return;}
+    setEnviandoContratos(true);
+    try{
+      const res=await fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos`,{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:construirCostosPantallaDto()}),
+      });
+      const d=await res.json().catch(()=>({}));
+      setEnvioContratos({ok:res.ok,texto:String(d.mensaje||(res.ok?'Datos enviados a Contratos.':'No se pudo enviar a Contratos.'))});
+    }catch{setEnvioContratos({ok:false,texto:'No se pudo conectar para enviar a Contratos.'});}
+    finally{setEnviandoContratos(false);}
   }
 
   // ── ESTILOS
@@ -20375,6 +20399,16 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                   <svg fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{width:14,height:14,flexShrink:0}}><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   {saving?'Generando…':'Exportar costos'}
                 </button>
+                {/* Módulo 2 del puente: mismos permisos que editar costos (el servidor los vuelve a exigir). */}
+                {puedeEditarCostosUI&&solicitudProceso?.id!=null&&(
+                  <>
+                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos} title="Envía los datos de esta oferta a Contratos a través del puente (hoy en modo prueba: valida y no escribe)"
+                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos)?'default':'pointer',opacity:(saving||enviandoContratos)?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
+                      {enviandoContratos?'Enviando…':'Enviar a Contratos'}
+                    </button>
+                    {envioContratos&&<div style={{fontSize:11,fontWeight:600,color:envioContratos.ok?'#16a34a':RED,fontFamily:F}}>{envioContratos.texto}</div>}
+                  </>
+                )}
                 {/* Ajuste "EXPORTAR COSTOS — MENSAJES AL HACER CLIC" — el botón
                     queda habilitado para que cada bloqueo se explique al
                     hacer clic. Verde SOLO el éxito; todo lo demás (bloqueos y
