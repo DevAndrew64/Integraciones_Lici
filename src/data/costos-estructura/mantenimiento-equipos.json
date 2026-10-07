@@ -1,0 +1,4489 @@
+{
+  "version": 1,
+  "generadoEn": "2026-08-13T21:23:59.164Z",
+  "fuente": {
+    "maestro": "data/importaciones/mantenimiento/COSTOS MTTO DE EQUIPOS ACT A 31 DE JULIO 2025.xlsx",
+    "historico": "data/importaciones/mantenimiento/PLANTILLA COSTO MES MANTTO.xlsx"
+  },
+  "notaUen": "UEN no participa en la resolución de tarifa de mantenimiento (validado con datos reales) — se conserva solo para trazabilidad.",
+  "maestro": [
+    {
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "referenciaId": "maestro-fila-2"
+    },
+    {
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL",
+      "valorMensual": 40000,
+      "referenciaId": "maestro-fila-3"
+    },
+    {
+      "descripcionOriginal": "GRECA",
+      "descripcionNormalizada": "GRECA",
+      "valorMensual": 11667,
+      "referenciaId": "maestro-fila-4"
+    },
+    {
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA",
+      "valorMensual": 60000,
+      "referenciaId": "maestro-fila-5"
+    },
+    {
+      "descripcionOriginal": "AUTOESCRUBBER",
+      "descripcionNormalizada": "AUTOESCRUBBER",
+      "valorMensual": 250000,
+      "referenciaId": "maestro-fila-6"
+    },
+    {
+      "descripcionOriginal": "GUADAÑA INDUSTRIAL",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL",
+      "valorMensual": 60000,
+      "referenciaId": "maestro-fila-7"
+    },
+    {
+      "descripcionOriginal": "SOPLADORA ELECTRICA",
+      "descripcionNormalizada": "SOPLADORA ELECTRICA",
+      "valorMensual": 20000,
+      "referenciaId": "maestro-fila-8"
+    },
+    {
+      "descripcionOriginal": "SOPLADORA DE HOJAS A GASOLINA",
+      "descripcionNormalizada": "SOPLADORA DE HOJAS A GASOLINA",
+      "valorMensual": 50000,
+      "referenciaId": "maestro-fila-9"
+    },
+    {
+      "descripcionOriginal": "LAVATAPETES",
+      "descripcionNormalizada": "LAVATAPETES",
+      "valorMensual": 40000,
+      "referenciaId": "maestro-fila-10"
+    },
+    {
+      "descripcionOriginal": "PLATAFORMA ELECTRICA PARA TRABAJO EN ALTURAS 10 MT",
+      "descripcionNormalizada": "PLATAFORMA ELECTRICA PARA TRABAJO EN ALTURAS 10 MT",
+      "valorMensual": 250000,
+      "referenciaId": "maestro-fila-11"
+    },
+    {
+      "descripcionOriginal": "SOLDADOR INVERSOR",
+      "descripcionNormalizada": "SOLDADOR INVERSOR",
+      "valorMensual": 8333,
+      "referenciaId": "maestro-fila-12"
+    },
+    {
+      "descripcionOriginal": "SONDA ELECTRICA",
+      "descripcionNormalizada": "SONDA ELECTRICA",
+      "valorMensual": 5000,
+      "referenciaId": "maestro-fila-13"
+    },
+    {
+      "descripcionOriginal": "LIMPIADOR DE CHORRO DE AGUA",
+      "descripcionNormalizada": "LIMPIADOR DE CHORRO DE AGUA",
+      "valorMensual": 66667,
+      "referenciaId": "maestro-fila-14"
+    },
+    {
+      "descripcionOriginal": "BARREDORA HOMBRE A BORDO FIORENTINI",
+      "descripcionNormalizada": "BARREDORA HOMBRE A BORDO FIORENTINI",
+      "valorMensual": 3486207,
+      "referenciaId": "maestro-fila-15"
+    },
+    {
+      "descripcionOriginal": "BARREDORA HOMBRE A BORDO TENNANT S-30",
+      "descripcionNormalizada": "BARREDORA HOMBRE A BORDO TENNANT S 30",
+      "valorMensual": 600000,
+      "referenciaId": "maestro-fila-16"
+    },
+    {
+      "descripcionOriginal": "PODADORA DE ALTURA",
+      "descripcionNormalizada": "PODADORA DE ALTURA",
+      "valorMensual": 80000,
+      "referenciaId": "maestro-fila-17"
+    },
+    {
+      "descripcionOriginal": "MOTOBOMBA ELECTRICA 2 PULGADAS",
+      "descripcionNormalizada": "MOTOBOMBA ELECTRICA 2 PULGADAS",
+      "valorMensual": 13333,
+      "referenciaId": "maestro-fila-18"
+    },
+    {
+      "descripcionOriginal": "MOTOBOMBA ELECTRICA 3 PULGADAS",
+      "descripcionNormalizada": "MOTOBOMBA ELECTRICA 3 PULGADAS",
+      "valorMensual": 16667,
+      "referenciaId": "maestro-fila-19"
+    },
+    {
+      "descripcionOriginal": "MOTOBOMBA ELECTRICA 4 PULGADAS",
+      "descripcionNormalizada": "MOTOBOMBA ELECTRICA 4 PULGADAS",
+      "valorMensual": 20000,
+      "referenciaId": "maestro-fila-20"
+    },
+    {
+      "descripcionOriginal": "MOTOBOMBA ELECTRICA  6 PULGADAS",
+      "descripcionNormalizada": "MOTOBOMBA ELECTRICA 6 PULGADAS",
+      "valorMensual": 23333,
+      "referenciaId": "maestro-fila-21"
+    },
+    {
+      "descripcionOriginal": "MOTOSIERRA RASTRERA",
+      "descripcionNormalizada": "MOTOSIERRA RASTRERA",
+      "valorMensual": 80000,
+      "referenciaId": "maestro-fila-22"
+    },
+    {
+      "descripcionOriginal": "MAQUINA GRINERA",
+      "descripcionNormalizada": "MAQUINA GRINERA",
+      "valorMensual": 100000,
+      "referenciaId": "maestro-fila-23"
+    },
+    {
+      "descripcionOriginal": "SOPLETE A GAS BUTANO",
+      "descripcionNormalizada": "SOPLETE A GAS BUTANO",
+      "valorMensual": 3333,
+      "referenciaId": "maestro-fila-24"
+    },
+    {
+      "descripcionOriginal": "MINITRACTOR  HUSQVARNA",
+      "descripcionNormalizada": "MINITRACTOR HUSQVARNA",
+      "valorMensual": 83333,
+      "referenciaId": "maestro-fila-25"
+    },
+    {
+      "descripcionOriginal": "BOMBA PEDROLLO",
+      "descripcionNormalizada": "BOMBA PEDROLLO",
+      "valorMensual": 10000,
+      "referenciaId": "maestro-fila-26"
+    },
+    {
+      "descripcionOriginal": "SONDA PARA INODORO",
+      "descripcionNormalizada": "SONDA PARA INODORO",
+      "valorMensual": 3333,
+      "referenciaId": "maestro-fila-27"
+    },
+    {
+      "descripcionOriginal": "MAQUINA CORTASETOS",
+      "descripcionNormalizada": "MAQUINA CORTASETOS",
+      "valorMensual": 45000,
+      "referenciaId": "maestro-fila-28"
+    },
+    {
+      "descripcionOriginal": "RADIO DE COMUNICACIÓN",
+      "descripcionNormalizada": "RADIO DE COMUNICACION",
+      "valorMensual": 40000,
+      "referenciaId": "maestro-fila-29"
+    },
+    {
+      "descripcionOriginal": "MOTOMOPA",
+      "descripcionNormalizada": "MOTOMOPA",
+      "valorMensual": 6667,
+      "referenciaId": "maestro-fila-30"
+    },
+    {
+      "descripcionOriginal": "BARREDORA MINI TRAVEL",
+      "descripcionNormalizada": "BARREDORA MINI TRAVEL",
+      "valorMensual": 26667,
+      "referenciaId": "maestro-fila-31"
+    },
+    {
+      "descripcionOriginal": "VENTILADOR ABANICO",
+      "descripcionNormalizada": "VENTILADOR ABANICO",
+      "valorMensual": 3333,
+      "referenciaId": "maestro-fila-32"
+    },
+    {
+      "descripcionOriginal": "CORTA CESPED DE 6.5 HP A GASOLINA",
+      "descripcionNormalizada": "CORTA CESPED DE 6 5 HP A GASOLINA",
+      "valorMensual": 40000,
+      "referenciaId": "maestro-fila-33"
+    },
+    {
+      "descripcionOriginal": "PULIDORA 4 1/2\"  MANGO LATERAL",
+      "descripcionNormalizada": "PULIDORA 4 1 2 MANGO LATERAL",
+      "valorMensual": 3333,
+      "referenciaId": "maestro-fila-34"
+    },
+    {
+      "descripcionOriginal": "PLATAFORMA RODANTE 80X120M 1.000KL",
+      "descripcionNormalizada": "PLATAFORMA RODANTE 80X120M 1 000KL",
+      "valorMensual": 8333,
+      "referenciaId": "maestro-fila-35"
+    },
+    {
+      "descripcionOriginal": "VENTILADOR AXIAL EXTRACTOR",
+      "descripcionNormalizada": "VENTILADOR AXIAL EXTRACTOR",
+      "valorMensual": 10000,
+      "referenciaId": "maestro-fila-36"
+    },
+    {
+      "descripcionOriginal": "CORTASETOS  SUKA SKH230B",
+      "descripcionNormalizada": "CORTASETOS SUKA SKH230B",
+      "valorMensual": 35000,
+      "referenciaId": "maestro-fila-37"
+    },
+    {
+      "descripcionOriginal": "FUMIGADORA NEUBOLIXADORA ELECTRICA 18 LTS",
+      "descripcionNormalizada": "FUMIGADORA NEUBOLIXADORA ELECTRICA 18 LTS",
+      "valorMensual": 5000,
+      "referenciaId": "maestro-fila-38"
+    }
+  ],
+  "historico": [
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "015",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL 20\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 20",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 2
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 3
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVABRILLADORA",
+      "descripcionNormalizada": "LAVABRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 4
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "049",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 5
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "AUTOSCRUBER",
+      "descripcionNormalizada": "AUTOSCRUBER",
+      "valorMensual": 250000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 6
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "044",
+      "descripcionOriginal": "MOTOMOPA",
+      "descripcionNormalizada": "MOTOMOPA",
+      "valorMensual": 6667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 7
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL",
+      "descripcionNormalizada": "RADIO PORTATIL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 8
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "BRILLADORA DE ALTA 20",
+      "descripcionNormalizada": "BRILLADORA DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 9
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 10
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "042",
+      "descripcionOriginal": "HIDRO LAVADORA  2700 PSI",
+      "descripcionNormalizada": "HIDRO LAVADORA 2700 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 11
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "MAQUINA AUTOMATICA PARA LAVAR PISOS AUTOSCRUBER",
+      "descripcionNormalizada": "MAQUINA AUTOMATICA PARA LAVAR PISOS AUTOSCRUBER",
+      "valorMensual": 250000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 12
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 13
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "013",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 14
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  DE ALTA 20\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 15
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIOS PORTATILES COMUNICACIÓN",
+      "descripcionNormalizada": "RADIOS PORTATILES COMUNICACION",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 16
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL 17\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 17
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "015",
+      "descripcionOriginal": "LAVABRILLADORA INDUSTRIAL 20\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 20",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 18
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 19
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "Lava-Brilladora de 17\"",
+      "descripcionNormalizada": "LAVA BRILLADORA DE 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 20
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 21
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "Brilladora Industrial",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 22
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "Lava-Brilladora de 17\"",
+      "descripcionNormalizada": "LAVA BRILLADORA DE 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 23
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 24
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 25
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA 17\"",
+      "descripcionNormalizada": "BRILLADORA 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 26
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 27
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA INDUSTRIAL",
+      "descripcionNormalizada": "LAVA BRILLADORA INDUSTRIAL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 28
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "015",
+      "descripcionOriginal": "Lava-Brilladora de alta",
+      "descripcionNormalizada": "LAVA BRILLADORA DE ALTA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 29
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora Electrica",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 30
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 31
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 32
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 33
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL DE 17\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL DE 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 34
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO DE COMUNICACIÓN",
+      "descripcionNormalizada": "RADIO DE COMUNICACION",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 35
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL MOTOROLA DEP-450 DIGITAL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL MOTOROLA DEP 450 DIGITAL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 36
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "MAQUINA LAVA-BRILLADORA INDUSTRIAL PISOS",
+      "descripcionNormalizada": "MAQUINA LAVA BRILLADORA INDUSTRIAL PISOS",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 37
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 38
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "MAQUINA LAVA-BRILLADORA INDUSTRIAL PISOS",
+      "descripcionNormalizada": "MAQUINA LAVA BRILLADORA INDUSTRIAL PISOS",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 39
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVABRILLADORA",
+      "descripcionNormalizada": "LAVABRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 40
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "BARREDORA MINI TRAVEL",
+      "descripcionNormalizada": "BARREDORA MINI TRAVEL",
+      "valorMensual": 26667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 41
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 42
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "044",
+      "descripcionOriginal": "MOTO MOPA",
+      "descripcionNormalizada": "MOTO MOPA",
+      "valorMensual": 6667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 43
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDRO LAVADORA",
+      "descripcionNormalizada": "HIDRO LAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 44
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "015",
+      "descripcionOriginal": "BRILLADORA LAVADORA INDUSTRIAL",
+      "descripcionNormalizada": "BRILLADORA LAVADORA INDUSTRIAL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 45
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO DE INTERCOMUNICACION",
+      "descripcionNormalizada": "RADIO DE INTERCOMUNICACION",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 46
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 2400 PSI ELITE",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 2400 PSI ELITE",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 47
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVADORA BRILLADORA DE ALTA DUAL",
+      "descripcionNormalizada": "LAVADORA BRILLADORA DE ALTA DUAL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 48
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 49
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 50
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 51
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 52
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "AUTOSCRUBBER",
+      "descripcionNormalizada": "AUTOSCRUBBER",
+      "valorMensual": 250000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 53
+    },
+    {
+      "grupoActivo": "005",
+      "subTipoActivo": "001",
+      "descripcionOriginal": "VENTILADOR / ABANICO",
+      "descripcionNormalizada": "VENTILADOR ABANICO",
+      "valorMensual": 3333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 54
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 55
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 56
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA IND",
+      "descripcionNormalizada": "LAVA BRILLADORA IND",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 57
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 58
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA IND",
+      "descripcionNormalizada": "LAVA BRILLADORA IND",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 59
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 60
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA IND",
+      "descripcionNormalizada": "LAVA BRILLADORA IND",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 61
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA IND",
+      "descripcionNormalizada": "LAVA BRILLADORA IND",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 62
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 63
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 64
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA IND",
+      "descripcionNormalizada": "LAVA BRILLADORA IND",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 65
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 66
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVABRILALDORA",
+      "descripcionNormalizada": "LAVABRILALDORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 67
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 68
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA",
+      "descripcionNormalizada": "ASPIRADORA",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 69
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA 16\"",
+      "descripcionNormalizada": "LAVA BRILLADORA 16",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 70
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "Hidro lavadora",
+      "descripcionNormalizada": "HIDRO LAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 71
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "Brilladora de alta",
+      "descripcionNormalizada": "BRILLADORA DE ALTA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 72
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "049",
+      "descripcionOriginal": "Aspiradora industrial",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 73
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "sopladora",
+      "descripcionNormalizada": "SOPLADORA",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 74
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 75
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 76
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "015",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 77
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 78
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA SEMI- INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA SEMI INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 79
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 80
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA STHIL BG-50",
+      "descripcionNormalizada": "SOPLADORA STHIL BG 50",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 81
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "068",
+      "descripcionOriginal": "Motosierra Mediana",
+      "descripcionNormalizada": "MOTOSIERRA MEDIANA",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 82
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "descripcionOriginal": "Corta setos a Gasolina",
+      "descripcionNormalizada": "CORTA SETOS A GASOLINA",
+      "valorMensual": 45000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 83
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "064",
+      "descripcionOriginal": "Guadañadora capacidad industrial",
+      "descripcionNormalizada": "GUADA ADORA CAPACIDAD INDUSTRIAL",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 84
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "064",
+      "descripcionOriginal": "Guadañadora capacidad industrial",
+      "descripcionNormalizada": "GUADA ADORA CAPACIDAD INDUSTRIAL",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 85
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "descripcionOriginal": "Corta setos a Gasolina",
+      "descripcionNormalizada": "CORTA SETOS A GASOLINA",
+      "valorMensual": 45000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 86
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "068",
+      "descripcionOriginal": "Motosierra Mediana",
+      "descripcionNormalizada": "MOTOSIERRA MEDIANA",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 87
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA STHIL BG-50",
+      "descripcionNormalizada": "SOPLADORA STHIL BG 50",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 88
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 89
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "descripcionOriginal": "Corta setos a Gasolina",
+      "descripcionNormalizada": "CORTA SETOS A GASOLINA",
+      "valorMensual": 45000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 90
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "068",
+      "descripcionOriginal": "Motosierra Mediana",
+      "descripcionNormalizada": "MOTOSIERRA MEDIANA",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 91
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA STHIL BG-50",
+      "descripcionNormalizada": "SOPLADORA STHIL BG 50",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 92
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA",
+      "descripcionNormalizada": "ASPIRADORA",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 93
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "Aspiradora. Marca: Electrolux Ref.: EQP10",
+      "descripcionNormalizada": "ASPIRADORA MARCA ELECTROLUX REF EQP10",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 94
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "064",
+      "descripcionOriginal": "Guadaña Eléctrica",
+      "descripcionNormalizada": "GUADA A ELECTRICA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 95
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "Lava-Brilladora Ind",
+      "descripcionNormalizada": "LAVA BRILLADORA IND",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 96
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "Aspiradora Industrial",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 97
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora Eléctrica",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 98
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA RE-129 PLUS MARCA STHIL",
+      "descripcionNormalizada": "HIDROLAVADORA RE 129 PLUS MARCA STHIL",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 99
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL 17",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 100
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÑADORA",
+      "descripcionNormalizada": "GUADA ADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 101
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "041",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA A VAPOR 2000 PSI - 220 V",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA A VAPOR 2000 PSI 220 V",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 102
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 103
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 104
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA DE 17\"",
+      "descripcionNormalizada": "BRILLADORA DE 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 105
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 106
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 107
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS120",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS120",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 108
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA A COMBUSTION",
+      "descripcionNormalizada": "SOPLADORA A COMBUSTION",
+      "valorMensual": 50000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 109
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "069",
+      "descripcionOriginal": "MOTOSIERRA STIHL MS 250",
+      "descripcionNormalizada": "MOTOSIERRA STIHL MS 250",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 110
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "070",
+      "descripcionOriginal": "PODADORA DE ALTURA",
+      "descripcionNormalizada": "PODADORA DE ALTURA",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 111
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "019",
+      "descripcionOriginal": "CORTACESPED DE 6,5 HP A GASOLINA",
+      "descripcionNormalizada": "CORTACESPED DE 6 5 HP A GASOLINA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 112
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "descripcionOriginal": "CORTASETOS",
+      "descripcionNormalizada": "CORTASETOS",
+      "valorMensual": 45000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 113
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS120",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS120",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 114
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA A COMBUSTION",
+      "descripcionNormalizada": "SOPLADORA A COMBUSTION",
+      "valorMensual": 50000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 115
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "069",
+      "descripcionOriginal": "MOTOSIERRA STIHL MS 170",
+      "descripcionNormalizada": "MOTOSIERRA STIHL MS 170",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 116
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "160",
+      "descripcionOriginal": "MAQUINA GRINERA",
+      "descripcionNormalizada": "MAQUINA GRINERA",
+      "valorMensual": 100000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 117
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PUNTO A PUNTO",
+      "descripcionNormalizada": "RADIO PUNTO A PUNTO",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 118
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "010",
+      "descripcionOriginal": "RADIO PUNTO A PUNTO",
+      "descripcionNormalizada": "RADIO PUNTO A PUNTO",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 119
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 120
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "MAQUINA LAVA-BRILLADORA INDUSTRIAL PISOS",
+      "descripcionNormalizada": "MAQUINA LAVA BRILLADORA INDUSTRIAL PISOS",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 121
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "MAQUINA HIDROLAVADORA ELÉCTRICA",
+      "descripcionNormalizada": "MAQUINA HIDROLAVADORA ELECTRICA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 122
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "AUTO SCRUBBER 20\u0002\"",
+      "descripcionNormalizada": "AUTO SCRUBBER 20",
+      "valorMensual": 233333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 123
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "MAQUINA LAVA-BRILLADORA INDUSTRIAL PISOS",
+      "descripcionNormalizada": "MAQUINA LAVA BRILLADORA INDUSTRIAL PISOS",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 124
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "MAQUINA HIDROLAVADORA ELÉCTRICA",
+      "descripcionNormalizada": "MAQUINA HIDROLAVADORA ELECTRICA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 125
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL PARA COMUNICACIÓN",
+      "descripcionNormalizada": "RADIO PORTATIL PARA COMUNICACION",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 126
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "Brilladora industrial de 17\" con portapad",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL DE 17 CON PORTAPAD",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 127
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "018",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL DE 14\" 175 RPM",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL DE 14 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 128
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "Aspiradora industrial de 15 lts con accesorios",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL DE 15 LTS CON ACCESORIOS",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 129
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "041",
+      "descripcionOriginal": "Hidrolavadora 220 volt. a presión-vapor",
+      "descripcionNormalizada": "HIDROLAVADORA 220 VOLT A PRESION VAPOR",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 130
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora 110 volt. a presión de agua fría",
+      "descripcionNormalizada": "HIDROLAVADORA 110 VOLT A PRESION DE AGUA FRIA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 131
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "142",
+      "descripcionOriginal": "Pulidora 4 1/2\" mango lateral",
+      "descripcionNormalizada": "PULIDORA 4 1 2 MANGO LATERAL",
+      "valorMensual": 3333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 132
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "Sopladora industrial",
+      "descripcionNormalizada": "SOPLADORA INDUSTRIAL",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 133
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "018",
+      "descripcionOriginal": "Plataforma rodante 80x120m - cap. 1000 Kg",
+      "descripcionNormalizada": "PLATAFORMA RODANTE 80X120M CAP 1000 KG",
+      "valorMensual": 8333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 134
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "AUTO SCRUBBER 20\u0002\"",
+      "descripcionNormalizada": "AUTO SCRUBBER 20",
+      "valorMensual": 250000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 135
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "Aspiradora industrial de 15 lts con accesorios",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL DE 15 LTS CON ACCESORIOS",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 136
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "Hidrolavadora 110 volt. a presión de agua fría",
+      "descripcionNormalizada": "HIDROLAVADORA 110 VOLT A PRESION DE AGUA FRIA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 137
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "Radio teléfono",
+      "descripcionNormalizada": "RADIO TELEFONO",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 138
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "013",
+      "descripcionOriginal": "BRILLADORA DOMESTICA",
+      "descripcionNormalizada": "BRILLADORA DOMESTICA",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 139
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 140
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17\" 175 RPM",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 141
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 142
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "059",
+      "descripcionOriginal": "ASPIRADORA",
+      "descripcionNormalizada": "ASPIRADORA",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 143
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "010",
+      "descripcionOriginal": "RADIO",
+      "descripcionNormalizada": "RADIO",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 144
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 145
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 146
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 147
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 148
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 149
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 150
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 151
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 152
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "049",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 2 MOTORES",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 2 MOTORES",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 153
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 154
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 155
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "145",
+      "descripcionOriginal": "PLATAFORMA ELECTRICA PARA TRABAJO EN ALTURAS 10 MT",
+      "descripcionNormalizada": "PLATAFORMA ELECTRICA PARA TRABAJO EN ALTURAS 10 MT",
+      "valorMensual": 250000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 156
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "179",
+      "descripcionOriginal": "LIMPIADOR DE CHORRO DE AGUA PORTATIL MODELO KJ-310",
+      "descripcionNormalizada": "LIMPIADOR DE CHORRO DE AGUA PORTATIL MODELO KJ 310",
+      "valorMensual": 66667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 157
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "148",
+      "descripcionOriginal": "SOLDADOR INVERSOR 200Amp 110/220V MMA/TIG",
+      "descripcionNormalizada": "SOLDADOR INVERSOR 200AMP 110 220V MMA TIG",
+      "valorMensual": 8333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 158
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "187",
+      "descripcionOriginal": "SONDA ELECTRICA A200-K60 O SIMILAR (20 METROS)",
+      "descripcionNormalizada": "SONDA ELECTRICA A200 K60 O SIMILAR 20 METROS",
+      "valorMensual": 5000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 159
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "187",
+      "descripcionOriginal": "SONDA ELECTRICA A200-K60 O SIMILAR (20 METROS)",
+      "descripcionNormalizada": "SONDA ELECTRICA A200 K60 O SIMILAR 20 METROS",
+      "valorMensual": 5000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 160
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "148",
+      "descripcionOriginal": "SOLDADOR INVERSOR 200Amp 110/220V MMA/TIG",
+      "descripcionNormalizada": "SOLDADOR INVERSOR 200AMP 110 220V MMA TIG",
+      "valorMensual": 8333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 161
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "187",
+      "descripcionOriginal": "SONDA ELECTRICA A200-K60 O SIMILAR (20 METROS)",
+      "descripcionNormalizada": "SONDA ELECTRICA A200 K60 O SIMILAR 20 METROS",
+      "valorMensual": 5000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 162
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "179",
+      "descripcionOriginal": "LIMPIADOR DE CHORRO DE AGUA PORTATIL MODELO KJ-310",
+      "descripcionNormalizada": "LIMPIADOR DE CHORRO DE AGUA PORTATIL MODELO KJ 310",
+      "valorMensual": 66667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 163
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 164
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 165
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 166
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 167
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "099",
+      "descripcionOriginal": "GRECA 30 TINTOS",
+      "descripcionNormalizada": "GRECA 30 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 168
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 169
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 170
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 171
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 172
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 173
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 174
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 175
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 176
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 177
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 178
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 179
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 180
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 181
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 182
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 183
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 184
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 185
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 186
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 187
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 188
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 189
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 190
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 191
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 192
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 193
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 194
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 195
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 196
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "179",
+      "descripcionOriginal": "LIMPIADOR DE CHORRO DE AGUA PORTATIL MODELO KJ-310",
+      "descripcionNormalizada": "LIMPIADOR DE CHORRO DE AGUA PORTATIL MODELO KJ 310",
+      "valorMensual": 66667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 197
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "010",
+      "descripcionOriginal": "RADIO DE COMUNICACIÓN",
+      "descripcionNormalizada": "RADIO DE COMUNICACION",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 198
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "190",
+      "descripcionOriginal": "SOPLETE A GAS BUTANO",
+      "descripcionNormalizada": "SOPLETE A GAS BUTANO",
+      "valorMensual": 3333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 199
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "165",
+      "descripcionOriginal": "MOTOBOMBA DE 6 PULGADAS",
+      "descripcionNormalizada": "MOTOBOMBA DE 6 PULGADAS",
+      "valorMensual": 23333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 200
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "166",
+      "descripcionOriginal": "Bomba sumergible de 2 pulg. monofasica mas extensi",
+      "descripcionNormalizada": "BOMBA SUMERGIBLE DE 2 PULG MONOFASICA MAS EXTENSI",
+      "valorMensual": 13333,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 201
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "055",
+      "descripcionOriginal": "Bomba sumergible de 4 pulgada mas extension",
+      "descripcionNormalizada": "BOMBA SUMERGIBLE DE 4 PULGADA MAS EXTENSION",
+      "valorMensual": 16667,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 202
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "164",
+      "descripcionOriginal": "VENTILADOR - EXTRACTOR IND 520W 12\"",
+      "descripcionNormalizada": "VENTILADOR EXTRACTOR IND 520W 12",
+      "valorMensual": 10000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 203
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 204
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "054",
+      "descripcionOriginal": "Bomba sumergible de 3 pulg. Monofasica autorefrige",
+      "descripcionNormalizada": "BOMBA SUMERGIBLE DE 3 PULG MONOFASICA AUTOREFRIGE",
+      "valorMensual": 50000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 205
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "010",
+      "descripcionOriginal": "RADIOS PUNTO A PUNTO",
+      "descripcionNormalizada": "RADIOS PUNTO A PUNTO",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 206
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 207
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "010",
+      "descripcionOriginal": "RADIO PORTATIL TXPRO DE 4 W DE POTENCIA, ALCANCE 4",
+      "descripcionNormalizada": "RADIO PORTATIL TXPRO DE 4 W DE POTENCIA ALCANCE 4",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 208
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 209
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 210
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 211
+    },
+    {
+      "grupoActivo": "006",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 212
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "068",
+      "descripcionOriginal": "MOTOSIERRA STIHL MS 170",
+      "descripcionNormalizada": "MOTOSIERRA STIHL MS 170",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 213
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "008",
+      "descripcionOriginal": "RADIO PORTATIL VHF",
+      "descripcionNormalizada": "RADIO PORTATIL VHF",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 214
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 215
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "052",
+      "descripcionOriginal": "BARREDORA HOMBRE A BORDO 48DK",
+      "descripcionNormalizada": "BARREDORA HOMBRE A BORDO 48DK",
+      "valorMensual": 1668313,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 216
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "descripcionOriginal": "CORTASETOS SUKRA SKHT230B",
+      "descripcionNormalizada": "CORTASETOS SUKRA SKHT230B",
+      "valorMensual": 35000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 217
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "064",
+      "descripcionOriginal": "GUADAÑA INDUSTRIAL STHIL FS120",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS120",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 218
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "HIDROLAVADORA HD/512",
+      "descripcionNormalizada": "HIDROLAVADORA HD 512",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 219
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVABRILLADORA 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA 17",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 220
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "070",
+      "descripcionOriginal": "PODADORA DE ALTURA STHIL",
+      "descripcionNormalizada": "PODADORA DE ALTURA STHIL",
+      "valorMensual": 80000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 221
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA A COMBUSTION",
+      "descripcionNormalizada": "SOPLADORA A COMBUSTION",
+      "valorMensual": 50000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 222
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "133",
+      "descripcionOriginal": "FUMIGADORA ELECTRICA NEBULIZADORA 10 LTS",
+      "descripcionNormalizada": "FUMIGADORA ELECTRICA NEBULIZADORA 10 LTS",
+      "valorMensual": 5000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 223
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 2400 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 2400 PSI",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 224
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "064",
+      "descripcionOriginal": "GUADAÑADORA",
+      "descripcionNormalizada": "GUADA ADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 225
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "074",
+      "descripcionOriginal": "SOPLADORA ELECTRICA 600 WATTS",
+      "descripcionNormalizada": "SOPLADORA ELECTRICA 600 WATTS",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 226
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA INDUSTRIAL",
+      "descripcionNormalizada": "LAVA BRILLADORA INDUSTRIAL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 227
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 228
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "052",
+      "descripcionOriginal": "BARREDORA HOMBRE A BORDO 48DK",
+      "descripcionNormalizada": "BARREDORA HOMBRE A BORDO 48DK",
+      "valorMensual": 1751563,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 229
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 230
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÑADORA",
+      "descripcionNormalizada": "GUADA ADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 231
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOPLADORA BG-86Z",
+      "descripcionNormalizada": "SOPLADORA BG 86Z",
+      "valorMensual": 20000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 232
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "052",
+      "descripcionOriginal": "BARREDORA HOMBRE A BORDO 48DK",
+      "descripcionNormalizada": "BARREDORA HOMBRE A BORDO 48DK",
+      "valorMensual": 1834980,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 233
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA-BRILLADORA INDUSTRIAL",
+      "descripcionNormalizada": "LAVA BRILLADORA INDUSTRIAL",
+      "valorMensual": 40000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 234
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA",
+      "descripcionNormalizada": "HIDROLAVADORA",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 235
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "040",
+      "descripcionOriginal": "MAQUINA HIDROLAVADORA INDUSTRIAL",
+      "descripcionNormalizada": "MAQUINA HIDROLAVADORA INDUSTRIAL",
+      "valorMensual": 60000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 236
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "161",
+      "descripcionOriginal": "MOTOBOMBA ELECTRICA PEDROLLO PKM 60",
+      "descripcionNormalizada": "MOTOBOMBA ELECTRICA PEDROLLO PKM 60",
+      "valorMensual": 10000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 237
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "011",
+      "descripcionOriginal": "Tennant S30",
+      "descripcionNormalizada": "TENNANT S30",
+      "valorMensual": 600000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 238
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "011",
+      "descripcionOriginal": "Tennant S30",
+      "descripcionNormalizada": "TENNANT S30",
+      "valorMensual": 600000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 239
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "011",
+      "descripcionOriginal": "Tennant S30",
+      "descripcionNormalizada": "TENNANT S30",
+      "valorMensual": 600000,
+      "uen": "BAQ",
+      "hoja": "PLANTILLA UEN BAQ",
+      "fila": 240
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 2
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 3
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 4
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 5
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 6
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 7
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 8
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 9
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 10
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "102",
+      "descripcionOriginal": "GRECA 240 TINTOS",
+      "descripcionNormalizada": "GRECA 240 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 11
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 12
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 13
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 14
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 15
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 16
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "LAVABRILLADORA DE ALTA 20\"",
+      "descripcionNormalizada": "LAVABRILLADORA DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 17
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 18
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 19
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 20
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 21
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 22
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "102",
+      "descripcionOriginal": "GRECA 240 TINTOS",
+      "descripcionNormalizada": "GRECA 240 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 23
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "LAVABRILLADORA DE ALTA 20\"",
+      "descripcionNormalizada": "LAVABRILLADORA DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 24
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 25
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 26
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 27
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 28
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 29
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 30
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 31
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 32
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 33
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 34
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 35
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 36
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 37
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 38
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 39
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 40
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 41
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 42
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 43
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 44
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 45
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 46
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 47
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 48
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 49
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 50
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 51
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 52
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 53
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "LAVABRILLADORA DE ALTA 20\"",
+      "descripcionNormalizada": "LAVABRILLADORA DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 54
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 55
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 56
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 57
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 58
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 59
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 60
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 61
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 62
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 63
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 64
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 65
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 66
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "LAVABRILLADORA DE ALTA 20\"",
+      "descripcionNormalizada": "LAVABRILLADORA DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 67
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 68
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 69
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 70
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 71
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 72
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 73
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 74
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 75
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 76
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 77
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "100",
+      "descripcionOriginal": "GRECA 60 TINTOS",
+      "descripcionNormalizada": "GRECA 60 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 78
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 79
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 80
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "100",
+      "descripcionOriginal": "GRECA 60 TINTOS",
+      "descripcionNormalizada": "GRECA 60 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 81
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 82
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 83
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 84
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 85
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 86
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 87
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 88
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 89
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 90
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 91
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "100",
+      "descripcionOriginal": "GRECA 60 TINTOS",
+      "descripcionNormalizada": "GRECA 60 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 92
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 93
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 94
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 95
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 96
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 97
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 98
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 99
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 100
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 101
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 102
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 103
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 104
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 105
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 106
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 107
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 108
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 109
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 110
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 111
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 112
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 113
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "LAVABRILLADORA DE ALTA 20\"",
+      "descripcionNormalizada": "LAVABRILLADORA DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 114
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 115
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 116
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 117
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 118
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 119
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 120
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 121
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "102",
+      "descripcionOriginal": "GRECA 240 TINTOS",
+      "descripcionNormalizada": "GRECA 240 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 122
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 123
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 124
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "020",
+      "descripcionOriginal": "LavaBrilladora Industrial 175 rpm 17\"",
+      "descripcionNormalizada": "LAVABRILLADORA INDUSTRIAL 175 RPM 17",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 125
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 126
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 127
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 128
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 129
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 130
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 131
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 132
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 133
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 134
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "049",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 135
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 136
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 137
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 138
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 139
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 140
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 141
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 142
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 143
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 144
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "descripcionOriginal": "AUTOESCRUBBER",
+      "descripcionNormalizada": "AUTOESCRUBBER",
+      "valorMensual": 250000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 145
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "015",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL 20 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 20 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 146
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 147
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 148
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "101",
+      "descripcionOriginal": "GRECA 120 TINTOS",
+      "descripcionNormalizada": "GRECA 120 TINTOS",
+      "valorMensual": 11667,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 149
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 150
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL  17 175 RPM\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 17 175 RPM",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 151
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA INDUSTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 152
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "064",
+      "descripcionOriginal": "GUADAÑA INDUSTRIAL STHIL F280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL F280",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 153
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 154
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 155
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 156
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL DE ALTA 20\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL DE ALTA 20",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 157
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA RE-98 STIHL",
+      "descripcionNormalizada": "HIDROLAVADORA RE 98 STIHL",
+      "valorMensual": 60000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 158
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 159
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 160
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "016",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 161
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 162
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 163
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "BRILLADORA INDUSTRIAL 16\"",
+      "descripcionNormalizada": "BRILLADORA INDUSTRIAL 16",
+      "valorMensual": 40000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 164
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "047",
+      "descripcionOriginal": "ASPIRADORA SEMI- INDUSTRIAL",
+      "descripcionNormalizada": "ASPIRADORA SEMI INDUSTRIAL",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 165
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "descripcionNormalizada": "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+      "valorMensual": 25000,
+      "uen": "BOG",
+      "hoja": "PLANTILLA UEN BOG",
+      "fila": 166
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 2
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "014",
+      "descripcionOriginal": "LAVA BRILLADORA",
+      "descripcionNormalizada": "LAVA BRILLADORA",
+      "valorMensual": 40000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 3
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "019",
+      "descripcionOriginal": "CORTACESPED DE 6,5 HP A GASOLINA",
+      "descripcionNormalizada": "CORTACESPED DE 6 5 HP A GASOLINA",
+      "valorMensual": 40000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 4
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "descripcionOriginal": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "descripcionNormalizada": "HIDROLAVADORA ELECTRICA 1200 PSI",
+      "valorMensual": 60000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 5
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "descripcionOriginal": "ASPIRADORA IND",
+      "descripcionNormalizada": "ASPIRADORA IND",
+      "valorMensual": 25000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 6
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "065",
+      "descripcionOriginal": "GUADAÐA INDUSTRIAL STHIL FS280",
+      "descripcionNormalizada": "GUADA A INDUSTRIAL STHIL FS280",
+      "valorMensual": 60000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 7
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "070",
+      "descripcionOriginal": "PODADORA DE ALTURA STHIL HT103",
+      "descripcionNormalizada": "PODADORA DE ALTURA STHIL HT103",
+      "valorMensual": 80000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 8
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "descripcionOriginal": "SOLPLADORA",
+      "descripcionNormalizada": "SOLPLADORA",
+      "valorMensual": 50000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 9
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "descripcionOriginal": "CORTASETO",
+      "descripcionNormalizada": "CORTASETO",
+      "valorMensual": 45000,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 10
+    },
+    {
+      "grupoActivo": "007",
+      "subTipoActivo": "003",
+      "descripcionOriginal": "CAMIONETA DOBLE CABINA",
+      "descripcionNormalizada": "CAMIONETA DOBLE CABINA",
+      "valorMensual": 2926525,
+      "uen": "MIN",
+      "hoja": "PLANTILLA UEN MINA",
+      "fila": 11
+    }
+  ],
+  "codigosAmbiguos": [
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "039",
+      "tarifasDistintas": [
+        60000,
+        40000
+      ],
+      "descripcionesInvolucradas": [
+        "HIDROLAVADORA",
+        "Hidrolavadora",
+        "HIDROLAVADORA ELECTRICA 1200 PSI",
+        "Hidrolavadora Electrica",
+        "HIDRO LAVADORA",
+        "Hidrolavadora Eléctrica",
+        "HIDROLAVADORA RE-129 PLUS MARCA STHIL",
+        "MAQUINA HIDROLAVADORA ELÉCTRICA",
+        "Hidrolavadora 110 volt. a presión de agua fría",
+        "BRILLADORA INDUSTRIAL  17\" 175 RPM",
+        "HIDROLAVADORA RE-98 STIHL"
+      ]
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "051",
+      "tarifasDistintas": [
+        250000,
+        26667,
+        233333
+      ],
+      "descripcionesInvolucradas": [
+        "AUTOSCRUBER",
+        "MAQUINA AUTOMATICA PARA LAVAR PISOS AUTOSCRUBER",
+        "BARREDORA MINI TRAVEL",
+        "AUTOSCRUBBER",
+        "AUTO SCRUBBER 20\u0002\"",
+        "AUTOESCRUBBER"
+      ]
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "048",
+      "tarifasDistintas": [
+        25000,
+        60000
+      ],
+      "descripcionesInvolucradas": [
+        "ASPIRADORA INDUSTRIAL 1 MOTOR",
+        "ASPIRADORA INDUSTRIAL",
+        "ASPIRADORA INDUSTRIAL SECO HUMEDO",
+        "Aspiradora. Marca: Electrolux Ref.: EQP10",
+        "Aspiradora Industrial",
+        "ASPIRADORA INDUSTRIAL SECO/HUMEDO",
+        "HIDROLAVADORA ELECTRICA 1200 PSI",
+        "ASPIRADORA SEMI INDSUTRIAL 1 MOTOR",
+        "ASPIRADORA IND"
+      ]
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "075",
+      "tarifasDistintas": [
+        20000,
+        50000
+      ],
+      "descripcionesInvolucradas": [
+        "sopladora",
+        "SOPLADORA STHIL BG-50",
+        "SOPLADORA A COMBUSTION",
+        "Sopladora industrial",
+        "SOPLADORA BG-86Z",
+        "SOLPLADORA"
+      ]
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "057",
+      "tarifasDistintas": [
+        45000,
+        35000
+      ],
+      "descripcionesInvolucradas": [
+        "Corta setos a Gasolina",
+        "CORTASETOS",
+        "CORTASETOS SUKRA SKHT230B",
+        "CORTASETO"
+      ]
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "018",
+      "tarifasDistintas": [
+        40000,
+        8333
+      ],
+      "descripcionesInvolucradas": [
+        "BRILLADORA INDUSTRIAL DE 14\" 175 RPM",
+        "Plataforma rodante 80x120m - cap. 1000 Kg"
+      ]
+    },
+    {
+      "grupoActivo": "004",
+      "subTipoActivo": "052",
+      "tarifasDistintas": [
+        1668313,
+        1751563,
+        1834980
+      ],
+      "descripcionesInvolucradas": [
+        "BARREDORA HOMBRE A BORDO 48DK"
+      ]
+    }
+  ],
+  "conflictosMaestroHistorico": []
+}

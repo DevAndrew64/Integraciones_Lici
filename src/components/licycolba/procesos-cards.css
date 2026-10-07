@@ -1,0 +1,4492 @@
+﻿/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — procesos-cards.css
+   Prefijo: licy-  ·  Sin conflicto con clases globales
+══════════════════════════════════════════════════════════════ */
+
+/* ── Tema oscuro: topbar original ── */
+html[data-theme="dark"] .licy-topbar {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid #e8edf2;
+}
+
+/* ── Tema rojo corporativo: topbar ── */
+html[data-theme="red"] .licy-topbar {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid #f0d0d5;
+}
+html[data-theme="red"] .licy-topbar-crumb-parent { color: #9b7279; }
+html[data-theme="red"] .licy-topbar-crumb-current { color: #8b1222; }
+
+/* ── Tema rosa: topbar ── */
+html[data-theme="pink"] .licy-topbar {
+  background: rgba(255,248,250,0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #F2B5C7;
+}
+html[data-theme="pink"] .licy-topbar-crumb-parent { color: #c4899a; }
+html[data-theme="pink"] .licy-topbar-crumb-current { color: #A03050; font-weight: 700; }
+html[data-theme="pink"] .licy-topbar-crumb { color: #c4899a; }
+html[data-theme="pink"] .licy-topbar-search input {
+  background: rgba(255,255,255,0.85);
+  border-color: #F2B5C7;
+  color: #2d1520;
+}
+html[data-theme="pink"] .licy-topbar-search input::placeholder { color: #c4899a; }
+html[data-theme="pink"] .licy-topbar-search svg { color: #c4899a; }
+html[data-theme="pink"] .licy-topbar-user-name { color: #2d1520; }
+html[data-theme="pink"] .licy-topbar-user-role { color: #9c7880; }
+
+/* ── TOPBAR GLOBAL ─────────────────────────────────────────── */
+.licy-topbar {
+  height: 54px;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(30,87,153,0.08);
+  display: flex;
+  align-items: center;
+  padding: 0 24px 0 20px;
+  gap: 14px;
+  flex-shrink: 0;
+  z-index: 100;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif);
+  box-sizing: border-box;
+}
+
+.licy-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 170px;
+  flex-shrink: 0;
+}
+
+.licy-topbar-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #1a2e5a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.licy-topbar-logo img {
+  width: 18px;
+  filter: brightness(0) invert(1);
+}
+
+.licy-topbar-brand-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.licy-topbar-brand-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f8fafc;
+  border: 1px solid #e8edf2;
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+.licy-topbar-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.licy-topbar-crumb-parent {
+  color: #94a3b8;
+}
+
+.licy-topbar-crumb-current {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.licy-topbar-space {
+  flex: 1;
+}
+
+.licy-topbar-search {
+  position: relative;
+  width: 240px;
+}
+
+.licy-topbar-search svg {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.licy-topbar-search input {
+  width: 100%;
+  height: 33px;
+  border: 1px solid #e8edf2;
+  border-radius: 20px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 0 14px 0 32px;
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.licy-topbar-search input::placeholder {
+  color: #94a3b8;
+}
+
+.licy-topbar-search input:focus {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.06);
+}
+
+.licy-topbar-bell {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  border: 1px solid #e8edf2;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: all 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.licy-topbar-bell:hover {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.licy-topbar-bell svg {
+  width: 14px;
+  height: 14px;
+}
+
+.licy-topbar-bell-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 1.5px solid white;
+}
+
+.licy-topbar-new-btn {
+  height: 33px;
+  padding: 0 14px;
+  border-radius: 20px;
+  background: #0f172a;
+  border: none;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.licy-topbar-new-btn:hover {
+  background: #1e293b;
+}
+
+.licy-topbar-new-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.licy-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 10px 0 5px;
+  border: 1px solid #e8edf2;
+  border-radius: 20px;
+  cursor: pointer;
+  background: white;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.licy-topbar-user:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.licy-topbar-user-av {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.03em;
+}
+
+.licy-topbar-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.licy-topbar-user-role {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+
+.licy-topbar-user-chev {
+  color: #94a3b8;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+}
+
+/* ── VISTA PROCESOS ─────────────────────────────────────────── */
+.licy-procesos-view {
+  flex: 1;
+  overflow-y: visible;
+  padding: 24px 26px;
+  background: transparent;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif);
+  box-sizing: border-box;
+}
+
+.licy-procesos-view::-webkit-scrollbar {
+  width: 4px;
+}
+
+.licy-procesos-view::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+/* Header */
+.licy-procesos-header {
+  margin-bottom: 20px;
+}
+
+.licy-procesos-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.licy-procesos-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 3px 0 0;
+}
+
+/* Search bar */
+.licy-procesos-search-bar {
+  background: white;
+  border: 1px solid #e8edf2;
+  border-radius: 13px;
+  padding: 15px 17px;
+  margin-bottom: 14px;
+}
+
+.licy-procesos-search-inputs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.licy-procesos-search-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.licy-procesos-search-wrap svg {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.licy-procesos-search-wrap input {
+  width: 100%;
+  height: 38px;
+  border: 1.5px solid #e8edf2;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 0 13px 0 34px;
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.licy-procesos-search-wrap input::placeholder {
+  color: #94a3b8;
+}
+
+.licy-procesos-search-wrap input:focus {
+  border-color: #2563eb;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.07);
+}
+
+.licy-procesos-search-btn {
+  height: 38px;
+  padding: 0 20px;
+  border-radius: 9px;
+  background: #0f172a;
+  border: none;
+  color: white;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.licy-procesos-search-btn:hover {
+  background: #1e293b;
+}
+
+/* Filtros */
+.licy-procesos-filters {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.licy-procesos-filter-select {
+  height: 28px;
+  padding: 0 9px;
+  padding-right: 22px;
+  border-radius: 7px;
+  border: 1px solid #e8edf2;
+  background: #f8fafc;
+  font-size: 11.5px;
+  color: #475569;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+
+.licy-procesos-filter-select:hover {
+  border-color: #cbd5e1;
+  background-color: white;
+}
+
+.licy-procesos-filter-clear {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.licy-procesos-filter-clear:hover {
+  background: #fee2e2;
+}
+
+/* Tabs */
+.licy-procesos-tabs {
+  display: flex;
+  gap: 1px;
+  border-bottom: 1px solid #e8edf2;
+  margin-bottom: 18px;
+}
+
+.licy-procesos-tab {
+  height: 33px;
+  padding: 0 13px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #94a3b8;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.licy-procesos-tab:hover {
+  color: #475569;
+}
+
+.licy-procesos-tab-active {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  border-bottom-color: #0f172a !important;
+}
+
+/* Grid de cards */
+.licy-procesos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1280px) {
+  .licy-procesos-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .licy-procesos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card */
+.licy-proceso-card {
+  background: white;
+  border: 1px solid #e8edf2;
+  border-radius: 11px;
+  padding: 15px 15px 13px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  outline: none;
+}
+
+.licy-proceso-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
+}
+
+.licy-proceso-card:focus-visible {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Header de la card */
+.licy-proceso-card-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.licy-proceso-card-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  border: 1px solid #e8edf2;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.licy-proceso-card-entity {
+  flex: 1;
+  min-width: 0;
+}
+
+.licy-proceso-card-entity-name {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.licy-proceso-card-location {
+  font-size: 9.5px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+/* Título */
+.licy-proceso-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+/* Descripción */
+.licy-proceso-card-desc {
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* Footer */
+.licy-proceso-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.licy-proceso-deadline {
+  font-size: 10.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.licy-proceso-deadline svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0.8;
+}
+
+.licy-proceso-deadline-red   { color: #dc2626; }
+.licy-proceso-deadline-amber { color: #d97706; }
+.licy-proceso-deadline-blue  { color: #2563eb; }
+
+.licy-proceso-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.licy-proceso-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.licy-proceso-tag {
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 20px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.licy-proceso-tag-s2    { background: #eff6ff; color: #3b82f6; }
+.licy-proceso-tag-s1    { background: #f0fdf4; color: #16a34a; }
+.licy-proceso-tag-priv  { background: #f5f3ff; color: #7c3aed; }
+.licy-proceso-tag-otro  { background: #f1f5f9; color: #64748b; }
+.licy-proceso-tag-modal { background: #f8fafc; color: #94a3b8; }
+
+/* Botón gestionar */
+.licy-proceso-gestionar-btn {
+  width: 27px;
+  height: 27px;
+  border-radius: 6px;
+  border: 1px solid #e8edf2;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.licy-proceso-gestionar-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.licy-proceso-gestionar-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+/* Loading */
+.licy-procesos-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.licy-spin {
+  width: 18px;
+  height: 18px;
+  animation: licy-spin 1s linear infinite;
+}
+
+@keyframes licy-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+.licy-procesos-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #dc2626;
+  font-size: 12.5px;
+  margin-bottom: 14px;
+}
+
+/* Vacío */
+.licy-procesos-empty {
+  background: white;
+  border: 1px solid #e8edf2;
+  border-radius: 12px;
+  padding: 48px 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.licy-procesos-empty p {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #475569;
+  margin: 0 0 6px;
+}
+
+.licy-procesos-empty span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* ── PAGINACIÓN ─────────────────────────────────────────────── */
+.licy-procesos-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.licy-pag-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.licy-pag-select {
+  height: 27px;
+  padding: 0 20px 0 7px;
+  border-radius: 6px;
+  border: 1px solid #e8edf2;
+  background: white;
+  font-size: 12px;
+  font-family: inherit;
+  color: #475569;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.licy-pag-right {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.licy-pag-btn {
+  height: 30px;
+  min-width: 30px;
+  padding: 0 5px;
+  border-radius: 7px;
+  border: 1px solid #e8edf2;
+  background: white;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.licy-pag-btn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.licy-pag-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.licy-pag-btn-active {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.licy-pag-btn-nav {
+  padding: 0 11px;
+}
+
+.licy-pag-btn-dots {
+  border: none !important;
+  background: transparent !important;
+  cursor: default !important;
+  color: #94a3b8 !important;
+}
+
+.licy-pag-btn svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — ajuste final cards compactas tipo referencia
+   Objetivo:
+   - Grilla limpia tipo 3 columnas
+   - Cards más compactas
+   - Textos largos controlados
+   - Sin desbordes horizontales
+   - Fondo uniforme
+══════════════════════════════════════════════════════════════ */
+
+/* Contenedor general */
+.licy-procesos-view {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding: 28px 32px !important;
+  background: transparent !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Encabezado */
+.licy-procesos-header {
+  margin-bottom: 24px !important;
+}
+
+.licy-procesos-title {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.03em !important;
+}
+
+.licy-procesos-subtitle {
+  font-size: 14px !important;
+  color: #94a3b8 !important;
+  margin-top: 4px !important;
+}
+
+/* Barra de búsqueda */
+.licy-procesos-search-bar {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 22px 24px !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  border: 1px solid #e8edf2 !important;
+  box-sizing: border-box !important;
+  margin-bottom: 24px !important;
+}
+
+.licy-procesos-search-inputs {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 190px !important;
+  gap: 14px !important;
+  margin-bottom: 14px !important;
+}
+
+.licy-procesos-search-wrap {
+  min-width: 0 !important;
+}
+
+.licy-procesos-search-wrap input {
+  height: 46px !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  background: transparent !important;
+}
+
+.licy-procesos-search-btn {
+  height: 46px !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  background: #0f172a !important;
+}
+
+/* Filtros */
+.licy-procesos-filters {
+  display: flex !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.licy-procesos-filter-select {
+  height: 36px !important;
+  min-width: 130px !important;
+  border-radius: 10px !important;
+  background-color: #f8fafc !important;
+  font-size: 13px !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.licy-procesos-filter-clear {
+  height: 36px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+}
+
+/* Tabs */
+.licy-procesos-tabs {
+  margin-bottom: 24px !important;
+  border-bottom: 1px solid #e8edf2 !important;
+  gap: 12px !important;
+}
+
+.licy-procesos-tab {
+  height: 38px !important;
+  padding: 0 18px !important;
+  font-size: 14px !important;
+  color: #94a3b8 !important;
+}
+
+.licy-procesos-tab-active {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border-bottom-color: #0f172a !important;
+}
+
+/* Grilla */
+.licy-procesos-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  margin-bottom: 22px !important;
+}
+
+/* Card compacta */
+.licy-proceso-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 220px !important;
+  padding: 20px 22px 16px !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  border: 1px solid #e8edf2 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.licy-proceso-card:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+/* Header card */
+.licy-proceso-card-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-card-logo {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border: 1px solid #e8edf2 !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-card-entity {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-proceso-card-entity-name {
+  display: block !important;
+  max-width: 100% !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #94a3b8 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.licy-proceso-card-location {
+  display: block !important;
+  max-width: 100% !important;
+  margin-top: 2px !important;
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Título máximo 2 líneas */
+.licy-proceso-card-title {
+  font-size: 15.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  line-height: 1.28 !important;
+  letter-spacing: -0.02em !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  overflow: hidden !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* Descripción máximo 3 líneas */
+.licy-proceso-card-desc {
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  color: #475569 !important;
+  line-height: 1.45 !important;
+  max-height: 60px !important;
+  overflow: hidden !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* Footer */
+.licy-proceso-card-footer {
+  margin-top: auto !important;
+  padding-top: 12px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-deadline {
+  min-width: 0 !important;
+  max-width: 45% !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.licy-proceso-deadline svg {
+  width: 12px !important;
+  height: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-card-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  max-width: 55% !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-card-tags {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-proceso-tag {
+  height: 22px !important;
+  max-width: 120px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Botón gestionar */
+.licy-proceso-gestionar-btn {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+  border: 1px solid #e8edf2 !important;
+  background: #ffffff !important;
+  color: #94a3b8 !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-gestionar-btn:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* Vacío */
+.licy-procesos-empty {
+  border-radius: 16px !important;
+  min-height: 180px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Paginación */
+.licy-procesos-paginacion {
+  padding-top: 22px !important;
+}
+
+.licy-pag-left {
+  font-size: 13px !important;
+}
+
+.licy-pag-btn {
+  height: 34px !important;
+  min-width: 34px !important;
+  border-radius: 10px !important;
+}
+
+.licy-pag-btn-nav {
+  padding: 0 14px !important;
+}
+
+/* Responsive: baja a 2 columnas solo cuando realmente no haya espacio */
+@media (max-width: 1500px) {
+  .licy-procesos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Responsive tablets */
+@media (max-width: 1100px) {
+  .licy-procesos-search-inputs {
+    grid-template-columns: 1fr !important;
+  }
+
+  .licy-procesos-search-btn {
+    width: 100% !important;
+  }
+
+  .licy-procesos-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .licy-proceso-card {
+    height: auto !important;
+    min-height: 240px !important;
+  }
+}
+
+/* Responsive móvil */
+@media (max-width: 700px) {
+  .licy-procesos-view {
+    padding: 20px 16px !important;
+  }
+
+  .licy-procesos-search-bar {
+    padding: 18px !important;
+  }
+
+  .licy-procesos-tabs {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .licy-procesos-tab {
+    flex-shrink: 0 !important;
+  }
+
+  .licy-proceso-card-footer {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .licy-proceso-deadline,
+  .licy-proceso-card-actions {
+    max-width: 100% !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Forzar 3 columnas limpias en escritorio
+══════════════════════════════════════════════════════════════ */
+
+.licy-procesos-view {
+  padding: 24px 28px !important;
+  background: transparent !important;
+  overflow-x: hidden !important;
+}
+
+/* Buscador más compacto */
+.licy-procesos-search-bar {
+  padding: 18px 20px !important;
+  margin-bottom: 20px !important;
+  border-radius: 14px !important;
+}
+
+.licy-procesos-search-inputs {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 180px !important;
+  gap: 12px !important;
+}
+
+.licy-procesos-search-wrap input {
+  height: 42px !important;
+}
+
+.licy-procesos-search-btn {
+  height: 42px !important;
+}
+
+/* Tabs más limpios */
+.licy-procesos-tabs {
+  margin-bottom: 18px !important;
+}
+
+/* Forzar 3 columnas */
+.licy-procesos-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Cards más compactas */
+.licy-proceso-card {
+  height: 235px !important;
+  min-width: 0 !important;
+  padding: 18px 18px 14px !important;
+  border-radius: 13px !important;
+  overflow: hidden !important;
+  gap: 10px !important;
+}
+
+/* Logo más pequeño */
+.licy-proceso-card-logo {
+  width: 34px !important;
+  height: 34px !important;
+  font-size: 10px !important;
+}
+
+/* Entidad */
+.licy-proceso-card-entity-name {
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+}
+
+.licy-proceso-card-location {
+  font-size: 11px !important;
+}
+
+/* Título: máximo 2 líneas */
+.licy-proceso-card-title {
+  font-size: 14px !important;
+  line-height: 1.28 !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  overflow: hidden !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* Descripción: máximo 3 líneas */
+.licy-proceso-card-desc {
+  font-size: 12.5px !important;
+  line-height: 1.42 !important;
+  max-height: 54px !important;
+  overflow: hidden !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* Footer compacto */
+.licy-proceso-card-footer {
+  padding-top: 10px !important;
+  gap: 6px !important;
+}
+
+.licy-proceso-deadline {
+  font-size: 11.5px !important;
+  max-width: 42% !important;
+}
+
+.licy-proceso-card-actions {
+  max-width: 58% !important;
+}
+
+.licy-proceso-tag {
+  height: 20px !important;
+  max-width: 95px !important;
+  padding: 0 8px !important;
+  font-size: 10px !important;
+}
+
+.licy-proceso-gestionar-btn {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+}
+
+/* Este media query reemplaza el anterior de 1500px.
+   Solo baja a 2 columnas cuando realmente no quepan. */
+@media (max-width: 1180px) {
+  .licy-procesos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Móvil / pantallas estrechas */
+@media (max-width: 820px) {
+  .licy-procesos-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .licy-procesos-search-inputs {
+    grid-template-columns: 1fr !important;
+  }
+
+  .licy-proceso-card {
+    height: auto !important;
+    min-height: 220px !important;
+  }
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — procesos-cards OVERRIDE FINAL v10
+   Pega este bloque AL FINAL de procesos-cards.css
+   Reemplaza cualquier override anterior.
+══════════════════════════════════════════════════════════════ */
+
+/* ── OCULTAR header y barra de búsqueda ── */
+.licy-procesos-header,
+.licy-procesos-search-bar {
+  display: none !important;
+}
+
+/* Vista */
+.licy-procesos-view {
+  padding: 16px 20px 20px !important;
+  background: transparent !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+/* Tabs */
+.licy-procesos-tabs {
+  margin-bottom: 14px !important;
+}
+
+/* ── GRILLA ── */
+.licy-procesos-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  margin-bottom: 16px !important;
+}
+
+/* ── CARD: altura que tú ya ajustaste manualmente ── */
+.licy-proceso-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  padding: 13px 15px 11px !important;
+  border-radius: 11px !important;
+  background: #ffffff !important;
+  border: 1px solid #e8edf2 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.licy-proceso-card:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.07) !important;
+  transform: translateY(-1px) !important;
+}
+
+.licy-proceso-card-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-proceso-card-logo {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border: 1px solid #e8edf2 !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.licy-proceso-card-entity {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+}
+
+.licy-proceso-card-entity-name {
+  display: block !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  line-height: 1.2 !important;
+}
+
+.licy-proceso-card-location {
+  display: block !important;
+  font-size: 10px !important;
+  color: #94a3b8 !important;
+  margin-top: 1px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  line-height: 1.2 !important;
+}
+
+/* ── TÍTULO: máx 2 líneas ── */
+.licy-proceso-card-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  line-height: 1.28 !important;
+  letter-spacing: -0.01em !important;
+  max-height: 34px !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+/* ── DESCRIPCIÓN: clamp correcto con max-height explícito ── */
+.licy-proceso-card-desc {
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: #64748b !important;
+  line-height: 1.45 !important;
+  text-transform: lowercase !important;
+  /* max-height = line-height × font-size × nº líneas */
+  /* 1.45 × 11px × 3 ≈ 48px */
+  max-height: 48px !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  flex-shrink: 0 !important;        /* ← ya no es flex:1, tiene tamaño fijo */
+  margin: 0 !important;
+  word-break: break-word !important;
+}
+
+/* ── FOOTER empujado al fondo con spacer ── */
+.licy-proceso-card-footer {
+  margin-top: auto !important;      /* ← empuja al fondo */
+  padding-top: 8px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-proceso-deadline {
+  min-width: 0 !important;
+  max-width: 50% !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  flex-shrink: 1 !important;
+}
+
+.licy-proceso-deadline svg {
+  width: 10px !important;
+  height: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-card-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-proceso-card-tags {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-proceso-tag {
+  height: 18px !important;
+  max-width: 95px !important;
+  padding: 0 7px !important;
+  border-radius: 999px !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-proceso-gestionar-btn {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  border: 1px solid #e8edf2 !important;
+  background: #ffffff !important;
+  color: #94a3b8 !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.licy-proceso-gestionar-btn:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.licy-proceso-gestionar-btn svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.licy-procesos-paginacion {
+  padding: 12px 0 4px !important;
+  background: transparent !important;
+}
+
+/* ══ RESPONSIVE ══════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+  .licy-procesos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .licy-procesos-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .licy-procesos-view {
+  padding: 14px 18px 18px !important;
+  height: 100% !important;
+  overflow-y: visible !important;
+}
+  .licy-proceso-card-footer {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .licy-proceso-deadline,
+  .licy-proceso-card-actions {
+    max-width: 100% !important;
+  }
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — compactar espacio entre descripción y footer
+   Quita el hueco blanco interno de las cards
+══════════════════════════════════════════════════════════════ */
+
+.licy-procesos-view {
+  padding: 14px 18px 18px !important;
+}
+
+/* Card con altura natural, no estirada */
+.licy-proceso-card {
+  min-height: 210px !important;
+  height: auto !important;
+  max-height: none !important;
+  padding: 12px 14px 10px !important;
+  gap: 7px !important;
+}
+
+/* Título compacto */
+.licy-proceso-card-title {
+  font-size: 12.8px !important;
+  line-height: 1.22 !important;
+  max-height: 32px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* Descripción compacta, sin reservar altura fija innecesaria */
+.licy-proceso-card-desc {
+  font-size: 10.8px !important;
+  line-height: 1.34 !important;
+  max-height: 44px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* CLAVE: el footer ya no se va al fondo */
+.licy-proceso-card-footer {
+  margin-top: 6px !important;
+  padding-top: 7px !important;
+  border-top: 1px solid #f1f5f9 !important;
+}
+
+/* Ajustes finos de footer */
+.licy-proceso-deadline {
+  font-size: 10.8px !important;
+}
+
+.licy-proceso-tag {
+  height: 18px !important;
+  font-size: 9.5px !important;
+}
+
+.licy-proceso-gestionar-btn {
+  width: 26px !important;
+  height: 26px !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — footer al pie y más espacio para descripción
+══════════════════════════════════════════════════════════════ */
+
+/* Card con altura estable para que el footer pueda ir al pie */
+.licy-proceso-card {
+  height: 210px !important;
+  min-height: 210px !important;
+  max-height: 210px !important;
+  padding: 13px 15px 12px !important;
+  gap: 7px !important;
+}
+
+/* Título controlado en 2 líneas */
+.licy-proceso-card-title {
+  min-height: 32px !important;
+  max-height: 32px !important;
+  line-height: 1.24 !important;
+  margin: 0 !important;
+}
+
+/* La descripción ocupa el espacio disponible antes del footer */
+.licy-proceso-card-desc {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  line-height: 1.38 !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 5 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* Footer siempre al pie de la card */
+.licy-proceso-card-footer {
+  margin-top: auto !important;
+  padding-top: 8px !important;
+  flex-shrink: 0 !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — ajustar tamaño visual de paginación izquierda
+══════════════════════════════════════════════════════════════ */
+
+.licy-procesos-paginacion {
+  align-items: center !important;
+}
+
+.licy-pag-left {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+
+.licy-pag-left span,
+.licy-pag-left label {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+}
+
+.licy-pag-select {
+  height: 30px !important;
+  min-width: 52px !important;
+  font-size: 12px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+}
+
+.licy-pag-btn {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+/* LICYCOLBA — empresa del grupo en card */
+.licy-proceso-card {
+  position: relative !important;
+}
+
+.licy-proceso-empresa-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 22px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.licy-proceso-empresa-aseocolba {
+  background: #0f2f57;
+  color: #ffffff;
+}
+
+.licy-proceso-empresa-tempocolba {
+  background: #d8ecfb;
+  color: #1e5799;
+}
+
+.licy-proceso-empresa-vigicolba {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.licy-proceso-card-header {
+  padding-right: 96px !important;
+}
+/* LICYCOLBA — página activa azul corporativo */
+.licy-pag-btn-active,
+.licy-pag-btn-active:hover,
+.licy-pag-btn.active,
+.licy-pag-btn.active:hover {
+  background: #1e5799 !important;
+  border-color: #1e5799 !important;
+  color: #ffffff !important;
+}
+/* LICYCOLBA — ocultar selector "Resultados por página" */
+.licy-pag-left {
+  display: none !important;
+}
+
+/* Mantener la paginación alineada a la derecha */
+.licy-procesos-paginacion {
+  justify-content: flex-end !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — texto de resultados con estilo igual a paginación
+   Resultado esperado: "Resultados por página: 1–6 de 2.907"
+══════════════════════════════════════════════════════════════ */
+
+/* Contenedor izquierdo visible */
+.licy-pag-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  line-height: 1 !important;
+}
+
+/* Oculta solo el selector de cantidad */
+.licy-pag-select {
+  display: none !important;
+}
+
+/* Homologa textos del lado izquierdo con botones tipo "Anterior" */
+.licy-pag-left,
+.licy-pag-left span,
+.licy-pag-left label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  font-family: inherit !important;
+}
+
+/* Mantiene separación entre izquierda y derecha */
+.licy-procesos-paginacion {
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+/* Botones de paginación con mismo tamaño base */
+.licy-pag-btn {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+}
+/* LICYCOLBA — paginación sin negrilla */
+.licy-pag-left,
+.licy-pag-left span,
+.licy-pag-left label,
+.licy-pag-select {
+  font-weight: 400 !important;
+  color: #94a3b8 !important;
+}
+
+/* Los botones no activos también sin negrilla */
+.licy-pag-btn:not(.licy-pag-btn-active):not(.active) {
+  font-weight: 400 !important;
+}
+
+/* Mantener solo la página activa destacada */
+.licy-pag-btn-active,
+.licy-pag-btn.active {
+  font-weight: 600 !important;
+}
+/* LICYCOLBA — tamaño de letra de paginación */
+.licy-pag-btn,
+.licy-pag-btn-nav,
+.licy-pag-btn-dots {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+}
+
+/* Página activa: mismo tamaño, solo más marcada */
+.licy-pag-btn-active,
+.licy-pag-btn.active {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Contador izquierdo: "Resultados por página: 1–6 de 2.907" */
+.licy-pag-left,
+.licy-pag-left span,
+.licy-pag-left label {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: #94a3b8 !important;
+}
+/* LICYCOLBA — justificar objeto/descripción de la card */
+.licy-proceso-card-desc {
+  text-align: justify !important;
+  text-justify: inter-word !important;
+  hyphens: auto !important;
+}
+/* LICYCOLBA — primera letra mayúscula en objeto/descripción */
+.licy-proceso-card-desc {
+  text-transform: lowercase !important;
+}
+
+.licy-proceso-card-desc::first-letter {
+  text-transform: uppercase !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Notificaciones CSS
+   Pega este bloque AL FINAL de procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+/* ── Campana activa ── */
+.licy-topbar-bell--active {
+  background: #f0f4ff !important;
+  border-color: #c7d7fd !important;
+  color: #2563eb !important;
+}
+
+/* Badge con número en la campana */
+.licy-topbar-bell-dot {
+  position: absolute !important;
+  top: 3px !important;
+  right: 3px !important;
+  min-width: 16px !important;
+  height: 16px !important;
+  padding: 0 4px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  border: 1.5px solid white !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  color: white !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+}
+
+/* ── Wrapper posicionado ── */
+.licy-notif-bell-wrap {
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-panel-wrap {
+  position: absolute !important;
+  top: calc(100% + 10px) !important;
+  right: 0 !important;
+  z-index: 9999 !important;
+}
+
+/* ── Panel principal ── */
+.licy-notif-panel {
+  width: 420px !important;
+  max-height: 70vh !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 40px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+}
+
+/* ── Header del panel ── */
+.licy-notif-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 18px 20px 14px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.licy-notif-header-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.licy-notif-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em !important;
+}
+
+.licy-notif-badge {
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 6px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  color: white !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.licy-notif-mark-all {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #2563eb !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+  white-space: nowrap !important;
+  transition: color 0.15s ease !important;
+}
+
+.licy-notif-mark-all:hover {
+  color: #1d4ed8 !important;
+  text-decoration: underline !important;
+}
+
+.licy-notif-close {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  border: 1px solid #e8edf2 !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94a3b8 !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-close svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.licy-notif-close:hover {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+}
+
+/* ── Tabs ── */
+.licy-notif-tabs {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  flex-shrink: 0 !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+.licy-notif-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+
+.licy-notif-tab {
+  height: 28px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid #e8edf2 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-tab:hover {
+  border-color: #cbd5e1 !important;
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+.licy-notif-tab--active {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.licy-notif-tab-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-tab--active .licy-notif-tab-dot {
+  background: #fca5a5 !important;
+}
+
+/* ── Lista ── */
+.licy-notif-list {
+  overflow-y: visible !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.licy-notif-list::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.licy-notif-list::-webkit-scrollbar-thumb {
+  background: #e2e8f0 !important;
+  border-radius: 4px !important;
+}
+
+/* ── Item ── */
+.licy-notif-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  padding: 14px 18px !important;
+  cursor: pointer !important;
+  border-bottom: 1px solid #f8fafc !important;
+  transition: background 0.12s ease !important;
+  position: relative !important;
+}
+
+.licy-notif-item:last-child {
+  border-bottom: none !important;
+}
+
+.licy-notif-item:hover {
+  background: transparent !important;
+}
+
+.licy-notif-item--unread {
+  background: #f0f6ff !important;
+}
+
+.licy-notif-item--unread:hover {
+  background: #e8f0fe !important;
+}
+
+.licy-notif-item--urgent {
+  background: #fff5f5 !important;
+  border-left: 3px solid #ef4444 !important;
+}
+
+.licy-notif-item--urgent:hover {
+  background: #fee2e2 !important;
+}
+
+/* ── Body del item ── */
+.licy-notif-item-body {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.licy-notif-item-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  line-height: 1.3 !important;
+  margin-bottom: 3px !important;
+}
+
+.licy-notif-item-desc {
+  font-size: 12px !important;
+  color: #475569 !important;
+  line-height: 1.5 !important;
+  margin-bottom: 5px !important;
+}
+
+.licy-notif-item-time {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+}
+
+/* Punto no leído */
+.licy-notif-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #2563eb !important;
+  flex-shrink: 0 !important;
+  margin-top: 4px !important;
+}
+
+/* ── Iconos ── */
+.licy-notif-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.licy-notif-icon--red {
+  background: #fef2f2 !important;
+  color: #ef4444 !important;
+}
+
+.licy-notif-icon--green {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+}
+
+.licy-notif-icon--blue {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+.licy-notif-icon--orange {
+  background: #fff7ed !important;
+  color: #ea580c !important;
+}
+
+.licy-notif-icon--gray {
+  background: transparent !important;
+  color: #64748b !important;
+}
+
+/* ── Vacío ── */
+.licy-notif-empty {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 48px 20px !important;
+  gap: 8px !important;
+}
+
+.licy-notif-empty svg {
+  width: 48px !important;
+  height: 48px !important;
+  margin-bottom: 4px !important;
+}
+
+.licy-notif-empty p {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  margin: 0 !important;
+}
+
+.licy-notif-empty span {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — corrección visual fuerte panel de notificaciones
+   Corrige íconos gigantes, panel flotante y jerarquía visual
+══════════════════════════════════════════════════════════════ */
+
+.licy-notif-bell-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-panel-wrap {
+  position: absolute !important;
+  top: calc(100% + 12px) !important;
+  right: 0 !important;
+  z-index: 99999 !important;
+}
+
+/* Caja principal del panel */
+.licy-notif-panel {
+  width: 430px !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: 72vh !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.22) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+}
+
+/* Header */
+.licy-notif-header {
+  height: 58px !important;
+  padding: 0 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid #eef2f7 !important;
+  background: #ffffff !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-title {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.licy-notif-badge {
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 7px !important;
+  border-radius: 999px !important;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.licy-notif-mark-all {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1e5799 !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+.licy-notif-close {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e8edf2 !important;
+  background: #ffffff !important;
+  color: #94a3b8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+}
+
+.licy-notif-close svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+/* Tabs */
+.licy-notif-tabs {
+  display: flex !important;
+  gap: 7px !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #eef2f7 !important;
+  background: #ffffff !important;
+  overflow-x: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-tab {
+  height: 30px !important;
+  padding: 0 13px !important;
+  border-radius: 999px !important;
+  border: 1px solid #dbe3ee !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.licy-notif-tab--active {
+  background: #1e5799 !important;
+  border-color: #1e5799 !important;
+  color: #ffffff !important;
+}
+
+/* Lista */
+.licy-notif-list {
+  flex: 1 !important;
+  overflow-y: visible !important;
+  min-height: 0 !important;
+  background: #ffffff !important;
+}
+
+.licy-notif-item {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) 10px !important;
+  gap: 12px !important;
+  padding: 14px 18px !important;
+  border-bottom: 1px solid #eef2f7 !important;
+  background: #ffffff !important;
+  cursor: pointer !important;
+  min-height: 76px !important;
+  box-sizing: border-box !important;
+}
+
+.licy-notif-item--unread {
+  background: #eef6ff !important;
+}
+
+.licy-notif-item--urgent {
+  background: #fff5f5 !important;
+  border-left: 3px solid #dc2626 !important;
+}
+
+/* Ícono: fuerza tamaño pequeño */
+.licy-notif-icon {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+/* Cualquier svg dentro del panel queda controlado */
+.licy-notif-panel svg,
+.licy-notif-item svg,
+.licy-notif-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  display: block !important;
+}
+
+/* Si el icono es emoji/texto */
+.licy-notif-icon > span,
+.licy-notif-icon > div {
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+/* Colores iconos */
+.licy-notif-icon--red {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.licy-notif-icon--green {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+}
+
+.licy-notif-icon--blue {
+  background: #dbeafe !important;
+  color: #1e5799 !important;
+}
+
+.licy-notif-icon--orange {
+  background: #ffedd5 !important;
+  color: #ea580c !important;
+}
+
+.licy-notif-icon--gray {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* Texto del item */
+.licy-notif-item-body {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.licy-notif-item-title {
+  font-size: 13px !important;
+  line-height: 1.28 !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 0 3px !important;
+}
+
+.licy-notif-item-desc {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  font-weight: 400 !important;
+  color: #475569 !important;
+  margin: 0 0 4px !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.licy-notif-item-time {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+/* Punto no leído */
+.licy-notif-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #1e5799 !important;
+  align-self: start !important;
+  margin-top: 6px !important;
+}
+
+/* Campana */
+.licy-topbar-bell {
+  position: relative !important;
+}
+
+.licy-topbar-bell svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.licy-topbar-bell-dot {
+  position: absolute !important;
+  top: 2px !important;
+  right: 2px !important;
+  min-width: 16px !important;
+  height: 16px !important;
+  padding: 0 4px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #ffffff !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Vacío */
+.licy-notif-empty {
+  padding: 42px 20px !important;
+  text-align: center !important;
+}
+
+.licy-notif-empty svg {
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0 auto 8px !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — notificaciones minimalistas
+══════════════════════════════════════════════════════════════ */
+
+.licy-notif-panel {
+  width: 400px !important;
+  max-width: calc(100vw - 28px) !important;
+  max-height: 68vh !important;
+  border-radius: 16px !important;
+  border: 1px solid #e8edf2 !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.14) !important;
+}
+
+.licy-notif-header {
+  height: 52px !important;
+  padding: 0 16px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.licy-notif-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+.licy-notif-badge {
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 6px !important;
+  font-size: 10.5px !important;
+}
+
+.licy-notif-mark-all {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #1e5799 !important;
+}
+
+.licy-notif-close {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  border: 1px solid #e8edf2 !important;
+}
+
+.licy-notif-close svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.licy-notif-tabs {
+  padding: 10px 14px !important;
+  gap: 6px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.licy-notif-tab {
+  height: 28px !important;
+  padding: 0 11px !important;
+  border-radius: 999px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.licy-notif-tab--active {
+  background: #1e5799 !important;
+  border-color: #1e5799 !important;
+  color: #ffffff !important;
+}
+
+.licy-notif-tab-dot {
+  width: 5px !important;
+  height: 5px !important;
+  opacity: 0.7 !important;
+}
+
+.licy-notif-list {
+  background: #ffffff !important;
+}
+
+.licy-notif-item {
+  display: grid !important;
+  grid-template-columns: 30px minmax(0, 1fr) 8px !important;
+  gap: 11px !important;
+  min-height: 68px !important;
+  padding: 12px 16px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.licy-notif-item:hover {
+  background: transparent !important;
+}
+
+.licy-notif-item--unread {
+  background: #f8fbff !important;
+}
+
+.licy-notif-item--unread:hover {
+  background: #f0f6ff !important;
+}
+
+.licy-notif-item--urgent {
+  background: #ffffff !important;
+  border-left: 2px solid #dc2626 !important;
+}
+
+.licy-notif-item--urgent.licy-notif-item--unread {
+  background: #fffafa !important;
+}
+
+.licy-notif-icon {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  border-radius: 9px !important;
+  font-size: 14px !important;
+}
+
+.licy-notif-panel svg,
+.licy-notif-item svg,
+.licy-notif-icon svg {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  max-width: 15px !important;
+  min-height: 15px !important;
+  max-height: 15px !important;
+}
+
+.licy-notif-icon--red {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.licy-notif-icon--green {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+}
+
+.licy-notif-icon--blue {
+  background: #eff6ff !important;
+  color: #1e5799 !important;
+}
+
+.licy-notif-icon--orange {
+  background: #fff7ed !important;
+  color: #ea580c !important;
+}
+
+.licy-notif-icon--gray {
+  background: transparent !important;
+  color: #64748b !important;
+}
+
+.licy-notif-item-title {
+  font-size: 12.5px !important;
+  line-height: 1.28 !important;
+  font-weight: 650 !important;
+  color: #0f172a !important;
+  margin: 0 0 2px !important;
+}
+
+.licy-notif-item-desc {
+  font-size: 11.5px !important;
+  line-height: 1.38 !important;
+  color: #475569 !important;
+  margin: 0 0 3px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.licy-notif-item-time {
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+}
+
+.licy-notif-dot {
+  width: 7px !important;
+  height: 7px !important;
+  background: #1e5799 !important;
+  margin-top: 6px !important;
+}
+
+.licy-topbar-bell--active {
+  background: #f0f6ff !important;
+  border-color: #b7daf3 !important;
+  color: #1e5799 !important;
+}
+
+.licy-topbar-bell-dot {
+  min-width: 15px !important;
+  height: 15px !important;
+  font-size: 8.5px !important;
+  top: 2px !important;
+  right: 2px !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — notificaciones más sobrias sin cambiar estructura
+══════════════════════════════════════════════════════════════ */
+
+/* Campana: mantener fondo blanco, no azul */
+.licy-topbar-bell,
+.licy-topbar-bell--active {
+  background: #ffffff !important;
+  border-color: #e8edf2 !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+}
+
+.licy-topbar-bell:hover,
+.licy-topbar-bell--active:hover {
+  background: transparent !important;
+  border-color: #dbe3ee !important;
+  color: #64748b !important;
+}
+
+/* Badge de la campana más pequeño */
+.licy-topbar-bell-dot {
+  min-width: 13px !important;
+  height: 13px !important;
+  padding: 0 3px !important;
+  top: 3px !important;
+  right: 3px !important;
+  font-size: 7.5px !important;
+  font-weight: 700 !important;
+}
+
+/* Panel más limpio */
+.licy-notif-panel {
+  width: 390px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Header más discreto */
+.licy-notif-header {
+  height: 48px !important;
+  padding: 0 16px !important;
+}
+
+.licy-notif-title {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+.licy-notif-badge {
+  min-width: 18px !important;
+  height: 18px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+
+.licy-notif-mark-all {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #1e5799 !important;
+}
+
+.licy-notif-close {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+/* Tabs sobrios */
+.licy-notif-tabs {
+  padding: 9px 14px !important;
+  gap: 6px !important;
+}
+
+.licy-notif-tab {
+  height: 26px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  background: #ffffff !important;
+}
+
+.licy-notif-tab--active {
+  background: #1e5799 !important;
+  border-color: #1e5799 !important;
+  color: #ffffff !important;
+}
+
+/* Puntos rojos de tabs más discretos */
+.licy-notif-tab-dot {
+  width: 4px !important;
+  height: 4px !important;
+  opacity: 0.55 !important;
+}
+
+/* Items menos coloridos */
+.licy-notif-item {
+  grid-template-columns: 28px minmax(0, 1fr) 7px !important;
+  gap: 10px !important;
+  min-height: 62px !important;
+  padding: 11px 16px !important;
+  background: #ffffff !important;
+}
+
+.licy-notif-item--unread {
+  background: #fbfdff !important;
+}
+
+.licy-notif-item--urgent {
+  background: #ffffff !important;
+  border-left: 2px solid #e2e8f0 !important;
+}
+
+.licy-notif-item--urgent.licy-notif-item--unread {
+  background: #fbfdff !important;
+}
+
+/* Iconos más pequeños y suaves */
+.licy-notif-icon {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  border-radius: 8px !important;
+}
+
+.licy-notif-panel svg,
+.licy-notif-item svg,
+.licy-notif-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  max-width: 14px !important;
+  min-height: 14px !important;
+  max-height: 14px !important;
+}
+
+/* Colores de iconos más neutros */
+.licy-notif-icon--red,
+.licy-notif-icon--orange,
+.licy-notif-icon--green,
+.licy-notif-icon--blue,
+.licy-notif-icon--gray {
+  background: transparent !important;
+  color: #64748b !important;
+}
+
+/* Tipografía más parecida al sistema */
+.licy-notif-item-title {
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  margin-bottom: 2px !important;
+}
+
+.licy-notif-item-desc {
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+  color: #475569 !important;
+  margin-bottom: 2px !important;
+}
+
+.licy-notif-item-time {
+  font-size: 10px !important;
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+}
+
+/* Punto no leído más sobrio */
+.licy-notif-dot {
+  width: 6px !important;
+  height: 6px !important;
+  background: #1e5799 !important;
+  opacity: 0.85 !important;
+}
+/* LICYCOLBA — desplegar notificaciones hacia la derecha */
+.licy-notif-panel-wrap {
+  left: 0 !important;
+  right: auto !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — corrección campana y despliegue notificaciones
+══════════════════════════════════════════════════════════════ */
+
+/* Campana normal: blanca, redonda y sin borde negro */
+.licy-topbar-bell,
+.licy-topbar-bell--active {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 1px solid #e8edf2 !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.licy-topbar-bell:hover,
+.licy-topbar-bell--active:hover {
+  background: transparent !important;
+  border-color: #dbe3ee !important;
+  color: #64748b !important;
+}
+
+.licy-topbar-bell svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Badge pequeño de la campana */
+.licy-topbar-bell-dot {
+  top: 4px !important;
+  right: 4px !important;
+  min-width: 15px !important;
+  height: 15px !important;
+  padding: 0 4px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #ffffff !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+/* Wrapper de campana */
+.licy-notif-bell-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Panel: desplegar hacia abajo, alineado debajo de la campana */
+.licy-notif-panel-wrap {
+  position: absolute !important;
+  top: calc(100% + 14px) !important;
+  right: -18px !important;
+  left: auto !important;
+  transform: none !important;
+  z-index: 99999 !important;
+}
+
+/* Panel más compacto para que no se vea cortado */
+.licy-notif-panel {
+  width: 390px !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: calc(100vh - 120px) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+/* En pantallas pequeñas, que no se salga */
+@media (max-width: 900px) {
+  .licy-notif-panel-wrap {
+    right: -90px !important;
+  }
+
+  .licy-notif-panel {
+    width: 360px !important;
+  }
+}
+/* LICYCOLBA — alinear panel de notificaciones debajo de la campana */
+.licy-notif-panel-wrap {
+  position: absolute !important;
+  top: calc(100% + 14px) !important;
+  right: 50% !important;
+  left: auto !important;
+  transform: translateX(50%) !important;
+  z-index: 99999 !important;
+}
+
+.licy-notif-panel {
+  width: 390px !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: calc(100vh - 120px) !important;
+  border-radius: 16px !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Menú usuario + Modal cambiar contraseña
+   Pega este bloque AL FINAL de procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+/* ── Chip usuario activo ── */
+.licy-topbar-user--active {
+  background: transparent !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Flecha rotada cuando abierto */
+.licy-topbar-user-chev {
+  transition: transform 0.18s ease !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.licy-topbar-user-chev--open {
+  transform: rotate(180deg) !important;
+}
+
+/* ── Wrapper posicionado ── */
+.licy-user-wrap {
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Menú desplegable ── */
+.licy-user-menu {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  z-index: 9998 !important;
+  background: #ffffff !important;
+  border: 1px solid #e8edf2 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.05) !important;
+  min-width: 190px !important;
+  padding: 5px !important;
+  overflow: hidden !important;
+}
+
+.licy-user-menu-item {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 9px 12px !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  cursor: pointer !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  text-align: left !important;
+  transition: background 0.13s ease !important;
+  white-space: nowrap !important;
+}
+
+.licy-user-menu-item:hover {
+  background: transparent !important;
+  color: #0f172a !important;
+}
+
+.licy-user-menu-item--danger {
+  color: #dc2626 !important;
+}
+
+.licy-user-menu-item--danger:hover {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+
+.licy-user-menu-icon {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  background: #f1f5f9 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  transition: background 0.13s ease !important;
+}
+
+.licy-user-menu-item--danger .licy-user-menu-icon {
+  background: #fef2f2 !important;
+}
+
+.licy-user-menu-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.licy-user-menu-divider {
+  height: 1px !important;
+  background: #f1f5f9 !important;
+  margin: 4px 0 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Modal cambiar contraseña
+══════════════════════════════════════════════════════════════ */
+
+.lcpw-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+.lcpw-modal {
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18) !important;
+  width: 100% !important;
+  max-width: 400px !important;
+  overflow: hidden !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+}
+
+/* Header */
+.lcpw-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 22px 22px 18px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.lcpw-header-icon {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 11px !important;
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.lcpw-header-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.lcpw-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.lcpw-subtitle {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  margin: 2px 0 0 !important;
+}
+
+.lcpw-close {
+  margin-left: auto !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  border: 1px solid #e8edf2 !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94a3b8 !important;
+  flex-shrink: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.lcpw-close svg { width: 11px !important; height: 11px !important; }
+.lcpw-close:hover { background: #f1f5f9 !important; color: #475569 !important; }
+
+/* Form */
+.lcpw-form {
+  padding: 20px 22px 22px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+.lcpw-error-banner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  color: #dc2626 !important;
+}
+
+.lcpw-error-banner svg { width: 16px !important; height: 16px !important; flex-shrink: 0 !important; }
+
+.lcpw-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+}
+
+.lcpw-label {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+}
+
+.lcpw-input-wrap {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.lcpw-input {
+  width: 100% !important;
+  height: 40px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  padding: 0 38px 0 12px !important;
+  font-size: 13px !important;
+  color: #0f172a !important;
+  font-family: inherit !important;
+  outline: none !important;
+  transition: all 0.18s ease !important;
+  box-sizing: border-box !important;
+}
+
+.lcpw-input::placeholder { color: #cbd5e1 !important; }
+
+.lcpw-input:focus {
+  border-color: #2563eb !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08) !important;
+}
+
+.lcpw-input-wrap--error .lcpw-input {
+  border-color: #fca5a5 !important;
+  background: #fff5f5 !important;
+}
+
+.lcpw-input-wrap--error .lcpw-input:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+}
+
+.lcpw-eye {
+  position: absolute !important;
+  right: 10px !important;
+  width: 22px !important;
+  height: 22px !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94a3b8 !important;
+  padding: 0 !important;
+  transition: color 0.15s ease !important;
+}
+
+.lcpw-eye svg { width: 15px !important; height: 15px !important; }
+.lcpw-eye:hover { color: #475569 !important; }
+
+.lcpw-field-error {
+  font-size: 11px !important;
+  color: #ef4444 !important;
+  font-weight: 500 !important;
+}
+
+/* Indicador fuerza */
+.lcpw-strength {
+  display: flex !important;
+  gap: 4px !important;
+  margin-top: 2px !important;
+}
+
+.lcpw-strength-bar {
+  flex: 1 !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: #e2e8f0 !important;
+  transition: background 0.2s ease !important;
+}
+
+.lcpw-strength-bar--weak   { background: #ef4444 !important; }
+.lcpw-strength-bar--med    { background: #f59e0b !important; }
+.lcpw-strength-bar--strong { background: #16a34a !important; }
+
+/* Acciones */
+.lcpw-actions {
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 2px !important;
+}
+
+.lcpw-btn-cancel {
+  flex: 1 !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.lcpw-btn-cancel:hover:not(:disabled) { background: #f8fafc !important; border-color: #cbd5e1 !important; }
+.lcpw-btn-cancel:disabled { opacity: 0.5 !important; cursor: not-allowed !important; }
+
+.lcpw-btn-save {
+  flex: 1 !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: #1e5799 !important;
+  color: white !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  transition: all 0.15s ease !important;
+}
+
+.lcpw-btn-save:hover:not(:disabled) { background: #174a85 !important; }
+.lcpw-btn-save:disabled { opacity: 0.6 !important; cursor: not-allowed !important; }
+
+/* Spinner */
+.lcpw-spin {
+  width: 16px !important;
+  height: 16px !important;
+  animation: lcpw-spin 0.8s linear infinite !important;
+}
+
+@keyframes lcpw-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Success state */
+.lcpw-success {
+  padding: 44px 22px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.lcpw-success-icon {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  background: #f0fdf4 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #16a34a !important;
+}
+
+.lcpw-success-icon svg { width: 26px !important; height: 26px !important; }
+
+.lcpw-success p {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+}
+/* LICYCOLBA — avatar usuario azul degradado */
+.licy-topbar-user-av {
+  background: linear-gradient(135deg, #1e5799 0%, #2563eb 55%, #60a5fa 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(30, 87, 153, 0.22) !important;
+}
+/* LICYCOLBA — ocultar usuario y cerrar sesión del sidebar */
+.sidebar-user,
+.sidebar-user-info {
+  display: none !important;
+}
+
+/* Oculta solo el ítem de cerrar sesión si tiene esta clase */
+.sidebar-logout,
+.logout-item {
+  display: none !important;
+}
+/* LICYCOLBA — ocultar usuario y cerrar sesión del sidebar sin tocar JSX */
+
+/* Oculta el bloque del usuario en el sidebar */
+.sidebar-user {
+  display: none !important;
+}
+
+/* Oculta el primer item del nav si es el botón Cerrar sesión */
+.sidebar-nav > .nav-item:first-child {
+  display: none !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — sidebar tamaño intermedio
+══════════════════════════════════════════════════════════════ */
+
+.sidebar-title {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.nav-section-title,
+.sidebar-section-title {
+  font-size: 9.5px !important;
+  letter-spacing: 0.085em !important;
+}
+
+/* Ítems principales tamaño intermedio */
+.nav-item,
+.nav-item-text {
+  font-size: 11.8px !important;
+  font-weight: 500 !important;
+  line-height: 1.18 !important;
+}
+
+/* Submenú tamaño intermedio */
+.nav-subitem,
+.nav-subitem span {
+  font-size: 11.3px !important;
+  font-weight: 500 !important;
+  line-height: 1.18 !important;
+}
+
+/* Activos */
+.nav-item.active,
+.nav-subitem.active,
+.nav-item.active .nav-item-text,
+.nav-subitem.active span {
+  font-weight: 600 !important;
+}
+
+/* Íconos */
+.nav-item svg,
+.nav-subitem svg {
+  width: 14.5px !important;
+  height: 14.5px !important;
+}
+
+/* Flechas */
+.nav-chevron {
+  font-size: 12px !important;
+}
+
+/* Badge rojo */
+.nav-badge {
+  min-width: 17px !important;
+  height: 17px !important;
+  padding: 0 5px !important;
+  font-size: 9.5px !important;
+  line-height: 17px !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Usuarios CSS FINAL v3
+   Reemplaza TODOS los bloques anteriores de usuarios en procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+/* ── Page header ── */
+.content .page-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.content .page-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #1e5799 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.content .page-title svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+.content .page-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex-wrap: nowrap !important;
+}
+
+/* ── Search box ── */
+.content .search-box {
+  height: 30px !important;
+  padding: 0 11px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  color: #0f172a !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  outline: none !important;
+  transition: all 0.18s ease !important;
+  width: 180px !important;
+}
+.content .search-box::placeholder { color: #94a3b8 !important; }
+.content .search-box:focus {
+  border-color: #2563eb !important;
+  background: white !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.07) !important;
+}
+
+/* ── Icon buttons ── */
+.content .icon-btn {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: white !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+.content .icon-btn svg { width: 13px !important; height: 13px !important; flex-shrink: 0 !important; }
+.content .icon-btn:hover:not(:disabled) { border-color: #cbd5e1 !important; background: #f8fafc !important; color: #334155 !important; }
+.content .icon-btn:disabled { opacity: 0.35 !important; cursor: not-allowed !important; }
+
+.content .icon-btn.blue-fill { background: #1e5799 !important; border-color: #1e5799 !important; color: white !important; box-shadow: 0 2px 6px rgba(30,87,153,0.25) !important; }
+.content .icon-btn.blue-fill:hover { background: #174a85 !important; border-color: #174a85 !important; }
+.content .icon-btn.blue-fill svg { color: white !important; stroke: white !important; }
+.content .icon-btn.blue-fill:hover svg { color: white !important; stroke: white !important; }
+
+.content .icon-btn.red { border-color: #fecaca !important; color: #dc2626 !important; background: #fff5f5 !important; }
+.content .icon-btn.red:hover:not(:disabled) { background: #fef2f2 !important; border-color: #f87171 !important; }
+
+.content .icon-btn.green { border-color: #16a34a !important; background: #16a34a !important; color: white !important; box-shadow: 0 2px 6px rgba(22,163,74,0.25) !important; position: relative !important; }
+.content .icon-btn.green:hover:not(:disabled) { background: #15803d !important; border-color: #15803d !important; }
+.content .icon-btn.green svg { display: none !important; }
+.content .icon-btn.green::after {
+  content: '' !important;
+  display: block !important;
+  width: 15px !important;
+  height: 15px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='8' y1='13' x2='16' y2='13'/%3E%3Cline x1='8' y1='17' x2='16' y2='17'/%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* ── Table card ── */
+.content .table-card {
+  background: white !important;
+  border: 1px solid #e8edf2 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 1px 4px rgba(15,23,42,0.04) !important;
+}
+
+.content .table-scroll { overflow-x: auto !important; }
+.content .table-scroll::-webkit-scrollbar { height: 4px !important; }
+.content .table-scroll::-webkit-scrollbar-thumb { background: #e2e8f0 !important; border-radius: 4px !important; }
+
+/* ── Table ── */
+.content table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  font-size: 12px !important;
+}
+
+/* TH principal — SIN línea roja, fondo gris suave */
+.content thead tr:first-child th {
+  background: transparent !important;
+  border-bottom: 1.5px solid #e8edf2 !important;
+  padding: 0 !important;
+}
+
+.content .th-top {
+  padding: 9px 10px 7px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+}
+
+/* ELIMINAR la segunda fila de ≡ — ocultarla completamente */
+.content thead tr:nth-child(2) {
+  display: none !important;
+}
+
+/* ── TD compactos ── */
+.content tbody td {
+  padding: 8px 10px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #334155 !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+.content tbody tr:last-child td { border-bottom: none !important; }
+.content tbody tr:hover td { background: #fafbff !important; }
+
+/* Checkbox */
+.content td.center { text-align: center !important; }
+.content .cbx { width: 14px !important; height: 14px !important; accent-color: #1e5799 !important; cursor: pointer !important; }
+
+/* Badge */
+.content .badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 18px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+/* Botón firma */
+.content .firma-btn {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: white !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #64748b !important;
+  margin: 0 auto !important;
+  transition: all 0.15s ease !important;
+}
+.content .firma-btn svg { width: 12px !important; height: 12px !important; }
+.content .firma-btn:hover { background: #eff6ff !important; border-color: #bfdbfe !important; color: #2563eb !important; }
+
+/* ── Paginación ── */
+.content .pagination-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 9px 14px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  background: #fafcff !important;
+  font-size: 11.5px !important;
+  color: #94a3b8 !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.content .pagination-bar .pages {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+.content .page-btn {
+  height: 26px !important;
+  min-width: 26px !important;
+  padding: 0 7px !important;
+  border-radius: 6px !important;
+  border: 1px solid #e8edf2 !important;
+  background: white !important;
+  font-size: 11.5px !important;
+  font-family: inherit !important;
+  font-weight: 500 !important;
+  color: #475569 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  transition: all 0.13s ease !important;
+  white-space: nowrap !important;
+}
+.content .page-btn svg { width: 10px !important; height: 10px !important; flex-shrink: 0 !important; }
+.content .page-btn:hover:not(:disabled) { border-color: #cbd5e1 !important; background: #f8fafc !important; }
+.content .page-btn.active { background: #0f172a !important; border-color: #0f172a !important; color: white !important; font-weight: 700 !important; }
+.content .page-btn:disabled { opacity: 0.35 !important; cursor: not-allowed !important; }
+
+/* Nav buttons Anterior/Siguiente más anchos */
+.content .page-btn.page-btn-nav {
+  padding: 0 11px !important;
+  font-size: 11.5px !important;
+}
+
+/* ── Module status ── */
+.content .module-status {
+  padding: 28px 20px !important;
+  text-align: center !important;
+  font-size: 12.5px !important;
+  color: #64748b !important;
+  background: white !important;
+  border: 1px solid #e8edf2 !important;
+  border-radius: 12px !important;
+}
+.content .module-status.error { color: #dc2626 !important; background: #fef2f2 !important; border-color: #fecaca !important; }
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Scrollbar tabla usuarios: hover + active
+   Pega AL FINAL de procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+.content .table-scroll::-webkit-scrollbar {
+  height: 5px !important;
+}
+
+.content .table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 999px !important;
+}
+
+.content .table-scroll::-webkit-scrollbar-thumb {
+  background: #aba8ca !important;   /* azul claro — estado normal */
+  border-radius: 999px !important;
+  transition: background 0.2s ease !important;
+}
+
+.content .table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #2a2dfa !important;   /* imagen 2 — azul/morado brillante */
+}
+
+.content .table-scroll::-webkit-scrollbar-thumb:active {
+  background: #2225d4 !important;   /* imagen 1 — azul oscuro al arrastrar */
+}
+/* LICYCOLBA — paginación usuarios en azul corporativo */
+.content .page-btn.active,
+.content .page-btn.active:hover,
+.content .page-btn-active,
+.content .page-btn-active:hover {
+  background: #1e5799 !important;
+  border-color: #1e5799 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Botón Excel: ícono archivo XLS minimalista
+   Reemplaza el bloque .icon-btn.green en procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+.content .icon-btn.green {
+  background: white !important;
+  border: 1.5px solid #bbf7d0 !important;
+  color: #16a34a !important;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.10) !important;
+  position: relative !important;
+}
+
+.content .icon-btn.green:hover:not(:disabled) {
+  background: #f0fdf4 !important;
+  border-color: #4ade80 !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.18) !important;
+}
+
+.content .icon-btn.green:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.content .icon-btn.green svg {
+  display: none !important;
+}
+
+/* Ícono archivo + cuadrícula + XLS */
+.content .icon-btn.green::after {
+  content: '' !important;
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 22'%3E%3C!-- Cuerpo del archivo --%3E%3Crect x='2' y='1' width='16' height='20' rx='2' fill='none' stroke='%2316a34a' stroke-width='1.6'/%3E%3C!-- Cuadrícula 2x2 arriba --%3E%3Crect x='5' y='4' width='10' height='7' rx='1' fill='none' stroke='%2316a34a' stroke-width='1.4'/%3E%3Cline x1='10' y1='4' x2='10' y2='11' stroke='%2316a34a' stroke-width='1.2'/%3E%3Cline x1='5' y1='7.5' x2='15' y2='7.5' stroke='%2316a34a' stroke-width='1.2'/%3E%3C!-- Texto XLS --%3E%3Ctext x='10' y='19.5' text-anchor='middle' font-family='Arial,sans-serif' font-size='5.5' font-weight='800' fill='%2316a34a' letter-spacing='0.5'%3EXLS%3C/text%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Campos disabled: aspecto informativo limpio
+   Pega AL FINAL de procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+/* ── DISABLED: se ve como texto informativo, no como input ── */
+.modal-overlay input:disabled,
+.modal-overlay select:disabled,
+.modal-overlay textarea:disabled {
+  background: #f4f6f9 !important;
+  border: 1.5px solid #f4f6f9 !important;   /* borde del mismo color = casi invisible */
+  color: #6b7280 !important;
+  cursor: default !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  height: 38px !important;
+  padding: 0 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  opacity: 1 !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  pointer-events: none !important;           /* no responde a ningún clic */
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* ── ACTIVOS: blanco con borde visible ── */
+.modal-overlay input:not([type='checkbox']):not(:disabled),
+.modal-overlay select:not(:disabled),
+.modal-overlay textarea:not(:disabled),
+.modal-overlay input[type='date']:not(:disabled) {
+  background: #ffffff !important;
+  border: 1.5px solid #d1d5db !important;
+  color: #0f172a !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  height: 38px !important;
+  padding: 0 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+}
+
+.modal-overlay textarea:not(:disabled) {
+  height: 80px !important;
+  padding: 10px 12px !important;
+  resize: vertical !important;
+  line-height: 1.5 !important;
+}
+
+/* Focus activos */
+.modal-overlay input:not([type='checkbox']):not(:disabled):focus,
+.modal-overlay select:not(:disabled):focus,
+.modal-overlay textarea:not(:disabled):focus,
+.modal-overlay input[type='date']:not(:disabled):focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.09) !important;
+  background: #ffffff !important;
+}
+
+/* Placeholder activos */
+.modal-overlay input:not(:disabled)::placeholder,
+.modal-overlay textarea:not(:disabled)::placeholder {
+  color: #d1d5db !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   LICYCOLBA — Modal Editar Solicitud: clases modal-card
+   Pega AL FINAL de procesos-cards.css
+══════════════════════════════════════════════════════════════ */
+
+/* ── Contenedor principal ── */
+.modal-card {
+  background: white !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.08) !important;
+  border: 1px solid #e8edf2 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+}
+
+/* ── Header ── */
+.modal-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 20px 24px 16px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  flex-shrink: 0 !important;
+}
+
+.modal-header h3 {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Ícono lápiz del header */
+.modal-header svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: #1e5799 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Botón cerrar X */
+.modal-close-btn {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: white !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94a3b8 !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+.modal-close-btn svg {
+  width: 13px !important;
+  height: 13px !important;
+  color: inherit !important;
+}
+
+.modal-close-btn:hover {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #ef4444 !important;
+}
+
+/* ── Error banner ── */
+.modal-error {
+  margin: 0 24px !important;
+  padding: 10px 14px !important;
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  color: #dc2626 !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Body scrollable ── */
+.modal-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 20px 24px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #e2e8f0 transparent !important;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #e2e8f0 !important;
+  border-radius: 4px !important;
+}
+
+/* Labels dentro del body */
+.modal-body label {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  display: block !important;
+  margin-bottom: 5px !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Inputs activos */
+.modal-body input:not([type='checkbox']):not(:disabled),
+.modal-body select:not(:disabled),
+.modal-body textarea:not(:disabled),
+.modal-body input[type='date']:not(:disabled) {
+  width: 100% !important;
+  height: 38px !important;
+  border: 1.5px solid #d1d5db !important;
+  border-radius: 9px !important;
+  background: #ffffff !important;
+  padding: 0 12px !important;
+  font-size: 12.5px !important;
+  color: #0f172a !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.modal-body textarea:not(:disabled) {
+  height: 90px !important;
+  padding: 10px 12px !important;
+  resize: vertical !important;
+  line-height: 1.5 !important;
+}
+
+.modal-body input[type='date']:not(:disabled) {
+  cursor: pointer !important;
+}
+
+/* Focus */
+.modal-body input:not([type='checkbox']):not(:disabled):focus,
+.modal-body select:not(:disabled):focus,
+.modal-body textarea:not(:disabled):focus,
+.modal-body input[type='date']:not(:disabled):focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.09) !important;
+}
+
+/* Placeholder */
+.modal-body input::placeholder,
+.modal-body textarea::placeholder {
+  color: #d1d5db !important;
+}
+
+/* Disabled — informativo, sin apariencia de input */
+.modal-body input:disabled,
+.modal-body select:disabled,
+.modal-body textarea:disabled {
+  width: 100% !important;
+  height: 38px !important;
+  border: 1.5px solid #f4f6f9 !important;
+  border-radius: 9px !important;
+  background: #f4f6f9 !important;
+  padding: 0 12px !important;
+  font-size: 12.5px !important;
+  color: #6b7280 !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/* ── Actions / footer ── */
+.modal-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  padding: 14px 24px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  background: #fafcff !important;
+  flex-shrink: 0 !important;
+}
+
+/* Botón Cancelar */
+.modal-btn-cancel {
+  height: 38px !important;
+  padding: 0 22px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: white !important;
+  color: #475569 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.modal-btn-cancel:hover:not(:disabled) {
+  background: transparent !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+.modal-btn-cancel:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* Botón Guardar cambios */
+.modal-btn-save {
+  height: 38px !important;
+  padding: 0 24px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: #1e5799 !important;
+  color: white !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  letter-spacing: -0.01em !important;
+  box-shadow: 0 2px 8px rgba(30, 87, 153, 0.25) !important;
+}
+
+.modal-btn-save:hover:not(:disabled) {
+  background: #174a85 !important;
+  box-shadow: 0 4px 12px rgba(30, 87, 153, 0.32) !important;
+  transform: translateY(-1px) !important;
+}
+
+.modal-btn-save:disabled {
+  background: #93b4d9 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+/* Scrollbar modal — aparece solo al hover */
+.modal-scroll-col::-webkit-scrollbar { width: 4px !important; }
+.modal-scroll-col::-webkit-scrollbar-track { background: transparent !important; }
+.modal-scroll-col::-webkit-scrollbar-thumb { background: #94a3b8 !important; border-radius: 4px !important; }
+
+/* LICYCOLBA — tag modalidad legible en footer */
+.licy-proceso-tag-modalidad {
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* LICYCOLBA — ribbon NUEVO fix */
+.licy-proceso-card {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   FILTROS AVANZADOS — agregar al final de procesos-cards.css
+   ═══════════════════════════════════════════════════ */
+
+/* Botón Filtros avanzados */
+.licy-procesos-filter-avanzado-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  background: #0d2d5e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font, system-ui);
+  cursor: pointer;
+  position: relative;
+  transition: background .15s, box-shadow .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.licy-procesos-filter-avanzado-btn:hover {
+  background: #1a5ea8;
+  box-shadow: 0 2px 8px rgba(13,45,94,.25);
+}
+
+/* Badge contador de filtros activos */
+.licy-filtros-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  background: #c8102e;
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  border: 2px solid #fff;
+}
+
+/* Fila de badges de filtros activos */
+.licy-filtros-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0 2px;
+}
+
+.licy-filtro-badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #EAF2FB;
+  color: #1a5ea8;
+  border: 1px solid #c3d9f0;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px 3px 10px;
+  font-family: var(--font, system-ui);
+  white-space: nowrap;
+}
+
+.licy-filtro-badge-chip button {
+  background: none;
+  border: none;
+  color: #1a5ea8;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  opacity: .7;
+  transition: opacity .1s;
+}
+
+.licy-filtro-badge-chip button:hover {
+  opacity: 1;
+  color: #c8102e;
+}
+
+/* Focus styles para inputs del panel */
+.licy-filtros-panel-input:focus,
+.licy-filtros-panel-select:focus {
+  border-color: #1a5ea8 !important;
+  box-shadow: 0 0 0 3px rgba(26,94,168,.1);
+}
+
+/* Mostrar solo la fila de filtros dentro de search-bar */
+.licy-procesos-search-bar {
+  display: block !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 0 12px 0 !important;
+  margin-bottom: 10px !important;
+}
+
+.licy-procesos-search-inputs {
+  display: none !important;
+}
+
+/* LICYCOLBA — botón Filtros alineado a la derecha de la fila */
+.licy-procesos-filters {
+  justify-content: flex-start !important;
+}
+
+.licy-procesos-filter-avanzado-btn {
+  margin-left: auto !important;
+}
+
+/* LICYCOLBA — ocultar botón filtros de la barra superior */
+.licy-procesos-filter-avanzado-btn {
+  display: none !important;
+}
+
+/* Botón filtro flotante derecho */
+.licy-filtro-fab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: #6b21a8;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 500;
+  box-shadow: -2px 2px 8px rgba(0,0,0,0.2);
+  transition: background .15s, width .15s;
+}
+
+.licy-filtro-fab:hover {
+  background: #7c3aed;
+  width: 40px;
+}
+
+.licy-filtro-fab svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Badge en el FAB */
+.licy-filtro-fab .licy-filtros-badge {
+  top: -6px;
+  right: -6px;
+}
+/* Ocultar barra de filtros rápidos — solo usar botón embudo */
+.licy-procesos-search-bar {
+  display: none !important;
+}
+/* ══════════════════════════════════════════════════════════════
+   TEMA ROSA — overrides con !important para superar reglas base
+   Paleta: #D4697C #E07A8C #F2B5C7 #F7E0D8 #C8C2DF #8BA5B8
+══════════════════════════════════════════════════════════════ */
+/* Avatar usuario */
+html[data-theme="pink"] .licy-topbar-user-av {
+  background: linear-gradient(135deg, #C4566A 0%, #E07A8C 100%) !important;
+  box-shadow: 0 4px 12px rgba(196,86,106,0.28) !important;
+}
+/* Badge estado en cards (Convocatoria, etc.) */
+html[data-theme="pink"] .licy-proceso-empresa-aseocolba {
+  background: #D4697C !important;
+  color: #ffffff !important;
+}
+html[data-theme="pink"] .licy-proceso-empresa-tempocolba {
+  background: #F7E0D8 !important;
+  color: #A03050 !important;
+}
+/* Paginación activa */
+html[data-theme="pink"] .licy-pag-btn-active,
+html[data-theme="pink"] .licy-pag-btn-active:hover,
+html[data-theme="pink"] .licy-pag-btn.active,
+html[data-theme="pink"] .licy-pag-btn.active:hover {
+  background: #D4697C !important;
+  border-color: #D4697C !important;
+  color: #ffffff !important;
+}
+/* Botón filtro avanzado */
+html[data-theme="pink"] .licy-procesos-filter-avanzado-btn {
+  background: #D4697C !important;
+}
+html[data-theme="pink"] .licy-procesos-filter-avanzado-btn:hover {
+  background: #C4566A !important;
+  box-shadow: 0 2px 8px rgba(196,86,106,0.30) !important;
+}
+/* FAB filtro flotante */
+html[data-theme="pink"] .licy-filtro-fab {
+  background: #C8C2DF !important;
+}
+html[data-theme="pink"] .licy-filtro-fab:hover {
+  background: #B5AED3 !important;
+}
+/* Icon buttons blue-fill dentro del contenido */
+html[data-theme="pink"] .content .icon-btn.blue-fill {
+  background: #D4697C !important;
+  border-color: #D4697C !important;
+  box-shadow: 0 2px 6px rgba(212,105,124,0.28) !important;
+}
+/* Checkboxes */
+html[data-theme="pink"] .content .cbx {
+  accent-color: #D4697C !important;
+}
+/* Badge rojo de nav */
+html[data-theme="pink"] .nav-badge {
+  background: #E07A8C !important;
+}
+/* Etiqueta "NEW" en card */
+html[data-theme="pink"] .licy-proceso-card-logo {
+  background: #D4697C !important;
+  border-color: #C4566A !important;
+  color: #ffffff !important;
+}
+html[data-theme="pink"] .licy-proceso-card-logo span {
+  background: #D4697C !important;
+  color: #ffffff !important;
+}
+/* Tabs / pestañas activas con #1e5799 en módulos internos */
+html[data-theme="pink"] [class*="tab"][class*="active"],
+html[data-theme="pink"] [class*="Tab"][class*="active"],
+html[data-theme="pink"] [class*="tab"].active {
+  color: #D4697C !important;
+  border-color: #D4697C !important;
+}
+html[data-theme="pink"] [class*="tab"][class*="active"]:not([class*="bg"]) {
+  background: rgba(212,105,124,0.09) !important;
+}

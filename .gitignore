@@ -1,0 +1,134 @@
+# Archivos locales / privados
+/_ey_anexos/
+/workflows/
+/scratch/
+/tmp/
+/.claude/
+
+# Datos y documentación interna no entregable
+/docs/casos-costos-aseo/
+/docs/diagnostico-casos-costos-aseo.md
+/docs/matriz-validacion-costos-aseo.md
+
+# Tooling temporal / diagnóstico / migraciones auxiliares
+/scripts/diagnostico/
+/scripts/data-api/
+/prisma/migrations-propuestas/
+/src/generated/prisma-candidata/
+
+# Artefactos temporales de datos
+*.dump
+*.pgdump
+*.sql-dump
+*.migration-dump
+*.migration-dump.*
+*.db-backup
+*.bridge.tsv
+*.bridge.json
+*.bridge.csv
+*.sqlite
+*.log
+*.tmp
+
+# Mapas / outputs temporales
+*_old_to_new*
+*_old_to_opaque*
+*_opaque_to_new*
+*map_old*
+*map_opaque*
+coverage_report_ids*
+correspondencia-procesos*
+proceso-id-map*
+
+# Screenshots / capturas locales
+*.png
+!public/**/*.png
+!src/**/*.png
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+/.playwright/
+/playwright-report/
+/test-results/
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# variables de entorno
+.env*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma generado
+/src/generated/prisma
+
+# bases de datos locales
+dev.db
+*.db
+*.db-journal
+prisma/dev.db
+
+# archivos de debug
+debug-*.json
+debug-*.txt
+
+# scripts temporales
+_*.mjs
+_fix_*.js
+/scratch-*.ts
+
+# fixtures locales
+/pruebas-pliegos/
+
+# Next.js generated types
+next-env.d.ts
+
+# Insumos locales grandes (inventarios Docker, no entregables/no versionar)
+/ops/input/
+
+# Scripts sueltos de diagnóstico puntual (no operativos permanentes)
+/lanzar_full_resync.ts
+/auditoria_privados_integral.mjs
+/comparar_bandejas_reales.mjs
+/ops/analizar-bandejas-cutover.mjs
+/ops/analizar-cutover-v2.mjs
+/ops/auditar-docker-cutover.mjs
+/ops/migrar-legado-a-docker.mjs
+/ops/migrar-legado-a-docker-v2.mjs
+
+# Reportes/paquetes de datos generados por los scripts de ops/ (auditorías,
+# manifiestos, dry-runs) — nunca al historial de git (datos de negocio, no
+# código); respaldados aparte fuera del repo cuando corresponde. Los pocos
+# que SÍ se decidió versionar (p.ej. el paquete del cutover histórico
+# original) ya están trackeados desde antes de este patrón y siguen
+# trackeados sin necesidad de excepción explícita aquí.
+/ops/output/*.json
+/ops/output/*.csv
+/ops/output/*.gz
+/ops/output/*.md

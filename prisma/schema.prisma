@@ -1,0 +1,1917 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  cedula       String
+  celular      String
+  entidadGrupo String
+  cargo        String
+  email        String   @unique
+  usuario      String
+  rol          String
+  estado       String
+  firmaDigital String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  proceso         String?
+  subproceso      String?
+  uen             String?
+  sessionVersion  Int     @default(1)
+
+  analisis            LecturaAnalisis[]
+  auditLogs           AuditLog[]
+  rateLimitGemini     RateLimitGemini[]
+  geminiUsages        GeminiUsage[]
+  simulaciones        SimulacionPonderacion[]
+  metodosRevisados    MetodoPonderacionProceso[] @relation("MetodosRevisadosPor")
+  lecturasGestionadas LecturaAnalisis[]          @relation("LecturasGestionadas")
+
+  docsAnalisisEconomicoCargados DocumentoAnalisisEconomicoProceso[] @relation("DocsAnalisisEconomicoCargados")
+  analisisEconomicoEjecutados   AnalisisEconomicoProceso[]          @relation("AnalisisEconomicoEjecutados")
+  reglasTrmCreadas              ReglaTrmProceso[]                   @relation("ReglasTrmCreadas")
+  reglasTrmAprobadas            ReglaTrmProceso[]                   @relation("ReglasTrmAprobadas")
+  reglasTrmRechazadas           ReglaTrmProceso[]                   @relation("ReglasTrmRechazadas")
+  conjuntosMetodosCreados       ConjuntoMetodosPonderacionProceso[] @relation("ConjuntosMetodosCreados")
+  conjuntosMetodosAprobados     ConjuntoMetodosPonderacionProceso[] @relation("ConjuntosMetodosAprobados")
+  conjuntosMetodosRechazados    ConjuntoMetodosPonderacionProceso[] @relation("ConjuntosMetodosRechazados")
+  excepcionesCandidataDecididas DecisionExcepcionCandidata[]        @relation("ExcepcionesCandidataDecididas")
+}
+
+model DeletedUser {
+  id               Int      @id @default(autoincrement())
+  originalUserId   Int?
+  cedula           String
+  celular          String
+  entidadGrupo     String
+  cargo            String
+  email            String
+  usuario          String
+  rol              String
+  estado           String
+  firmaDigital     String?
+  createdAt        DateTime
+  updatedAt        DateTime
+  deletedAt        DateTime @default(now())
+  deletedByUsuario String?
+  deletedByEmail   String?
+  deletedByCargo   String?
+  proceso          String?
+  subproceso       String?
+  uen              String?
+}
+
+model Notificacion {
+  id            Int       @id @default(autoincrement())
+  tipo          String
+  titulo        String
+  descripcion   String?
+  codigoProceso String?
+  procesoId     Int?
+  entidad       String?
+  perfil        String?
+  leida         Boolean   @default(false)
+  datos         Json?
+  creadoEn      DateTime  @default(now())
+  leidaEn       DateTime?
+  // B.3 — clave de idempotencia para notificaciones generadas por el
+  // aplicador de la Data API (proceso_nuevo:/documento_nuevo:/cronograma_cambio:).
+  // Nullable: las notificaciones legacy no la llevan; UNIQUE garantiza que
+  // el aplicador nunca cree dos veces la misma notificación.
+  claveIdempotencia String? @unique
+
+  @@index([leida])
+  @@index([tipo])
+  @@index([perfil])
+  @@index([creadoEn])
+  @@index([codigoProceso])
+  @@index([procesoId])
+  @@index([tipo, procesoId, creadoEn])
+}
+
+model Proceso {
+  id                       Int                      @id @default(autoincrement())
+  externalId               String?                  @unique
+  codigoProceso            String?
+  nombre                   String?
+  entidad                  String?
+  objeto                   String?
+  fuente                   String?
+  aliasFuente              String?
+  modalidad                String?
+  perfil                   String?
+  departamento             String?
+  estadoFuente             String?
+  fechaPublicacion         DateTime?
+  fechaVencimiento         DateTime?
+  valor                    Float?
+  linkDetalle              String?
+  linkSecop                String?
+  linkSecopReg             String?
+  totalCronogramas         Int                      @default(0)
+  totalDocumentos          Int                      @default(0)
+  rawJson                  String?
+  hashContenido            String?
+  lastSyncedAt             DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  sourceKey                String                   @unique
+  duracion                 String?
+  fechaVencimientoAnterior DateTime?
+  fechaCambioFechaCierre   DateTime?
+  tieneCambioFechaCierre   Boolean                  @default(false)
+  noViable                 Boolean                  @default(false)
+  observacionNoViable      String?
+  noViableRegistradoPor    String?
+  noViableFecha            DateTime?
+  actividadLicy            String?
+  clasificacionAt          DateTime?
+  unspsc                   String?
+  scraperIntentos          Int?
+  scraperUltimoIntento     DateTime?
+  scraperError             String?
+  scraperEstado            String?
+  scraperTipoFuente        String?
+  scraperScore             Float?
+  scraperTodosLinks        String?
+  oculto                   Boolean?                 @default(false)
+  // ── B.3 — espejo local del estado de el servicio de datos ──────────────
+  // `disponibleDataApi` NUNCA hereda `true` por el mero hecho de existir la
+  // fila: default `false` — solo un UPSERT real de la Data API lo enciende
+  // (ver mapeoCanonico.datosCreacionProceso). `retiradoDataApiEn` sella el
+  // tombstone (la fila nunca se borra). `ultimoSnapshotId` es la marca del
+  // último full-resync que tocó la fila (base de la reconciliación).
+  // `origenFuncional` persiste el concepto canónico — nunca un proveedor —
+  // y es la protección PRIMARIA de los procesos MANUAL frente a la
+  // reconciliación (la convención `sourceKey` `local:%` queda solo como
+  // compatibilidad con registros históricos).
+  disponibleDataApi        Boolean                  @default(false)
+  retiradoDataApiEn        DateTime?
+  ultimoSnapshotId         String?
+  origenFuncional          OrigenFuncionalCanonico?
+  cronogramasSecop         ProcesoCronogramaSecop[]
+  detalleSecop             ProcesoDetalleSecop?
+  documentosSecop          ProcesoDocumentoSecop[]
+  snapshotsSecop           ProcesoSnapshotSecop[]
+  simulaciones             SimulacionPonderacion[]
+  metodosExtraidos         MetodoPonderacionProceso[]
+  estadoRevisionPliego     EstadoRevisionPliego  @default(SIN_ANALIZAR)
+  /// ¿La TRM gobierna la evaluación económica de este proceso? Gate del flujo.
+  usaPonderacionTrm        UsoPonderacionTrm     @default(NO_DETERMINADO)
+  documentosAnalisisEconomico DocumentoAnalisisEconomicoProceso[]
+  analisisEconomico        AnalisisEconomicoProceso[]
+  reglasTrm                ReglaTrmProceso[]
+  conjuntosMetodosPonderacion ConjuntoMetodosPonderacionProceso[]
+
+  @@index([codigoProceso])
+  @@index([perfil])
+  @@index([aliasFuente])
+  @@index([departamento])
+  @@index([estadoFuente])
+  @@index([fechaPublicacion])
+  @@index([fechaVencimiento])
+  @@index([tieneCambioFechaCierre])
+  @@index([linkDetalle])
+  @@index([scraperEstado, scraperIntentos])
+  @@index([scraperIntentos, scraperUltimoIntento])
+  @@index([scraperUltimoIntento])
+  @@index([aliasFuente], map: "idx_proceso_alias_fuente")
+  @@index([id], map: "idx_proceso_link_detalle_null", where: raw("((\"linkDetalle\" IS NULL) OR (\"linkDetalle\" = ''::text))"))
+  @@index([fechaPublicacion(sort: Desc)], map: "idx_proceso_linkdetalle_null_fecha", where: raw("((\"linkDetalle\" IS NULL) OR (TRIM(BOTH FROM \"linkDetalle\") = ''::text))"))
+  @@index([perfil], map: "idx_proceso_perfil")
+}
+
+model ProcesoDetalleSecop {
+  id                      Int       @id @default(autoincrement())
+  procesoId               Int       @unique
+  urlConsulta             String?
+  urlFinal                String?
+  titulo                  String?
+  estado                  String?
+  fase                    String?
+  tipoProceso             String?
+  tipoContrato            String?
+  justificacionModalidad  String?
+  duracionContrato        String?
+  fechaTerminacion        DateTime?
+  direccionEjecucion      String?
+  codigoUnspsc            String?
+  unspscAdicionales       Json?
+  esMipymes               Boolean?
+  esPaa                   Boolean?
+  vigenciaPaa             String?
+  misionVision            String?
+  valorAdquisiciones      Float?
+  valorTotalProceso       Float?
+  cuestionarioJson        Json?
+  informacionPresupuestal Json?
+  textoPlano              String?
+  hashDetalle             String?
+  capturadoEn             DateTime  @default(now())
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  proceso                 Proceso   @relation(fields: [procesoId], references: [id], onDelete: Cascade)
+
+  @@index([estado])
+  @@index([capturadoEn])
+  @@index([updatedAt])
+}
+
+model ProcesoCronogramaSecop {
+  id                 Int       @id @default(autoincrement())
+  procesoId          Int
+  evento             String
+  valorTexto         String?
+  fechaInicio        DateTime?
+  fechaFin           DateTime?
+  zonaHoraria        String?
+  orden              Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  valorTextoAnterior String?
+  fechaActualizacion DateTime?
+  tieneCambioFecha   Boolean   @default(false)
+  proceso            Proceso   @relation(fields: [procesoId], references: [id], onDelete: Cascade)
+
+  @@index([procesoId])
+  @@index([evento])
+  @@index([updatedAt])
+}
+
+model ProcesoDocumentoSecop {
+  id             Int      @id @default(autoincrement())
+  procesoId      Int
+  nombre         String
+  urlDocumento   String?
+  tipoDocumento  String?
+  // B.3 — id del documento en el servicio de datos. Nullable: los
+  // documentos legacy no lo llevan. El contrato canónico NO garantiza que
+  // `docId` sea único globalmente, solo dentro de su proceso — por eso la
+  // unicidad es compuesta (procesoId, dataApiDocId), no un @unique simple.
+  dataApiDocId   String?
+  extension      String?
+  hashArchivo    String?
+  rutaLocal      String?
+  mimeType       String?
+  tamanoBytes    Int?
+  textoExtraido  String?
+  descargado     Boolean  @default(false)
+  procesado      Boolean  @default(false)
+  fechaDetectado DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  proceso        Proceso  @relation(fields: [procesoId], references: [id], onDelete: Cascade)
+
+  @@unique([procesoId, dataApiDocId])
+  @@index([procesoId])
+  @@index([nombre])
+  @@index([tipoDocumento])
+  @@index([descargado])
+  @@index([procesado])
+  @@index([fechaDetectado])
+  @@index([updatedAt])
+}
+
+model ProcesoSnapshotSecop {
+  id            Int      @id @default(autoincrement())
+  procesoId     Int
+  urlConsulta   String?
+  hashContenido String?
+  payloadJson   Json
+  creadoEn      DateTime @default(now())
+  proceso       Proceso  @relation(fields: [procesoId], references: [id], onDelete: Cascade)
+
+  @@index([procesoId])
+  @@index([creadoEn])
+}
+
+/// Estado ÚNICO e identificable de la sincronización con el servicio de
+/// datos. Es un singleton: exactamente una fila, con `clave = "procesos"`
+/// (nunca una colección accidental de estados independientes). El
+/// `checkpointCursor` es el checkpoint INCREMENTAL definitivo — solo avanza
+/// en páginas de sync incremental normal, o al promoverse explícitamente al
+/// completar un full resync. Los campos `fullResync*` son exclusivamente el
+/// estado TRANSITORIO de un full resync en curso.
+model DataApiSyncState {
+  clave                    String    @id
+  checkpointCursor         String?
+  checkpointActualizadoEn  DateTime?
+  fullResyncSnapshotId     String?
+  fullResyncNextPageCursor String?
+  fullResyncIniciadoEn     DateTime?
+}
+
+model ProcesoNuevo {
+  id               Int       @id @default(autoincrement())
+  procesoId        Int?
+  sourceKey        String    @unique
+  codigoProceso    String?
+  nombre           String?
+  entidad          String?
+  objeto           String?
+  fuente           String?
+  aliasFuente      String?
+  modalidad        String?
+  perfil           String?
+  departamento     String?
+  estadoFuente     String?
+  fechaPublicacion DateTime?
+  fechaVencimiento DateTime?
+  valor            Float?
+  linkDetalle      String?
+  linkSecop        String?
+  linkSecopReg     String?
+  fechaDeteccion   DateTime  @default(now())
+  duracion         String?
+
+  @@index([fechaDeteccion])
+  @@index([perfil])
+  @@index([aliasFuente])
+  @@index([codigoProceso])
+}
+
+model Solicitud {
+  id                Int       @id @default(autoincrement())
+  procesoId         Int?
+  procesoSourceKey  String?
+  externalId        String?
+  codigoProceso     String?
+  nombreProceso     String?
+  entidad           String?
+  objeto            String?
+  fuente            String?
+  aliasFuente       String?
+  modalidad         String?
+  perfil            String?
+  departamento      String?
+  estadoFuente      String?
+  fechaPublicacion  DateTime?
+  fechaVencimiento  DateTime?
+  valor             Float?
+  linkDetalle       String?
+  linkSecop         String?
+  linkSecopReg      String?
+  estadoSolicitud   String    @default("En revisión")
+  observacion       String?
+  usuarioRegistro   String?
+  emailRegistro     String?
+  cargoRegistro     String?
+  entidadRegistro   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  aprobador         String?
+  asignaciones      Json      @default("[]")
+  ciudad            String?
+  docData           Json      @default("[]")
+  fechaCierre       DateTime?
+  obsData           Json      @default("[]")
+  plataforma        String?
+  procData          Json      @default("{}")
+  procStep          Int       @default(0)
+  revisor           String?
+  sede              String?
+  causalCierre      String?
+  fechaAperturaSqr  DateTime?
+  fechaCierreSqr    DateTime?
+  resultadoFinal    String?
+  sqrCerrada        Boolean   @default(false)
+  sqrCreada         Boolean   @default(false)
+  sqrError          String?
+  sqrNumero         String?
+  // Ajuste "CIERRE DE SQR AL PRESENTAR" — estado explícito del intento de
+  // cierre externo en GrupoColba: PENDIENTE|CERRANDO|CERRADA|ERROR. `null`
+  // en registros anteriores a este ajuste equivale a PENDIENTE, salvo que
+  // `sqrCerrada` ya sea `true` (entonces equivale a CERRADA) — ver
+  // `resolverEstadoCierreSqrEfectivo`. Nunca se hace backfill que escriba
+  // CERRADA retroactivamente; el valor solo se escribe hacia adelante.
+  sqrCierreEstado   String?
+  // Ajuste "ESTADO FINAL SQR (booleano)" — señal EXPLÍCITA, booleana, que
+  // reciben tanto la persistencia como el motor de cierre de SQR
+  // (`intentarCerrarSqrSiCorresponde`) para decidir el payload/validación
+  // de GrupoColba, SIN que el motor tenga que interpretar `estadoRevision`:
+  // `true` (únicamente vía la acción real "Presentar proceso" — exige
+  // descripción + evidencia) | `false` (cualquier cierre terminal —
+  // Rechazado, Cerrar sin presentar, Cancelado — ocurrido SIN haber
+  // presentado — exige solo observación, nunca evidencia) | `null` =
+  // histórico (no se puede demostrar con certeza cómo terminó) o proceso
+  // aún no terminado — NUNCA se infiere/asume como `false`. Un proceso ya
+  // en `true` que luego se adjudica/no-adjudica CONSERVA ese valor — el
+  // cierre final posterior nunca lo degrada a `false`.
+  estadoFinalSqr    Boolean?
+  origenSolicitud   String    @default("Comercial")
+  correoContacto    String?
+  direccionContacto String?
+  nitContacto       String?
+  personaContacto   String?
+  telefonoContacto  String?
+  duracion          String?
+  fechaEntregaInfo  DateTime?
+  // Ajuste "SEGUIMIENTO — MERCADEO" — historial de anotaciones INMUTABLES
+  // sobre la evolución del proceso (nunca una sola observación editable —
+  // cada registro es un elemento nuevo, nunca se reemplaza uno existente).
+  // Mismo patrón ya usado por `asignaciones`/`docData`/`obsData`: array JSON
+  // manipulado en TypeScript, sin tabla relacionada. Forma de cada elemento
+  // (ver `src/lib/solicitudes/seguimiento.ts`): { id, texto, creadoEn,
+  // creadoPor, rol }. Requiere la migración
+  // `20260825180000_add_seguimiento_solicitud` aplicada contra la BD real
+  // ANTES de `npx prisma generate` — de lo contrario cualquier
+  // `findUnique`/`findMany` de `Solicitud` sin `select` explícito falla con
+  // "column does not exist" (incidente ya ocurrido una vez, ver historial).
+  observacionesSeguimiento Json @default("[]")
+
+  @@index([estadoSolicitud])
+  @@index([codigoProceso])
+  @@index([procesoId])
+  @@index([procesoSourceKey])
+  @@index([origenSolicitud])
+  @@index([sqrNumero])
+  @@index([sqrCreada])
+  @@index([sqrCerrada])
+  @@index([createdAt(sort: Desc)])
+  @@index([aliasFuente])
+  @@index([revisor])
+  @@index([aprobador])
+  @@index([estadoSolicitud, createdAt(sort: Desc)])
+  @@index([origenSolicitud, estadoSolicitud, createdAt(sort: Desc)])
+}
+
+model DeletedSolicitud {
+  id                Int       @id @default(autoincrement())
+  originalId        Int?
+  procesoId         Int?
+  procesoSourceKey  String?
+  externalId        String?
+  codigoProceso     String?
+  nombreProceso     String?
+  entidad           String?
+  objeto            String?
+  fuente            String?
+  aliasFuente       String?
+  modalidad         String?
+  perfil            String?
+  departamento      String?
+  estadoFuente      String?
+  fechaPublicacion  DateTime?
+  fechaVencimiento  DateTime?
+  valor             Float?
+  linkDetalle       String?
+  linkSecop         String?
+  linkSecopReg      String?
+  estadoSolicitud   String?
+  observacion       String?
+  ciudad            String?
+  sede              String?
+  plataforma        String?
+  fechaCierre       DateTime?
+  procStep          Int       @default(0)
+  procData          Json      @default("{}")
+  obsData           Json      @default("[]")
+  docData           Json      @default("[]")
+  asignaciones      Json      @default("[]")
+  revisor           String?
+  aprobador         String?
+  usuarioRegistro   String?
+  emailRegistro     String?
+  cargoRegistro     String?
+  entidadRegistro   String?
+  createdAt         DateTime?
+  updatedAt         DateTime?
+  deletedAt         DateTime  @default(now())
+  deletedByUsuario  String?
+  deletedByEmail    String?
+  causalCierre      String?
+  fechaAperturaSqr  DateTime?
+  fechaCierreSqr    DateTime?
+  resultadoFinal    String?
+  sqrCerrada        Boolean?
+  sqrCreada         Boolean?
+  sqrError          String?
+  sqrNumero         String?
+  origenSolicitud   String    @default("Comercial")
+  correoContacto    String?
+  direccionContacto String?
+  nitContacto       String?
+  personaContacto   String?
+  telefonoContacto  String?
+  duracion          String?
+  fechaEntregaInfo  DateTime?
+
+  @@index([origenSolicitud])
+  @@index([deletedAt])
+  @@index([estadoSolicitud])
+}
+
+model PerfilRol {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  descripcion String?
+  permisos    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Documento {
+  id             Int                @id @default(autoincrement())
+  codigo         String?
+  nombre         String
+  empresa        String?
+  proceso        String?
+  subcarpetaId   String?
+  fechaEmision   DateTime?
+  frecuenciaDias Int?
+  diasTramite    Int?
+  notas          String?
+  correoContacto String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  versiones      DocumentoVersion[]
+}
+
+model DocumentoVersion {
+  id               Int       @id @default(autoincrement())
+  documentoId      Int
+  version          Int
+  nombreArchivo    String
+  rutaLaravel      String?
+  archivoBase64    String?
+  archivoTipo      String?
+  fechaEmision     DateTime?
+  fechaVencimiento DateTime?
+  subidoPor        String?
+  createdAt        DateTime  @default(now())
+  documento        Documento @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+}
+
+model LecturaAnalisis {
+  id              Int      @id @default(autoincrement())
+  nombreDocumento String
+  urlDocumento    String?
+  pdfHash         String?
+  modo            String?
+  pdfBlob         String?
+  codigoProceso   String?
+  entidad         String?
+  resultado            Json
+  tokensEntrada        Int?
+  tokensSalida         Int?
+  creadoEn             DateTime  @default(now())
+  usuarioId            Int?
+  usuario              User?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  metodosExtraidos     MetodoPonderacionProceso[]
+  fechaGestionInterna  DateTime?
+  usuarioGestionaId    Int?
+  usuarioGestiona      User?     @relation("LecturasGestionadas", fields: [usuarioGestionaId], references: [id], onDelete: SetNull)
+  notasTrazabilidad    String?
+  checklistEstados     Json?
+
+  @@index([creadoEn])
+  @@index([pdfHash, modo])
+  @@index([usuarioId])
+  @@index([codigoProceso])
+  @@index([modo])
+  @@index([usuarioGestionaId])
+}
+
+model RagDocumento {
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  codigoProceso String?
+  totalPaginas  Int?
+  totalChunks   Int        @default(0)
+  creadoEn      DateTime   @default(now())
+  chunks        RagChunk[]
+
+  @@index([creadoEn])
+  @@index([codigoProceso])
+}
+
+model RagChunk {
+  id          Int          @id @default(autoincrement())
+  documentoId Int
+  indice      Int
+  texto       String
+  documento   RagDocumento @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+
+  @@index([documentoId])
+}
+
+model GeminiUsage {
+  id        Int      @id @default(autoincrement())
+  modelo    String
+  endpoint  String
+  tokensIn  Int      @default(0)
+  tokensOut Int      @default(0)
+  costUsd   Float    @default(0)
+  perfil    String?
+  usuario   String?
+  usuarioId Int?
+  user      User?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  creadoEn  DateTime @default(now())
+
+  @@index([creadoEn(sort: Desc)])
+  @@index([modelo])
+  @@index([endpoint])
+  @@index([usuarioId])
+}
+
+model CostoEstructura {
+  id              Int      @id @default(autoincrement())
+  procesoCodigo   String?
+  procesoNombre   String?
+  cargo           String?
+  nTrabajadores   Int      @default(1)
+  costoMO         Float    @default(0)
+  costoEpp        Float    @default(0)
+  costoExamenes   Float    @default(0)
+  costoMaquinaria Float    @default(0)
+  costoAdmin      Float    @default(0)
+  costoTotal      Float    @default(0)
+  datos           Json
+  creadoEn        DateTime @default(now())
+
+  @@index([procesoCodigo])
+  @@index([creadoEn])
+}
+
+// Catálogo propio de horarios/turnos/jornadas para Estructura de Costos.
+// Espejo simplificado de la ventana "Horario - Turnos - Jornadas - Frecuencias"
+// del sistema legado (Midasoft) — mientras no está conectada la integración
+// real (POST /api/cargos, /api/turnos), los horarios se buscan y crean aquí,
+// quedando disponibles para futuros costeos.
+model HorarioCatalogo {
+  id                  Int      @id @default(autoincrement())
+  codigo              String?
+  horario             String
+  turno               String?
+  jornada             String?
+  horasSemana         Float    @default(0)
+  horasJornada        Float    @default(0)
+  horaInicio          String?
+  horaFin             String?
+  porvar              Float    @default(0)
+  codigoMidasoft      String?
+  // { sobretiempos: {lun:{he,hen,rn,domFest,hedf,henf,rnf},...}, descanso: {...} }
+  horasExtras         Json?
+  jornLun             Boolean  @default(false)
+  jornMar             Boolean  @default(false)
+  jornMie             Boolean  @default(false)
+  jornJue             Boolean  @default(false)
+  jornVie             Boolean  @default(false)
+  jornSab             Boolean  @default(false)
+  jornDom             Boolean  @default(false)
+  jornFes             Boolean  @default(false)
+  bonoLun             Boolean  @default(false)
+  bonoMar             Boolean  @default(false)
+  bonoMie             Boolean  @default(false)
+  bonoJue             Boolean  @default(false)
+  bonoVie             Boolean  @default(false)
+  bonoSab             Boolean  @default(false)
+  bonoDom             Boolean  @default(false)
+  bonoFes             Boolean  @default(false)
+  diaDescansoFijo     Boolean  @default(false)
+  empresa             String?
+  creadoPor           String?
+  creadoEn            DateTime @default(now())
+  // true si quedó creado en el sistema externo (grupocolba.com/service);
+  // false si solo se guardó aquí (el servicio externo no respondió) — permite
+  // diferenciar horarios "de la API" de horarios guardados solo localmente.
+  sincronizadoExterno Boolean  @default(false)
+
+  @@index([empresa])
+  @@index([codigo])
+}
+
+model ParametrosLaborales {
+  id                        Int       @id @default(autoincrement())
+  anio                      Int       @unique
+  smmlv                     Float
+  auxilioTransporte         Float
+  topeAuxilioSmmlv          Float
+  // Jornada — ajuste #1: parametrizada por vigencia
+  horasMaxSemanaActual      Float
+  fechaCambioHoras          DateTime?
+  horasMaxSemanaPosterior   Float?
+  // Divisor hora y factor mensual — ajuste #6
+  divisorHora               Float     @default(240) // salario / divisor = valor hora
+  factorMensual             Float     @default(4.333) // sem→mes: 4.333, 4.5, 30/7…
+  metodoPeriodo             String    @default("factor") // 'factor'|'calendario'|'dias_mes'
+  // Horario nocturno
+  horaInicioNocturna        Int
+  horaFinNocturna           Int
+  // Recargos — ajuste #2: todos parametrizados, sin hardcode
+  recargoNocturno           Float // 0.35
+  recargoExtraDiurno        Float // 0.25
+  recargoExtraNocturno      Float // 0.75
+  recargoDominical          Float // 0.75 (base dominical diurno)
+  recargoDominicalNoc       Float     @default(0.75) // dominical nocturno (base)
+  recargoFestivoDiu         Float     @default(0.75) // festivo L-S diurno
+  recargoFestivoNoc         Float     @default(0.75) // festivo L-S nocturno (base)
+  // Política de descanso por defecto — Fase 2.1
+  politicaDescansoDefault   Boolean   @default(true) // aplicar si turno > umbral y sin descanso explícito
+  minHorasTurnoParaDescanso Float     @default(6.0) // umbral en horas brutas
+  descansoDefaultMinutos    Int       @default(60) // duración del descanso aplicado
+  descansoComputableDefault Boolean   @default(false) // false = no computable (descuenta de netas)
+  // ARL por clase de riesgo
+  riesgoI                   Float
+  riesgoII                  Float
+  riesgoIII                 Float
+  riesgoIV                  Float
+  riesgoV                   Float
+  fuenteNormativa           String
+  activo                    Boolean   @default(true)
+  creadoEn                  DateTime  @default(now())
+  actualizadoEn             DateTime  @updatedAt
+
+  @@index([anio])
+  @@index([activo])
+}
+
+model AsistenteConocimiento {
+  id             Int                          @id @default(autoincrement())
+  empresa        String?
+  modulo         String?
+  titulo         String
+  contenido      String
+  tipo           String?
+  activo         Boolean                      @default(true)
+  creadoEn       DateTime                     @default(now())
+  actualizadoEn  DateTime                     @updatedAt
+  embedding      Unsupported("vector(3072)")?
+  embeddingModel String?
+  embeddingAt    DateTime?
+
+  @@index([empresa])
+  @@index([activo])
+  @@index([tipo])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MÓDULO: MEMORIA PERSISTENTE DEL ASISTENTE COLBA
+// ═══════════════════════════════════════════════════════════════
+
+model AssistantMemory {
+  id        Int      @id @default(autoincrement())
+  scope     String   @default("GLOBAL")   // GLOBAL | EMPRESA | USUARIO | CHAT
+  empresa   String?                        // ASEOCOLBA | TEMPOCOLBA | VIGICOLBA | TRANSCOLBA | GENERAL
+  key       String   @unique               // identificador corto (ej: aseo_no_es_licitaciones)
+  title     String
+  content   String
+  priority  Int      @default(50)          // mayor = más prioridad (100=crítico, 50=normal)
+  isActive  Boolean  @default(true)
+  source    String   @default("manual")   // manual | sistema | correccion | documento
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope, isActive])
+  @@index([empresa, isActive])
+  @@index([priority(sort: Desc)])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MÓDULO: ESTRUCTURA DE COSTO — MANO DE OBRA
+//  Fase 0: catálogos + entidades operativas
+// ═══════════════════════════════════════════════════════════════
+
+// Festivos colombianos por año — ajuste #10
+model CalendarioFestivos {
+  id     Int      @id @default(autoincrement())
+  fecha  DateTime // solo fecha, sin hora (almacenar en UTC 00:00)
+  nombre String
+  tipo   String // 'fijo' | 'movil' | 'puente'
+  anio   Int
+  activo Boolean  @default(true)
+
+  @@unique([fecha])
+  @@index([anio])
+  @@index([fecha])
+}
+
+// Catálogo de cargos normalizados por empresa — ajuste #9 (catálogo propio)
+model CatalogoCargo {
+  id                   Int      @id @default(autoincrement())
+  empresaGrupo         String // 'ASEOCOLBA'|'VIGICOLBA'|'TEMPOCOLBA'|'TODAS'
+  cargoNormalizado     String
+  cargoAlias           String[] // variantes textuales que Gemini puede devolver
+  riesgoArlDefault     String // 'I'|'II'|'III'|'IV'|'V'
+  requiereExamenAltura Boolean  @default(false)
+  dotacionBasica       String[] // ej: ['overol','botas','guantes']
+  eppBasico            String[] // ej: ['tapabocas','guantes nitrilo']
+  salarioBaseDefault   Float    @default(0) // 0 = usar SMMLV del periodo
+  activo               Boolean  @default(true)
+  anio                 Int
+
+  cargos CargoManoObra[]
+
+  @@index([empresaGrupo])
+  @@index([cargoNormalizado])
+  @@index([anio])
+}
+
+// Tabla de riesgos ARL con actividades asociadas
+model CatalogoRiesgoARL {
+  id             Int      @id @default(autoincrement())
+  clase          String // 'I'|'II'|'III'|'IV'|'V'
+  porcentaje     Float
+  descripcion    String
+  actividades    String[] // lista de actividades que aplican a esta clase
+  requiereAltura Boolean  @default(false)
+  anio           Int
+  activo         Boolean  @default(true)
+
+  @@index([clase])
+  @@index([anio])
+}
+
+// Solicitud principal de análisis de mano de obra
+model SolicitudManoObra {
+  id                       Int       @id @default(autoincrement())
+  procesoId                Int? // FK opcional al proceso comercial
+  cliente                  String
+  ciudad                   String?
+  direccion                String?
+  textoOriginal            String // INMUTABLE: nunca modificar después de guardar
+  servicioDetectado        String?
+  empresaGrupo             String? // detectada por Gemini, validada por usuario
+  duracionMeses            Int?
+  requiereInsumos          Boolean?
+  requiereDotacionEspecial Boolean?
+  requiereEppEspecial      Boolean?
+  requiereAlturas          Boolean?
+  multisede                Boolean   @default(false)
+  estado                   String    @default("borrador") // 'borrador'|'en_revision'|'aprobada'|'rechazada'
+  geminiVersion            String?
+  geminiExtraccionRaw      Json? // output crudo de Gemini para trazabilidad
+  creadoPor                Int?
+  creadoEn                 DateTime  @default(now())
+  actualizadoEn            DateTime  @updatedAt
+  aprobadoPor              Int?
+  aprobadoEn               DateTime?
+
+  escenarios EscenarioManoObra[]
+  alertas    AlertaManoObra[]
+  preguntas  PreguntaPendiente[]
+
+  @@index([estado])
+  @@index([procesoId])
+  @@index([creadoEn])
+}
+
+// Escenario dentro de una solicitud (ej: vigilancia vs conserjería)
+model EscenarioManoObra {
+  id                Int               @id @default(autoincrement())
+  solicitudId       Int
+  solicitud         SolicitudManoObra @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  nombre            String
+  descripcion       String?
+  empresaGrupo      String // 'ASEOCOLBA'|'VIGICOLBA'|'TEMPOCOLBA'
+  tipoServicio      String
+  sede              String?
+  ciudad            String?
+  esPrincipal       Boolean           @default(false)
+  orden             Int               @default(0)
+  aprobado          Boolean           @default(false)
+  costoTotalMensual Float? // calculado por motor
+
+  cargos    CargoManoObra[]
+  alertas   AlertaManoObra[]
+  preguntas PreguntaPendiente[]
+
+  @@index([solicitudId])
+  @@index([empresaGrupo])
+}
+
+// Cargo dentro de un escenario — ajuste #5: campos de cantidad separados
+model CargoManoObra {
+  id              Int               @id @default(autoincrement())
+  escenarioId     Int
+  escenario       EscenarioManoObra @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+  catalogoCargoId Int?
+  catalogoCargo   CatalogoCargo?    @relation(fields: [catalogoCargoId], references: [id])
+
+  // Identificación
+  cargoOriginal    String // texto literal del cliente
+  cargoNormalizado String // mapeado al catálogo
+
+  // Cantidades — ajuste #5
+  cantidadSolicitada         Int // lo que el cliente pidió explícitamente
+  cantidadPuestosPorTurno    Int? // puestos operativos simultáneos por turno
+  cantidadPersonasCalculadas Int? // calculado por FTE y rotación
+  fteTeorico                 Float? // FTE = horasCoberturaTotal / horasMaxSemana
+  requiereTurnante           Boolean @default(false)
+
+  // Tipo de cobertura
+  tipoCobertura          String // 'persona'|'puesto'|'turnante'|'relevo'|'eventual'
+  // ajuste #4: día de descanso puede ser diferente al domingo
+  diaDescansoObligatorio String? // 'D' (domingo) u otro día pactado ('S', 'L', etc.)
+
+  // Jornada
+  jornadaSemanalDeclarada Float? // declarada por el cliente
+  jornadaSemanalCalculada Float? // calculada por motor
+  coincideJornada         Boolean?
+  diferenciaHoras         Float? // calculada - declarada
+
+  // Salario
+  salarioBase   Float?
+  fuenteSalario String? // 'catalogo'|'smmlv'|'manual'|'pliego'
+
+  // ARL
+  claseRiesgoArl        String? // 'I'|'II'|'III'|'IV'|'V'
+  porcentajeArl         Float?
+  requiereValidacionArl Boolean @default(true)
+
+  // Beneficios
+  aplicaAuxilioTransporte Boolean?
+  requiereDotacion        Boolean  @default(true)
+  requiereEpp             Boolean  @default(true)
+  requiereExamenMedico    Boolean  @default(true)
+
+  // Resultados del motor (JSON para flexibilidad de estructura)
+  costoLaboral    Json? // CostoLaboral completo
+  inputsMensuales Json? // InputsMensuales para exportar al tab actual
+
+  editadoManualmente Boolean @default(false)
+  observaciones      String?
+
+  turnos  TurnoManoObra[]
+  alertas AlertaManoObra[]
+
+  @@index([escenarioId])
+  @@index([catalogoCargoId])
+}
+
+// Turno dentro de un cargo
+model TurnoManoObra {
+  id      Int           @id @default(autoincrement())
+  cargoId Int
+  cargo   CargoManoObra @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+
+  // Definición (origen: Gemini)
+  dias       String[] // ['L','M','X','J','V']
+  horaInicio String // "HH:MM" 24h
+  horaFin    String // "HH:MM" 24h
+
+  // Tipo de día — ajuste #3: Gemini sugiere, backend confirma con CalendarioFestivos
+  tipoDiaGemini    String? // sugerido por Gemini
+  tipoDiaCalculado String? // 'habil'|'dominical'|'festivo'|'dom_festivo' — calculado por backend
+
+  // Descanso
+  cruzaMedianoche    Boolean @default(false)
+  descansoMinutos    Int     @default(0)
+  descansoComputable Boolean @default(false)
+
+  // Horas calculadas por motor determinístico
+  horasBrutasDia     Float?
+  horasNetasDia      Float?
+  horasDiurnas       Float?
+  horasNocturnas     Float?
+  horasOrdDiurnas    Float?
+  horasOrdNocturnas  Float?
+  horasExtDiurnas    Float?
+  horasExtNocturnas  Float?
+  horasDomDiurnas    Float?
+  horasDomNocturnas  Float?
+  horasExtDomDiurnas Float?
+  horasExtDomNoc     Float?
+  horasFestDiurnas   Float?
+  horasFestNocturnas Float?
+
+  observaciones String?
+
+  @@index([cargoId])
+}
+
+// Alertas del módulo con severidad — ajuste #2 indirecto (porcentaje viene de params)
+model AlertaManoObra {
+  id          Int                @id @default(autoincrement())
+  solicitudId Int?
+  solicitud   SolicitudManoObra? @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  escenarioId Int?
+  escenario   EscenarioManoObra? @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+  cargoId     Int?
+  cargo       CargoManoObra?     @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+
+  severidad            String // 'CRITICA'|'ALTA'|'MEDIA'|'BAJA'
+  codigo               String // 'JORNADA_INCONSISTENTE'|'COBERTURA_24_7'|...
+  mensaje              String
+  fuenteNormativa      String?
+  campoAfectado        String?
+  revisada             Boolean   @default(false)
+  revisadaPor          Int?
+  revisadaEn           DateTime?
+  comentarioValidacion String? // obligatorio para ALTA/CRITICA antes de aprobar
+
+  @@index([solicitudId])
+  @@index([escenarioId])
+  @@index([severidad])
+  @@index([revisada])
+}
+
+// Preguntas pendientes para el equipo comercial
+model PreguntaPendiente {
+  id          Int                @id @default(autoincrement())
+  solicitudId Int?
+  solicitud   SolicitudManoObra? @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  escenarioId Int?
+  escenario   EscenarioManoObra? @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+  cargoId     Int?
+
+  pregunta     String
+  prioridad    String // 'urgente'|'normal'|'opcional'
+  contexto     String?
+  respondida   Boolean   @default(false)
+  respuesta    String?
+  respondidaEn DateTime?
+
+  @@index([solicitudId])
+  @@index([respondida])
+}
+
+model LoginAttempt {
+  id            Int      @id @default(autoincrement())
+  clave         String   @unique
+  count         Int      @default(0)
+  resetAt       DateTime
+  actualizadoEn DateTime @default(now()) @updatedAt
+
+  @@index([resetAt])
+}
+
+model RateLimitGemini {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int
+  usuario       User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endpoint      String
+  fecha         String
+  count         Int      @default(0)
+  actualizadoEn DateTime @default(now()) @updatedAt
+
+  @@unique([usuarioId, endpoint, fecha])
+  @@index([fecha])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int?
+  usuario   User?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  email     String?
+  rol       String?
+  accion    String
+  recurso   String?
+  recursoId String?
+  metodo    String?
+  ip        String?
+  userAgent String?
+  detalle   Json?
+
+  creadoEn  DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([accion])
+  @@index([creadoEn])
+  @@index([recurso])
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MÓDULO: TRM — CACHÉ Y AUDITORÍA
+//  Fase 2A: persistencia de valores consultados y logs de auditoría
+// ═══════════════════════════════════════════════════════════════
+
+model TrmCache {
+  id            Int       @id @default(autoincrement())
+  /// Fecha a la que aplica este valor TRM (un registro por fecha + fuente)
+  fecha         DateTime  @db.Date
+  valor         Decimal   @db.Decimal(12, 4)
+  centavos      Int
+  vigenciaDesde DateTime? @db.Date
+  vigenciaHasta DateTime? @db.Date
+  /// "datos_gov_co" | "superfinanciera_soap"
+  fuente        String    @default("datos_gov_co")
+  fuenteUrl     String?
+  esOficial     Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  simulaciones  SimulacionPonderacion[]
+
+  @@unique([fecha, fuente])
+  @@index([fecha])
+  @@index([fuente])
+  @@index([createdAt(sort: Desc)])
+}
+
+model TrmConsultaLog {
+  id              Int       @id @default(autoincrement())
+  fechaConsultada DateTime  @db.Date
+  fuente          String
+  fuenteUrl       String?
+  httpStatus      Int?
+  exito           Boolean
+  valor           Decimal?  @db.Decimal(12, 4)
+  centavos        Int?
+  vigenciaDesde   DateTime? @db.Date
+  vigenciaHasta   DateTime? @db.Date
+  error           String?
+  /// Fragmento de la respuesta cruda (truncado a 2000 chars)
+  respuestaRaw    String?
+  createdAt       DateTime  @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([fuente])
+  @@index([exito])
+  @@index([fechaConsultada])
+}
+
+// ─── API pública: clientes con API Key ───────────────────────────────────────
+
+/// Consumidor externo de la API pública (/api/public/v1).
+/// La clave NUNCA se guarda en texto plano: solo su hash SHA-256 y un prefijo
+/// para búsqueda. Cada consumidor tiene clave, scopes y rate limit propios.
+model ApiClient {
+  id                 Int       @id @default(autoincrement())
+  nombre             String
+  /// Prefijo público de la clave (lookup O(1)); no es secreto
+  apiKeyPrefix       String    @unique
+  /// SHA-256 hex de la clave completa
+  apiKeyHash         String
+  activo             Boolean   @default(true)
+  /// p.ej. ["procesos:indicadores:read", "procesos:detalle:read"]
+  scopes             String[]  @default([])
+  /// Valores de Proceso.perfil permitidos; vacío = todas las empresas
+  empresasPermitidas String[]  @default([])
+  rateLimitPorMinuto Int       @default(60)
+  expiraEn           DateTime?
+  ultimoUsoEn        DateTime?
+  creadoEn           DateTime  @default(now())
+  actualizadoEn      DateTime  @updatedAt
+
+  @@index([activo])
+  @@map("api_clients")
+}
+
+// ─── Fase 2C: Proyección decimal TRM (motor estadístico, sin IA) ─────────────
+
+/// Serie diaria oficial completa recibida de la API de TRM.
+/// Guarda TODOS los registros, incluso repetidos por domingo/festivo.
+model TrmHistorico {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @unique @db.Date
+  trm       Decimal  @db.Decimal(12, 4)
+  fuente    String   @default("datos_gov_co")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fecha(sort: Desc)])
+  @@map("trm_historico")
+}
+
+/// Solo fechas donde la TRM cambió respecto a la inmediatamente anterior
+/// (primer dato, o valor distinto — incluye sábados con TRM nueva).
+/// Es la serie de entrenamiento del modelo ARIMA.
+model TrmEventoEfectivo {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @unique @db.Date
+  trm       Decimal  @db.Decimal(12, 4)
+  /// Consecutivo 0,1,2,… — índice temporal del modelo
+  eventoId  Int      @unique
+  createdAt DateTime @default(now())
+
+  @@index([eventoId(sort: Desc)])
+  @@map("trm_eventos_efectivos")
+}
+
+/// Resultado de cada recalibración del modelo (ARIMA + bootstrap + moda decimal).
+model TrmPrediccion {
+  id                   Int      @id @default(autoincrement())
+  fechaCalculo         DateTime @default(now())
+  fechaObjetivo        DateTime @db.Date
+  fechaTRMAplicable    DateTime @db.Date
+  trmMedianaSimulada   Decimal? @db.Decimal(12, 4)
+  decimalRecomendado   String?
+  rangoPliego          String?
+  metodoProbable       String?
+  probabilidadDecimal  Decimal? @db.Decimal(6, 4)
+  probabilidadRango    Decimal? @db.Decimal(6, 4)
+  nivelConfianza       String?
+  horizonteDiasHabiles Int
+  modeloUsado          String
+  advertencia          String?
+  /// eventoId del último evento efectivo usado en la calibración
+  /// (si hay eventos más nuevos, la predicción está desactualizada)
+  ultimoEventoId       Int?
+
+  @@index([fechaObjetivo])
+  @@index([fechaCalculo(sort: Desc)])
+  @@map("trm_predicciones")
+}
+
+// ─── Fase 2B: Simulaciones de ponderación económica ─────────────────────────
+
+model SimulacionPonderacion {
+  id                 Int       @id @default(autoincrement())
+  procesoId          Int?
+  proceso            Proceso?  @relation(fields: [procesoId], references: [id], onDelete: SetNull)
+  solicitudId        Int?
+  numeroProceso      String?
+  razonSocial        String?
+  empresaGrupo       String?
+  nombre             String?
+  presupuestoOficial Decimal   @db.Decimal(20, 2)
+  trmValor           Decimal   @db.Decimal(12, 4)
+  trmFecha           DateTime  @db.Date
+  trmCentavos        Int
+  trmFuente          String
+  trmCacheId         Int?
+  trmCache           TrmCache? @relation(fields: [trmCacheId], references: [id], onDelete: SetNull)
+  metodoActivo       String
+  puntajeMaximo      Decimal   @db.Decimal(10, 4)
+  miOfertaPorcentaje Decimal?  @db.Decimal(8, 4)
+  miOfertaValor      Decimal?  @db.Decimal(20, 2)
+  creadoPorId        Int?
+  creadoPor          User?     @relation(fields: [creadoPorId], references: [id], onDelete: SetNull)
+  estado             String    @default("borrador")
+  notas              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  competidores SimulacionCompetidor[]
+  resultados   SimulacionResultadoMetodo[]
+
+  @@index([creadoPorId])
+  @@index([procesoId])
+  @@index([empresaGrupo])
+  @@index([razonSocial])
+  @@index([estado])
+  @@index([numeroProceso])
+  @@index([trmCacheId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model SimulacionCompetidor {
+  id                        Int                   @id @default(autoincrement())
+  simulacionId              Int
+  simulacion                SimulacionPonderacion @relation(fields: [simulacionId], references: [id], onDelete: Cascade)
+  nombre                    String?
+  porcentajeOferta          Decimal               @db.Decimal(8, 4)
+  valorOferta               Decimal?              @db.Decimal(20, 2)
+  fuente                    String                @default("manual")
+  probabilidadParticipacion Decimal?              @db.Decimal(5, 4)
+  observaciones             String?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  @@index([simulacionId])
+  @@index([fuente])
+}
+
+model SimulacionResultadoMetodo {
+  id                 Int                   @id @default(autoincrement())
+  simulacionId       Int
+  simulacion         SimulacionPonderacion @relation(fields: [simulacionId], references: [id], onDelete: Cascade)
+  metodo             String
+  porcentajeOptimo   Decimal               @db.Decimal(8, 4)
+  valorOptimo        Decimal               @db.Decimal(20, 2)
+  puntajeOptimo      Decimal               @db.Decimal(10, 4)
+  miOfertaPorcentaje Decimal?              @db.Decimal(8, 4)
+  miOfertaPuntaje    Decimal?              @db.Decimal(10, 4)
+  diferenciaPuntos   Decimal?              @db.Decimal(10, 4)
+  esMetodoActivo     Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([simulacionId])
+  @@index([metodo])
+  @@index([simulacionId, metodo])
+}
+
+// ─── Fase 3A: Métodos de ponderación extraídos de pliegos ────────────────────
+
+model MetodoPonderacionProceso {
+  id                  Int              @id @default(autoincrement())
+  procesoId           Int?
+  proceso             Proceso?         @relation(fields: [procesoId], references: [id], onDelete: SetNull)
+  codigoProceso       String?
+  lecturaAnalisisId   Int?
+  lecturaAnalisis     LecturaAnalisis? @relation(fields: [lecturaAnalisisId], references: [id], onDelete: SetNull)
+  analisisEconomicoProcesoId Int?
+  analisisEconomicoProceso   AnalisisEconomicoProceso? @relation(fields: [analisisEconomicoProcesoId], references: [id], onDelete: SetNull)
+  // FASE A.1 — un metodo de la ruta forward pertenece a UN conjunto versionado.
+  // Legacy: nullable. El gate consulta SOLO metodos de un conjunto (activo o candidato).
+  conjuntoMetodosId   Int?
+  conjuntoMetodos     ConjuntoMetodosPonderacionProceso? @relation(fields: [conjuntoMetodosId], references: [id], onDelete: Restrict)
+  razonSocial         String?
+  empresaGrupo        String?
+  presupuestoOficial  Decimal?         @db.Decimal(20, 2)
+  /// Puntaje máximo del criterio — SOLO si está expresamente dentro del criterio económico.
+  puntajeMaximo       Decimal?         @db.Decimal(10, 4)
+  nombreMetodo        String
+  /// Nombre/etiqueta de la fórmula TAL COMO aparece en el pliego. NO se usa para mapear al motor.
+  tipoFormula         String
+  rangoTrmDesde       Int?
+  rangoTrmHasta       Int?
+  /// Condición TRM en texto cuando no es un rango simple 00–99.
+  condicionTrmTexto   String?
+
+  // FASE A.1 §5 — sobre qué valor se aplica la fórmula (no siempre el total de la oferta).
+  baseEconomicaEvaluada        BaseEconomicaEvaluada?
+  descripcionBaseEconomica     String?
+  baseEconomicaTextoFuente     String?
+  baseEconomicaPaginaReferencia Int?
+
+  // FASE A.1 §6 — mismo nombre != misma fórmula. La equivalencia con el motor
+  // se confirma por SEMÁNTICA, nunca por nombre. Sin EQUIVALENTE_CONFIRMADA no
+  // hay activación productiva.
+  formulaReferenciaTexto  String?   // cómo se calcula el valor de referencia (literal del pliego)
+  reglaPuntuacionTexto    String?   // cómo se asigna el puntaje (literal del pliego)
+  formulaKeyMotor         String?   // FormulaKey del motor — SOLO si equivalenciaMotorEstado = EQUIVALENTE_CONFIRMADA
+  equivalenciaMotorEstado EquivalenciaFormulaMotor @default(NO_EVALUADA)
+  equivalenciaMotorNota   String?
+
+  formulaTexto        String?
+  notasFormula        String?
+  paginaReferencia    Int?
+  seccionReferencia   String?
+  textoFuente         String?
+  confianzaExtraccion Decimal?         @db.Decimal(5, 4)
+  fuenteExtraccion    String           @default("lectura_analisis")
+  estadoRevision      String           @default("pendiente_revision")
+  revisadoPorId       Int?
+  revisadoPor         User?            @relation("MetodosRevisadosPor", fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  revisadoEn          DateTime?
+  aprobado            Boolean          @default(false)
+  advertencias        Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([procesoId])
+  @@index([codigoProceso])
+  @@index([lecturaAnalisisId])
+  @@index([analisisEconomicoProcesoId])
+  @@index([conjuntoMetodosId])
+  @@index([estadoRevision])
+  @@index([empresaGrupo])
+  @@index([razonSocial])
+  @@index([createdAt(sort: Desc)])
+}
+
+// Ajuste "DIAGNOSTICAR E IMPORTAR LA BASE DE TARIFAS DE MANTENIMIENTO DE
+// EQUIPOS" — histórico de tarifas de mantenimiento POR CONTRATO/SITIO,
+// importado desde "PLANTILLA COSTO MES MANTTO.xlsx" (ver
+// scripts/importar-tarifas-mantenimiento.ts). NUNCA representa una
+// tarifa "oficial" única por tipo de equipo: el mismo grupo/tipo/
+// subtipo de activo puede tener varios valores legítimos según el
+// contrato/cliente (confirmado con datos reales — ver diagnóstico). Una
+// futura TarifaMantenimientoCanonica (no implementada) sería la que
+// resuelva una tarifa "oficial" mediante decisión administrativa
+// explícita, sin reemplazar ni borrar este histórico.
+model TarifaMantenimientoEquipo {
+  id Int @id @default(autoincrement())
+
+  empresaPrestadora String @default("ASEOCOLBA")
+  uen               String
+
+  clienteRazonSocial String
+  contrato           String
+  consecutivoTarifa  Int
+  codigoTarifa       String?
+  puntoEntrega       String
+
+  codigoMunicipio String?
+  nombreCiudad    String?
+
+  grupoActivo            String
+  descripcionGrupoActivo String?
+  tipoActivo             String
+  descripcionTipoActivo  String?
+  subtipoActivo          String
+  descripcionEquipo      String
+
+  cantidadAsignada          Decimal? @db.Decimal(12, 2)
+  frecuencia                Decimal? @db.Decimal(8, 2)
+  valorUnitarioAsignado     Decimal? @db.Decimal(20, 2)
+  valorMesAsignado          Decimal? @db.Decimal(20, 2)
+  cantidadFacturar          Decimal? @db.Decimal(12, 2)
+  valorMesMantenimiento     Decimal  @db.Decimal(20, 2)
+  // Auditoría — solo presente cuando el valor provino de una fórmula de
+  // Excel con resultado cacheado (ver resolverValorCeldaNumericaExcel);
+  // nunca participa en la llave de negocio ni se reevalúa.
+  formulaValorMantenimiento String?
+  valorMesOtrosRubros       Decimal? @db.Decimal(20, 2)
+
+  fuenteArchivo String
+  fuenteHoja    String
+  fuenteFila    Int
+  hashFila      String
+
+  loteImportacionId Int?
+  loteImportacion   ImportacionTarifasMantenimiento? @relation(fields: [loteImportacionId], references: [id], onDelete: SetNull)
+
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Llave de negocio DEFINITIVA — confirmada tras verificar en vivo que
+  // "Cons. Tarifa" es fijo por contrato/sitio (nunca un consecutivo por
+  // línea de equipo); subtipoActivo es indispensable para diferenciar
+  // las líneas de un mismo sitio.
+  @@unique([empresaPrestadora, uen, contrato, puntoEntrega, consecutivoTarifa, subtipoActivo])
+  @@index([empresaPrestadora, uen, grupoActivo, tipoActivo, subtipoActivo, activo])
+  @@index([contrato, puntoEntrega])
+  @@index([clienteRazonSocial])
+}
+
+model ImportacionTarifasMantenimiento {
+  id                  Int                                         @id @default(autoincrement())
+  nombreArchivo       String
+  hashArchivo         String
+  fechaImportacion    DateTime                                    @default(now())
+  usuarioImportacion  String?
+  totalLeidos         Int                                         @default(0)
+  totalInsertados     Int                                         @default(0)
+  totalActualizados   Int                                         @default(0)
+  // Ajuste "MIGRACIÓN E IMPORTACIÓN CONTROLADA" §7 — insertar/actualizar
+  // requiere distinguir explícitamente "ya existía y no cambió" de
+  // "insertado"/"actualizado" (nunca se infiere restando).
+  totalSinCambios     Int                                         @default(0)
+  totalRechazados     Int                                         @default(0)
+  // NO_INICIADO nunca se usa aquí — un lote solo se crea al comenzar un
+  // --apply real. DRY_RUN nunca persiste un lote (ver §4) — los estados
+  // reales de un lote persistido son EN_PROCESO/COMPLETADO/FALLIDO.
+  estado              String                                      @default("EN_PROCESO")
+  detalleError        String?
+  tarifas             TarifaMantenimientoEquipo[]
+  registrosRechazados RegistroRechazadoImportacionMantenimiento[]
+  // Ajuste §4 — idempotencia: NO es @@unique (un archivo puede tener
+  // varios lotes fallidos/en proceso antes de completarse); el importador
+  // aplica la regla "ya existe un lote COMPLETADO con este hash → detener"
+  // en código, nunca por restricción de base de datos (que bloquearía
+  // también reintentos legítimos tras un FALLIDO).
+
+  @@index([hashArchivo])
+  @@index([fechaImportacion(sort: Desc)])
+}
+
+// Ajuste "MIGRACIÓN E IMPORTACIÓN CONTROLADA" §6 — el proyecto no tenía
+// ningún patrón existente de "fila rechazada de importación" que
+// reutilizar (única mención de "rechaz" en el schema era un valor de
+// enum de Solicitud, sin relación). Se crea esta tabla para poder
+// consultar individualmente cada fila rechazada (hoy 2, más las que
+// aparezcan en futuras versiones del Excel) sin concatenar texto libre
+// en `detalleError`.
+model RegistroRechazadoImportacionMantenimiento {
+  id                Int                             @id @default(autoincrement())
+  loteImportacionId Int
+  loteImportacion   ImportacionTarifasMantenimiento @relation(fields: [loteImportacionId], references: [id], onDelete: Cascade)
+
+  fuenteHoja        String
+  fuenteFila        Int
+  llaveNormalizada  String?
+  descripcionEquipo String?
+  motivo            String
+  datosOriginales   Json
+
+  creadoEn DateTime @default(now())
+
+  @@index([loteImportacionId])
+  @@index([fuenteHoja, fuenteFila])
+}
+
+// ─── Réplica local persistente del catálogo externo de Maquinaria y
+// Equipos (grupo_activo → subtipo_activo → equipos/obtener) ─────────────
+//
+// Ajuste "RÉPLICA LOCAL PERSISTENTE DEL CATÁLOGO DE EQUIPOS" — mismo
+// patrón ya aprobado en este proyecto para "lote de sincronización con
+// publicación controlada" (ver ImportacionTarifasMantenimiento): cada
+// sincronización crea un lote NUEVO (`EquipoActivoCatalogoSync`,
+// `activa:false` mientras se construye); solo se marca `activa:true` (y se
+// desactiva la anterior) si el resultado es aceptable — la réplica
+// publicada anterior NUNCA se borra ni se sustituye por una peor mientras
+// la nueva sincronización está en curso o si falla.
+model EquipoActivoCatalogoSync {
+  id           Int      @id @default(autoincrement())
+  /// Clave normalizada de empresa tal como la exige la fuente externa (ej. "aseo") — nunca el nombre visible ("ASEOCOLBA").
+  empresa      String
+  iniciadaEn   DateTime @default(now())
+  finalizadaEn DateTime?
+  /// EN_PROCESO | COMPLETADO | FALLIDO — nunca un booleano ambiguo.
+  estado       String   @default("EN_PROCESO")
+  /// Solo una sync por empresa puede estar activa (publicada) a la vez — la que realmente lee el endpoint.
+  activa       Boolean  @default(false)
+
+  totalEquipos       Int     @default(0)
+  totalGrupos        Int     @default(0)
+  totalPares         Int     @default(0)
+  incompleto         Boolean @default(false)
+  grupoActivoFallido Boolean @default(false)
+  gruposFallidos     Int     @default(0)
+  paresFallidos      Int     @default(0)
+  detalleError       String?
+
+  /// "cron" (N8N) | "manual:<usuario>" | "auto-primera-carga" — nunca se infiere, siempre se registra quién la disparó.
+  disparadaPor String?
+
+  equipos EquipoActivoCatalogo[]
+
+  @@index([empresa, activa])
+  @@index([empresa, finalizadaEn(sort: Desc)])
+}
+
+model EquipoActivoCatalogo {
+  id     Int    @id @default(autoincrement())
+  /// Redundante con `sincronizacion.empresa` a propósito — permite indexar/filtrar sin JOIN en la ruta de lectura (camino caliente del modal).
+  empresa String
+
+  codGrupo      String
+  codSubtipo    String
+  grupo         String?
+  subTipo       String?
+  nombre        String
+  /// Dato informativo del equipo (ubicación real de la fuente, columna `ubicacion_empresa_c`) — NUNCA se usa como filtro de este catálogo.
+  uen           String?
+  empresaC      String?
+  fechaAdquisicion String?
+  valor         Decimal? @db.Decimal(20, 2)
+  estado        String?
+  estadoProducto String?
+
+  sincronizacionId Int
+  sincronizacion   EquipoActivoCatalogoSync @relation(fields: [sincronizacionId], references: [id], onDelete: Cascade)
+
+  creadoEn DateTime @default(now())
+
+  @@index([empresa, sincronizacionId])
+  @@index([sincronizacionId, codGrupo, codSubtipo])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FASE A.1 — CAPTURA FORWARD DEL PLIEGO (criterios de evaluación económica)
+//
+//  Flujo: en la ficha de un Proceso (Proceso.id conocido) el usuario carga un
+//  PDF, indica que contiene los criterios económicos y pulsa "Analizar con
+//  Gemini". Gemini EXTRAE estructura (nunca aprueba). El humano revisa y
+//  aprueba. Solo lo aprobado alimenta simulación/recomendación.
+//
+//  Identidad canónica: SIEMPRE Proceso.id (FK requerida). Nunca codigoProceso
+//  ni lecturaAnalisisId como identidad de negocio.
+//
+//  Migración PENDIENTE de aplicar — no se ejecuto migrate/db push.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum EstadoRevisionPliego {
+  SIN_ANALIZAR
+  PENDIENTE_REVISION
+  REQUIERE_REVISION_PLIEGO
+  PLIEGO_VERIFICADO
+  /// usaPonderacionTrm = NO confirmado por un humano: el proceso NO
+  /// pertenece al workflow productivo de ponderación TRM. NO es un pliego
+  /// pendiente de revisión — es un pliego fuera de alcance. Las
+  /// configuraciones históricas (si las hubo) NO se borran ni se tocan.
+  NO_APLICA_TRM
+}
+
+enum EstadoAnalisisDocumento {
+  PENDIENTE
+  ANALIZANDO
+  ANALIZADO
+  ERROR
+}
+
+enum EstadoVersionRegla {
+  CANDIDATA
+  ACTIVA
+  SUPERSEDED
+  RECHAZADA
+}
+
+enum OrigenTransicion {
+  HUMANO
+  SISTEMA
+}
+
+/// La semántica real de la regla temacTRM vive en eventoBaseTrm +
+/// offsetDiasHabiles + politicaActualizacionFecha (+ fechaFijaTrm). Este
+/// campo es solo el clasificador grueso.
+enum TipoReglaTrm {
+  RELATIVA_A_EVENTO
+  FECHA_FIJA
+  NO_APLICA
+  OTRA
+}
+
+enum EventoBaseTrm {
+  FECHA_CIERRE
+  FECHA_PRESENTACION_OFERTAS
+  FIN_TRASLADO_INFORME_EVALUACION
+  AUDIENCIA_ADJUDICACION
+  OTRO
+}
+
+/// Qué pasa con la fecha base si el cronograma cambia después.
+/// CONGELADA_INICIAL: se conserva la fecha prevista en la resolución de
+/// apertura (caso real encontrado en pliegos de audiencia de adjudicación).
+enum PoliticaActualizacionFechaTrm {
+  SIGUE_CRONOGRAMA
+  CONGELADA_INICIAL
+  OTRA
+}
+
+enum ReglaCentavos {
+  NO_DEFINIDA
+  REDONDEO
+  TRUNCADO
+  OTRA
+}
+
+/// ¿La TRM gobierna la evaluación económica de ESTE proceso?
+/// Este flujo solo aplica cuando existe TRM -> decimal/condición -> rango ->
+/// método de evaluación económica. Un PDF que menciona TRM para conversión
+/// de moneda / estados financieros / experiencia NO es de este flujo.
+enum UsoPonderacionTrm {
+  SI
+  NO
+  NO_DETERMINADO
+}
+
+/// Sobre qué valor de la oferta se aplica el criterio económico/TRM.
+/// COMPONENTE_ESPECIFICO: la fórmula se aplica solo a una parte (p. ej. solo
+/// los medios tecnológicos no regulados, no el total de la oferta).
+enum BaseEconomicaEvaluada {
+  TOTAL_OFERTA
+  COMPONENTE_ESPECIFICO
+  OTRA
+}
+
+/// ¿La fórmula del pliego es matemáticamente equivalente a una del motor?
+/// Mismo nombre NO implica misma fórmula: la equivalencia la confirma un
+/// humano/el motor comparando la SEMÁNTICA (valor de referencia, variables,
+/// tratamiento del presupuesto, asignación de puntaje, umbrales, ranking).
+enum EquivalenciaFormulaMotor {
+  NO_EVALUADA
+  EQUIVALENTE_CONFIRMADA
+  NO_EQUIVALENTE
+  DESCONOCIDA
+}
+
+/// PDF cargado manualmente por el usuario en la ficha del proceso, declarado
+/// como portador de los criterios economicos. Un proceso puede tener varios
+/// (pliego + adenda_01 + adenda_02 ...). El blob se guarda una sola vez aqui.
+model DocumentoAnalisisEconomicoProceso {
+  id             Int      @id @default(autoincrement())
+  procesoId      Int
+  // Restrict (NO Cascade): es evidencia de auditoría. Borrar un Proceso no
+  // debe borrar silenciosamente el documento que soportó una regla aprobada.
+  proceso        Proceso  @relation(fields: [procesoId], references: [id], onDelete: Restrict)
+
+  nombreArchivo  String
+  mimeType       String
+  tamanoBytes    Int
+  hashArchivo    String
+
+  // Almacenamiento del binario — abstracción para poder mover el blob a
+  // storage externo (UploadThing) sin cambiar este modelo:
+  //   storageBackend = "uploadthing" (default) → storageKey / storageUrl
+  //   storageBackend = "db"                    → archivoBase64 (solo PDFs pequeños)
+  storageBackend String   @default("uploadthing")
+  storageKey     String?
+  storageUrl     String?
+  archivoBase64  String?
+
+  nPaginas       Int?
+  textoExtraido  String?
+
+  rol            String   @default("PLIEGO")
+
+  estadoAnalisis EstadoAnalisisDocumento @default(PENDIENTE)
+  errorAnalisis  String?
+
+  cargadoPorId   Int?
+  cargadoPor     User?    @relation("DocsAnalisisEconomicoCargados", fields: [cargadoPorId], references: [id], onDelete: SetNull)
+  cargadoEn      DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
+
+  analisis       AnalisisEconomicoProceso[]
+  reglasTrm      ReglaTrmProceso[]
+  conjuntosMetodos ConjuntoMetodosPonderacionProceso[]
+
+  @@index([procesoId])
+  @@index([hashArchivo])
+  @@index([estadoAnalisis])
+  @@unique([procesoId, hashArchivo])
+}
+
+/// Una corrida de "Analizar con Gemini" sobre UN documento.
+model AnalisisEconomicoProceso {
+  id              Int      @id @default(autoincrement())
+  procesoId       Int
+  proceso         Proceso  @relation(fields: [procesoId], references: [id], onDelete: Restrict)
+  documentoId     Int
+  documento       DocumentoAnalisisEconomicoProceso @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+
+  modeloGemini    String
+  versionExtractor String   // semver del schema Zod de extracción usado
+  versionPrompt    String   // semver del prompt usado
+  tokensIn        Int      @default(0)
+  tokensOut       Int      @default(0)
+  salidaCruda     Json
+  extraccion      Json
+  /// [{ tipo: "INCONSISTENCIA_DOCUMENTAL" | "AMBIGUEDAD" | ..., descripcion, paginas:[int], fuentes:[str] }]
+  advertencias    Json?
+
+  // Señal del extractor: ¿la TRM gobierna la evaluación económica aquí?
+  // NO es dato verificado — el humano confirma y setea Proceso.usaPonderacionTrm.
+  trmGobiernaEvaluacionDetectado   Boolean?
+  trmGobiernaEvaluacionTextoFuente String?
+  trmGobiernaEvaluacionPagina      Int?
+
+  ejecutadoPorId  Int?
+  ejecutadoPor    User?    @relation("AnalisisEconomicoEjecutados", fields: [ejecutadoPorId], references: [id], onDelete: SetNull)
+  ejecutadoEn     DateTime @default(now())
+
+  reglaTrmGenerada  ReglaTrmProceso?
+  conjuntoGenerado  ConjuntoMetodosPonderacionProceso?
+  metodosGenerados  MetodoPonderacionProceso[]
+
+  @@index([procesoId])
+  @@index([documentoId])
+  @@index([ejecutadoEn(sort: Desc)])
+}
+
+/// Regla temporal de TRM del pliego, VERSIONADA (append + supersede).
+model ReglaTrmProceso {
+  id                Int      @id @default(autoincrement())
+  procesoId         Int
+  proceso           Proceso  @relation(fields: [procesoId], references: [id], onDelete: Restrict)
+
+  version           Int
+  estadoVersion     EstadoVersionRegla
+
+  supersedeAId      Int?             @unique
+  supersedeA        ReglaTrmProceso?  @relation("CadenaReglaTrm", fields: [supersedeAId], references: [id])
+  reemplazadaPor    ReglaTrmProceso?  @relation("CadenaReglaTrm")
+
+  origenCambio      String?
+  motivoCambio      String?
+
+  tipoReglaTrm      TipoReglaTrm
+  eventoBaseTrm     EventoBaseTrm?
+  /// texto que identifica el evento base en el pliego (p. ej. "resolución de
+  /// apertura", "cronograma SECOP", "acta de traslado del informe").
+  fuenteEventoBase  String?
+  offsetDiasHabiles Int?                    // 0 = día del evento · +1 · +2 (segundo día hábil) ...
+  politicaActualizacionFecha PoliticaActualizacionFechaTrm?
+  /// fecha prevista congelada (solo si politicaActualizacionFecha = CONGELADA_INICIAL).
+  fechaBaseCongelada DateTime? @db.Date
+  fechaFijaTrm      DateTime? @db.Date       // solo si tipoReglaTrm = FECHA_FIJA
+  calendarioHabil   String?
+  zonaHoraria       String?
+  reglaCentavos     ReglaCentavos
+
+  documentoId         Int?
+  documento           DocumentoAnalisisEconomicoProceso? @relation(fields: [documentoId], references: [id], onDelete: SetNull)
+  analisisEconomicoId Int?     @unique
+  analisisEconomico   AnalisisEconomicoProceso? @relation(fields: [analisisEconomicoId], references: [id], onDelete: SetNull)
+  textoReglaTrm       String?
+  textoFuente         String?
+  paginaReferencia    Int?
+  seccionReferencia   String?
+  confianzaExtraccion Decimal? @db.Decimal(5, 4)
+  advertencias        Json?
+  fuenteExtraccion    String
+
+  origenTransicion  OrigenTransicion @default(HUMANO)
+  creadoPorId       Int?
+  creadoPor         User?    @relation("ReglasTrmCreadas", fields: [creadoPorId], references: [id], onDelete: SetNull)
+  aprobadoPorId     Int?
+  aprobadoPor       User?    @relation("ReglasTrmAprobadas", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+  aprobadoEn        DateTime?
+  rechazadoPorId    Int?
+  rechazadoPor      User?    @relation("ReglasTrmRechazadas", fields: [rechazadoPorId], references: [id], onDelete: SetNull)
+  rechazadoEn       DateTime?
+  motivoRechazo     String?
+  supersedidaEn     DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  excepciones       DecisionExcepcionCandidata[]
+
+  @@unique([procesoId, version])
+  @@index([procesoId, estadoVersion])
+  @@index([documentoId])
+  // Indices UNICOS PARCIALES creados por SQL crudo en la migracion:
+  //   CREATE UNIQUE INDEX regla_trm_una_activa    ON "ReglaTrmProceso"("procesoId") WHERE "estadoVersion" = 'ACTIVA';
+  //   CREATE UNIQUE INDEX regla_trm_una_candidata ON "ReglaTrmProceso"("procesoId") WHERE "estadoVersion" = 'CANDIDATA';
+}
+
+/// CONJUNTO versionado de metodos/rangos de ponderacion de un proceso.
+/// Mismo ciclo de vida que ReglaTrmProceso (CANDIDATA/ACTIVA/SUPERSEDED/RECHAZADA).
+/// Una adenda / reanalisis produce un CONJUNTO CANDIDATO nuevo; el ACTIVO
+/// anterior NO se toca hasta aprobacion humana. NUNCA se mezclan metodos de
+/// generaciones distintas: el gate consulta SOLO los metodos de un conjunto.
+model ConjuntoMetodosPonderacionProceso {
+  id                Int      @id @default(autoincrement())
+  procesoId         Int
+  proceso           Proceso  @relation(fields: [procesoId], references: [id], onDelete: Restrict)
+
+  version           Int
+  estadoVersion     EstadoVersionRegla
+
+  supersedeAId      Int?     @unique
+  supersedeA        ConjuntoMetodosPonderacionProceso?  @relation("CadenaConjuntoMetodos", fields: [supersedeAId], references: [id])
+  reemplazadoPor    ConjuntoMetodosPonderacionProceso?  @relation("CadenaConjuntoMetodos")
+
+  origenCambio      String?
+  motivoCambio      String?
+
+  documentoId         Int?
+  documento           DocumentoAnalisisEconomicoProceso? @relation(fields: [documentoId], references: [id], onDelete: SetNull)
+  analisisEconomicoId Int?     @unique
+  analisisEconomico   AnalisisEconomicoProceso? @relation(fields: [analisisEconomicoId], references: [id], onDelete: SetNull)
+
+  // Presupuesto oficial y puntaje maximo economico VERIFICADOS por el humano
+  // al aprobar el conjunto (distintos de *Detectado en AnalisisEconomicoProceso).
+  // §3 — el presupuesto NO es requisito universal. Solo se exige si alguna
+  // fórmula EQUIVALENTE_CONFIRMADA del conjunto lo necesita (p. ej.
+  // media_geometrica_con_presupuesto). Se calcula al aprobar.
+  presupuestoRequeridoPorFormula Boolean  @default(false)
+  presupuestoOficialAprobado     Decimal? @db.Decimal(20, 2)
+  presupuestoTextoFuente         String?
+  presupuestoPaginaReferencia    Int?
+  /// "PROCESO_CANONICO" | "REVISION_HUMANA" | "FUENTE_EXPLICITA"
+  presupuestoOrigen              String?
+  puntajeMaximoEconomicoAprobado Decimal? @db.Decimal(10, 4)
+  puntajeMaximoTextoFuente       String?
+  puntajeMaximoPaginaReferencia  Int?
+
+  advertencias      Json?
+
+  origenTransicion  OrigenTransicion @default(HUMANO)
+  creadoPorId       Int?
+  creadoPor         User?    @relation("ConjuntosMetodosCreados", fields: [creadoPorId], references: [id], onDelete: SetNull)
+  aprobadoPorId     Int?
+  aprobadoPor       User?    @relation("ConjuntosMetodosAprobados", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+  aprobadoEn        DateTime?
+  rechazadoPorId    Int?
+  rechazadoPor      User?    @relation("ConjuntosMetodosRechazados", fields: [rechazadoPorId], references: [id], onDelete: SetNull)
+  rechazadoEn       DateTime?
+  motivoRechazo     String?
+  supersedidoEn     DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  metodos           MetodoPonderacionProceso[]
+
+  @@unique([procesoId, version])
+  @@index([procesoId, estadoVersion])
+  @@index([documentoId])
+  // Indices UNICOS PARCIALES creados por SQL crudo en la migracion:
+  //   CREATE UNIQUE INDEX conjunto_metodos_uno_activo    ON "ConjuntoMetodosPonderacionProceso"("procesoId") WHERE "estadoVersion" = 'ACTIVA';
+  //   CREATE UNIQUE INDEX conjunto_metodos_uno_candidato ON "ConjuntoMetodosPonderacionProceso"("procesoId") WHERE "estadoVersion" = 'CANDIDATA';
+}
+
+/// Excepcion HUMANA y AUDITADA para recomendar con una CANDIDATA pendiente.
+model DecisionExcepcionCandidata {
+  id                  Int      @id @default(autoincrement())
+  procesoId           Int
+  reglaTrmCandidataId Int
+  // Restrict: es un registro de auditoría (autorización humana explícita). Las
+  // reglas nunca se borran (van a RECHAZADA/SUPERSEDED), así que no bloquea nada real.
+  reglaTrmCandidata   ReglaTrmProceso @relation(fields: [reglaTrmCandidataId], references: [id], onDelete: Restrict)
+
+  decision            String
+  motivo              String
+  // actorId NO NULL + Restrict: Gemini/jobs nunca crean esta fila; el endpoint
+  // exige sesión humana y fija actorId = session.id en el servidor.
+  actorId             Int
+  actor               User     @relation("ExcepcionesCandidataDecididas", fields: [actorId], references: [id], onDelete: Restrict)
+  origen              String   @default("HUMANO")
+  decididoEn          DateTime @default(now())
+  vigente             Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  @@index([procesoId, reglaTrmCandidataId])
+  @@index([vigente])
+}
+
+/// B.3 — concepto CANÓNICO de origen de un proceso, tal como lo resuelve la
+/// el servicio de datos server-side por la NATURALEZA del origen. Nunca es un
+/// nombre de proveedor ni de scraper. `MANUAL` marca los procesos creados a
+/// mano en la aplicación: el aplicador los excluye de la reconciliación de
+/// full-resync por esta semántica persistida (la convención `sourceKey`
+/// `local:%` queda solo como compatibilidad con registros históricos).
+enum OrigenFuncionalCanonico {
+  MANUAL
+  PUBLICO_ABIERTO
+  PUBLICO_REGISTRADO
+  PRIVADO
+  DESCONOCIDO
+}
