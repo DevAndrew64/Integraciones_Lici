@@ -1,0 +1,17 @@
+{
+  "name": "puente-contratos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servicio puente LiciColba → Contratos (MySQL 5.5 / Visual FoxPro)",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
