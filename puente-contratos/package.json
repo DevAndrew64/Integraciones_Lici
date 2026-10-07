@@ -9,9 +9,14 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:mysql": "node --env-file=test/mysql/prueba.env --test test/mysql.integracion.test.js",
+    "mysql:prueba:arriba": "docker compose -f test/mysql/docker-compose.yml up -d --wait",
+    "mysql:prueba:abajo": "docker compose -f test/mysql/docker-compose.yml down -v",
+    "esquema:actualizar": "node src/herramientas/exportar-esquema.js"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mysql2": "^3.24.5"
   }
 }

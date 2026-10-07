@@ -1,16 +1,20 @@
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
+import { nitConDV } from './nit.js';
 import { huella, validarContrato } from './validar.js';
 
 /**
  * Escritor del módulo 1 («prueba»): no toca ninguna base de datos; devuelve lo que escribiría. El módulo MySQL aporta un
  * escritor con la misma forma (`escribir(datos) → resumen`) y no cambia nada más de este archivo.
+ * El NIT se escribiría como Contratos lo guarda: «base-DV» (el dígito de verificación lo calcula el puente).
  */
 export const escritorPrueba = {
   async escribir(datos) {
-    return { escribiria: datos };
+    return { escribiria: { ...datos, cliente: { ...datos.cliente, nitCompleto: nitConDV(datos.cliente.nit) } } };
   },
 };
+
+const SIN_BD = async () => ({ estado: 'sin_configurar' });
 
 function autenticar(token) {
   const esperado = Buffer.from(token);
@@ -25,9 +29,9 @@ function autenticar(token) {
  * Servicio puente LiciColba → Contratos. LiciColba (Next.js) envía un JSON estructurado; el puente lo valida y lo
  * entrega al escritor. Corre SOLO dentro de la red interna y exige un token compartido.
  *
- * @param {{token: string, modo?: 'dry-run' | 'escritura', escritor?: {escribir(datos: object): Promise<object>}}} opciones
+ * @param {{token: string, modo?: 'dry-run' | 'escritura', escritor?: {escribir(datos: object): Promise<object>}, estadoBD?: () => Promise<{estado: string}>}} opciones
  */
-export function crearApp({ token, modo = 'dry-run', escritor = escritorPrueba }) {
+export function crearApp({ token, modo = 'dry-run', escritor = escritorPrueba, estadoBD = SIN_BD }) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -38,7 +42,14 @@ export function crearApp({ token, modo = 'dry-run', escritor = escritorPrueba })
     next();
   });
 
-  app.get('/health', (_req, res) => res.json({ ok: true, servicio: 'puente-contratos', modo }));
+  // Público: solo el estado de la base en una palabra (sin_configurar | ok | esquema_distinto | sin_conexion).
+  app.get('/health', async (_req, res, next) => {
+    try {
+      res.json({ ok: true, servicio: 'puente-contratos', modo, bd: (await estadoBD()).estado });
+    } catch (e) {
+      next(e);
+    }
+  });
 
   app.use(autenticar(token));
   app.use(express.json({ limit: '256kb' }));

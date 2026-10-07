@@ -1,0 +1,27 @@
+# MySQL 5.5 LOCAL solo para probar el puente (nunca con datos de producción). El servidor de Contratos es 5.5 con las
+# tablas en latin1 y sin modo estricto: esta imagen lo reproduce.
+#
+#   npm run mysql:prueba:arriba      # levanta la base y crea las tablas (test/mysql/esquema.sql)
+#   npm run test:mysql               # corre las pruebas contra ella
+#   npm run mysql:prueba:abajo       # la apaga y borra
+services:
+  mysql55:
+    image: mysql:5.5
+    container_name: puente-mysql55-prueba
+    # Solo accesible desde este equipo.
+    ports:
+      - "127.0.0.1:3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: prueba-root-local
+      MYSQL_DATABASE: almacen_prueba
+      MYSQL_USER: puente
+      MYSQL_PASSWORD: prueba-local-sin-valor
+    # Como el servidor de Contratos: latin1 y sin sql_mode (el puente fija el modo estricto en cada conexión).
+    command: ["--character-set-server=latin1", "--collation-server=latin1_swedish_ci"]
+    volumes:
+      - ./esquema.sql:/docker-entrypoint-initdb.d/10-esquema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 60

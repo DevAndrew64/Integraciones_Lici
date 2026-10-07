@@ -41,7 +41,15 @@ describe('autenticación', () => {
   it('/health responde sin token y no revela datos', async () => {
     const r = await fetch(`${base}/health`);
     assert.equal(r.status, 200);
-    assert.deepEqual(await r.json(), { ok: true, servicio: 'puente-contratos', modo: 'dry-run' });
+    assert.deepEqual(await r.json(), { ok: true, servicio: 'puente-contratos', modo: 'dry-run', bd: 'sin_configurar' });
+  });
+  it('/health informa solo el estado de la base en una palabra, sin detalles', async () => {
+    const { s, url } = await arrancar({ estadoBD: async () => ({ estado: 'esquema_distinto', problemas: [{ tabla: 'secreta' }] }) });
+    try {
+      assert.deepEqual(await (await fetch(`${url}/health`)).json(), { ok: true, servicio: 'puente-contratos', modo: 'dry-run', bd: 'esquema_distinto' });
+    } finally {
+      s.close();
+    }
   });
   it('POST sin token o con token incorrecto → 401', async () => {
     assert.equal((await post(valido(), { token: null })).status, 401);
@@ -57,6 +65,7 @@ describe('POST /contratos (modo prueba)', () => {
     assert.equal(j.ok, true);
     assert.equal(j.modo, 'dry-run');
     assert.equal(j.escribiria.cliente.nit, '900123456');
+    assert.equal(j.escribiria.cliente.nitCompleto, '900123456-8', 'Contratos guarda el NIT como base-DV; el DV lo calcula el puente');
     assert.equal(j.escribiria.contrato.valorMensual, 5000000);
     assert.match(j.huella, /^[0-9a-f]{64}$/);
     assert.deepEqual(j.advertencias, []);
@@ -142,12 +151,21 @@ describe('validarContrato', () => {
     assert.equal(r.datos.contrato.objeto, 'Línea 1\nLínea 2');
   });
 
-  it('nunca trunca: lo que excede el límite se rechaza (el emoji cuenta como UN carácter)', () => {
+  it('nunca trunca: lo que excede el límite se rechaza', () => {
     const c = valido();
-    c.cliente.razonSocial = '😀'.repeat(200);
+    c.cliente.razonSocial = 'ñ'.repeat(200);
     assert.equal(validarContrato(c).ok, true);
-    c.cliente.razonSocial = '😀'.repeat(201);
+    c.cliente.razonSocial = 'ñ'.repeat(201);
     assert.match(validarContrato(c).errores[0].mensaje, /Máximo 200 caracteres \(tiene 201\)/);
+  });
+
+  it('las tablas de Contratos son latin1: lo que no cabe se rechaza, nunca se cambia por «?»', () => {
+    const c = valido();
+    c.cliente.razonSocial = 'Aseo “Premium” – Ñandú’s S.A. €';
+    c.contrato.objeto = 'Servicio de aseo ≥ 8 horas 😀';
+    const r = validarContrato(c);
+    assert.deepEqual(r.errores.map((e) => e.campo), ['contrato.objeto']);
+    assert.match(r.errores[0].mensaje, /no puede guardar: «≥» «😀»/);
   });
 
   it('rechaza caracteres de control y valores de tipo equivocado', () => {

@@ -5,9 +5,11 @@
  *   pidió (p. ej. lo que digitan Legal o el cliente).
  * - Se devuelven TODOS los errores a la vez. Lo opcional que falta no bloquea: se informa como advertencia.
  * - Nunca se trunca ni se redondea en silencio: lo que no cabe se rechaza.
- * - Los límites de longitud son PROVISIONALES: el módulo MySQL los reemplaza por la longitud real de cada columna.
+ * - Los límites de longitud son PROVISIONALES hasta el módulo 4, que los toma de la columna real donde se escribe cada dato.
+ * - Las tablas de Contratos son latin1: un carácter que no cabe se rechaza (nunca se cambia por «?» ni se corta).
  */
 import { createHash } from 'node:crypto';
+import { caracteresNoGuardables } from './latin1.js';
 
 const ESQUEMA = {
   origen: {
@@ -22,7 +24,7 @@ const ESQUEMA = {
   contrato: {
     // «Descripción» (Datos Generales) y «Objeto» (Mic Hoja 1/4) llevan el mismo texto.
     objeto: { tipo: 'texto', max: 4000, multilinea: true },
-    // A.I.U. con la «A»: lo calcula LiciColba (administración + imprevistos + utilidad sobre costos directos).
+    // A.I.U. de Contratos = el «% de I.U.» del costeo, aplicado a todo el costo (administrativos incluidos).
     porcentajeAIU: { tipo: 'numero', min: 0, max: 100 },
     // El valor del contrato es MENSUAL (con IVA).
     valorMensual: { tipo: 'numero', min: 0 },
@@ -39,6 +41,8 @@ const VALIDADORES = {
     if (typeof valor !== 'string') return { error: 'Debe ser texto.' };
     let t = valor.normalize('NFC');
     if (CONTROL.test(t)) return { error: 'Contiene caracteres de control.' };
+    const fuera = caracteresNoGuardables(t);
+    if (fuera.length > 0) return { error: `Contiene caracteres que Contratos no puede guardar: ${fuera.slice(0, 5).map((c) => `«${c}»`).join(' ')}.` };
     t = multilinea ? t.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trimEnd()).join('\n').trim() : t.replace(/\s+/g, ' ').trim();
     const largo = Array.from(t).length; // caracteres, no unidades UTF-16
     return largo > max ? { error: `Máximo ${max} caracteres (tiene ${largo}).` } : { valor: t };
