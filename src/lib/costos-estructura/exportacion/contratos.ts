@@ -6,7 +6,8 @@ import type { TotalesPantallaDto } from './costos-pantalla';
  * Hoja «Contratos» — los datos de la oferta con los NOMBRES del formulario «Contratos» (VFP) y en el orden de sus
  * pestañas, para digitarlos o copiarlos sin reescribir. Solo incluye lo que LiciColba ya tiene (Solicitud, totales de
  * la pantalla y el snapshot guardado del módulo Resultado): lo demás (fechas, forma de pago…) se digita en Contratos.
- * No recalcula nada ni escribe en ningún sistema.
+ * Lo único que calcula es el A.I.U. de los seis valores de «Operación del Contrato», como los guarda Contratos; no escribe
+ * en ningún sistema.
  */
 
 export interface SolicitudContratos {
@@ -55,16 +56,24 @@ const texto = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null
 const numero = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 /**
- * % A.I.U. = (Administración + Imprevistos + Utilidad) ÷ costos directos. El costeo guarda solo el % de I.U.; la «A» son
- * los Costos Administrativos, y el I.U. se aplica sobre (directos + administrativos), igual que `calcularTarifaServicio`.
- * `null` si falta el % de I.U. configurado o no hay costos directos.
+ * % A.I.U. de Contratos = el «% de I.U.» del costeo, tal cual. Contratos lo aplica sobre TODO el costo (mano de obra,
+ * insumos, equipos, administrativos, valor agregado y no continuos), igual que `calcularTarifaServicio`; los costos
+ * administrativos ya están en esa base, así que la «A» no se suma aparte. Verificado con una oferta adjudicada de
+ * producción (0.10 en la plantilla y en la base) y con los resultados guardados de LiciColba.
+ * `null` si el costeo no tiene el % de I.U. configurado.
  */
-export function porcentajeAIU(t: TotalesPantallaDto, porcentajeIU: unknown): number | null {
+export function porcentajeAIU(porcentajeIU: unknown): number | null {
   const iu = numero(porcentajeIU);
-  const directos = t.manoObra + t.insumos + t.maquinaria;
-  if (iu === null || !(directos > 0)) return null;
-  const valorIU = ((directos + t.administrativos) * iu) / 100;
-  return Math.round(((t.administrativos + valorIU) / directos) * 10000) / 100;
+  return iu !== null && iu >= 0 ? iu : null;
+}
+
+/**
+ * Valor que Contratos guarda para cada componente de la tarifa: el costo CON el A.I.U. incluido y antes de IVA, redondeado
+ * al peso (hoja «Tarifa» de la plantilla de Contratos: «VR. FINAL A IMPORTAR CON AIU» = ROUND(costo × (1 + AIU), 0)).
+ * `null` si se desconoce el A.I.U.: un valor sin él no es el que lleva el formulario.
+ */
+export function valorConAIU(costo: number, aiu: number | null): number | null {
+  return aiu === null ? null : Math.round(costo * (1 + aiu / 100));
 }
 
 export function camposFormularioContratos(d: {
@@ -73,7 +82,7 @@ export function camposFormularioContratos(d: {
   resultado: ResultadoGuardado | null;
 }): CampoContratos[] {
   const { solicitud: s, totales: t, resultado: r } = d;
-  const aiu = porcentajeAIU(t, r?.porcentajeIU);
+  const aiu = porcentajeAIU(r?.porcentajeIU);
   return [
     { pestana: 'Encabezado', campo: 'Nombre o Razón Social Cliente', valor: texto(s?.entidad) },
     { pestana: 'Datos Generales', campo: 'Nit', valor: texto(s?.nitContacto) },
@@ -86,12 +95,13 @@ export function camposFormularioContratos(d: {
     { pestana: 'Datos Generales', campo: 'Plazo de ejecución (meses) — para calcular «Fecha Final»', valor: numero(r?.vigenciaMeses) },
     { pestana: 'Mic Hoja 1/4', campo: 'Objeto', valor: texto(s?.objeto) },
     { pestana: 'Operación del Contrato', campo: '% AIU', valor: aiu },
-    { pestana: 'Operación del Contrato', campo: 'Vr. Mano Obra', valor: t.manoObra, formato: 'moneda' },
-    { pestana: 'Operación del Contrato', campo: 'Vr. Insumos', valor: t.insumos, formato: 'moneda' },
-    { pestana: 'Operación del Contrato', campo: 'Vr. Maquinaria', valor: t.maquinaria, formato: 'moneda' },
-    { pestana: 'Operación del Contrato', campo: 'Costos Admtivos.', valor: t.administrativos, formato: 'moneda' },
-    { pestana: 'Operación del Contrato', campo: 'Vlrs. Agregados', valor: t.valorAgregado, formato: 'moneda' },
-    { pestana: 'Operación del Contrato', campo: 'Servs. No Conts.', valor: t.serviciosNoContinuos, formato: 'moneda' },
+    // Los seis valores llevan el A.I.U. incluido y van antes de IVA (así los guarda Contratos): requieren el Resultado guardado.
+    { pestana: 'Operación del Contrato', campo: 'Vr. Mano Obra', valor: valorConAIU(t.manoObra, aiu), formato: 'moneda' },
+    { pestana: 'Operación del Contrato', campo: 'Vr. Insumos', valor: valorConAIU(t.insumos, aiu), formato: 'moneda' },
+    { pestana: 'Operación del Contrato', campo: 'Vr. Maquinaria', valor: valorConAIU(t.maquinaria, aiu), formato: 'moneda' },
+    { pestana: 'Operación del Contrato', campo: 'Costos Admtivos.', valor: valorConAIU(t.administrativos, aiu), formato: 'moneda' },
+    { pestana: 'Operación del Contrato', campo: 'Vlrs. Agregados', valor: valorConAIU(t.valorAgregado, aiu), formato: 'moneda' },
+    { pestana: 'Operación del Contrato', campo: 'Servs. No Conts.', valor: valorConAIU(t.serviciosNoContinuos, aiu), formato: 'moneda' },
   ];
 }
 
@@ -131,8 +141,10 @@ export function escribirHojaContratos(
     else if (c.formato === 'moneda') celda.numFmt = FORMATO_MONEDA;
     fila++;
   }
-  ws.getCell(`A${fila + 1}`).value = 'El resto de campos del formulario se digita en Contratos.';
+  ws.getCell(`A${fila + 1}`).value = 'Los seis valores de «Operación del Contrato» llevan el % A.I.U. incluido (costo × (1 + A.I.U.), redondeado al peso) y van antes de IVA; requieren la pestaña Resultado guardada.';
   ws.getCell(`A${fila + 1}`).font = { italic: true };
+  ws.getCell(`A${fila + 2}`).value = 'El resto de campos del formulario se digita en Contratos.';
+  ws.getCell(`A${fila + 2}`).font = { italic: true };
 
   autoAjustarColumnas(ws, [24, 56, 44]);
 }

@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import { camposFormularioContratos, elegirSolicitud, escribirHojaContratos, esAdjudicada, porcentajeAIU, type SolicitudContratos } from './contratos';
+import { camposFormularioContratos, elegirSolicitud, escribirHojaContratos, esAdjudicada, porcentajeAIU, valorConAIU, type SolicitudContratos } from './contratos';
 import type { TotalesPantallaDto } from './costos-pantalla';
 
 const totales: TotalesPantallaDto = {
@@ -12,22 +12,30 @@ const solicitud = (o: Partial<SolicitudContratos> = {}): SolicitudContratos => (
 const adjudicada = (o: Partial<SolicitudContratos> = {}) => solicitud({ asignaciones: [{ estadoRevision: 'PRESENTADO' }, { estadoRevision: 'CERRADO_ADJUDICADO' }], ...o });
 const valorDe = (campos: ReturnType<typeof camposFormularioContratos>, campo: string) => campos.find((c) => c.campo === campo)?.valor;
 
-describe('porcentajeAIU (administración + imprevistos + utilidad sobre costos directos)', () => {
-  it('suma la «A» (costos administrativos) al I.U., que se aplica sobre directos + administrativos', () => {
-    // directos = 1000 + 200 + 300 = 1500 · I.U. 8 % de (1500 + 60) = 124,8 · A.I.U. = (60 + 124,8) / 1500 = 12,32 %
-    expect(porcentajeAIU(totales, 8)).toBe(12.32);
+describe('porcentajeAIU (el «% de I.U.» del costeo, tal cual)', () => {
+  it('es el % de I.U. configurado: Contratos lo aplica sobre todo el costo, administrativos incluidos', () => {
+    expect(porcentajeAIU(10)).toBe(10);
+    expect(porcentajeAIU(8)).toBe(8);
+    expect(porcentajeAIU(8.5)).toBe(8.5);
+    expect(porcentajeAIU(0)).toBe(0);
   });
-  it('sin costos administrativos el A.I.U. es el propio I.U.', () => {
-    expect(porcentajeAIU({ ...totales, administrativos: 0 }, 10)).toBe(10);
+  it('sin I.U. configurado o con un valor inválido no inventa un valor', () => {
+    for (const malo of [null, undefined, Number.NaN, -1, '10', {}]) expect(porcentajeAIU(malo)).toBeNull();
   });
-  it('con I.U. 0 % queda solo la «A»', () => {
-    expect(porcentajeAIU(totales, 0)).toBe(4);
+});
+
+describe('valorConAIU (cómo guarda Contratos cada componente de la tarifa)', () => {
+  it('es ROUND(costo × (1 + AIU), 0), antes de IVA', () => {
+    expect(valorConAIU(1000, 8)).toBe(1080);
+    expect(valorConAIU(60, 8)).toBe(65); // 64,8
+    expect(valorConAIU(40, 8)).toBe(43); // 43,2
+    expect(valorConAIU(0, 10)).toBe(0);
   });
-  it('sin I.U. configurado o sin costos directos no inventa un valor', () => {
-    expect(porcentajeAIU(totales, null)).toBeNull();
-    expect(porcentajeAIU(totales, undefined)).toBeNull();
-    expect(porcentajeAIU(totales, Number.NaN)).toBeNull();
-    expect(porcentajeAIU({ ...totales, manoObra: 0, insumos: 0, maquinaria: 0 }, 8)).toBeNull();
+  it('reproduce la hoja «Tarifa» de una oferta adjudicada de producción (costo 55.596.129,99 con A.I.U. 10 % → 61.155.743)', () => {
+    expect(valorConAIU(55596129.98835262, 10)).toBe(61155743);
+  });
+  it('sin A.I.U. no hay valor: uno sin él no es el que lleva el formulario', () => {
+    expect(valorConAIU(1000, null)).toBeNull();
   });
 });
 
@@ -41,10 +49,18 @@ describe('camposFormularioContratos', () => {
     expect(valorDe(c, 'Dirección')).toBe('Calle 1');
     expect(valorDe(c, 'Descripción')).toBe('Aseo');
     expect(valorDe(c, 'Objeto')).toBe('Aseo');
-    expect(valorDe(c, '% A.I.U.')).toBe(12.32);
-    expect(valorDe(c, '% AIU')).toBe(12.32); // el mismo valor en «Operación del Contrato»
-    expect(valorDe(c, 'Vr. Mano Obra')).toBe(1000);
-    expect(valorDe(c, 'Servs. No Conts.')).toBe(40);
+    expect(valorDe(c, '% A.I.U.')).toBe(8);
+    expect(valorDe(c, '% AIU')).toBe(8); // el mismo valor en «Operación del Contrato»
+  });
+
+  it('los seis valores de «Operación del Contrato» llevan el A.I.U. incluido (8 %), redondeados al peso', () => {
+    const c = camposFormularioContratos({ solicitud: solicitud(), totales, resultado });
+    expect(valorDe(c, 'Vr. Mano Obra')).toBe(1080);
+    expect(valorDe(c, 'Vr. Insumos')).toBe(216);
+    expect(valorDe(c, 'Vr. Maquinaria')).toBe(324);
+    expect(valorDe(c, 'Costos Admtivos.')).toBe(65);
+    expect(valorDe(c, 'Vlrs. Agregados')).toBe(54);
+    expect(valorDe(c, 'Servs. No Conts.')).toBe(43);
   });
 
   it('el Valor Contrato es MENSUAL: el valor comercial mensual con IVA, más el valor antes de IVA como referencia', () => {
@@ -63,7 +79,8 @@ describe('camposFormularioContratos', () => {
       expect(valorDe(c, campo)).toBeNull();
     }
     expect(valorDe(camposFormularioContratos({ solicitud: solicitud({ nitContacto: '   ' }), totales, resultado: null }), 'Nit')).toBeNull();
-    expect(valorDe(c, 'Vr. Insumos')).toBe(200); // los totales vienen de la pantalla y siempre existen
+    // sin el % de I.U. guardado los seis valores no se pueden dar con A.I.U.: no se ofrecen sin él
+    for (const campo of ['Vr. Mano Obra', 'Vr. Insumos', 'Vr. Maquinaria', 'Costos Admtivos.', 'Vlrs. Agregados', 'Servs. No Conts.']) expect(valorDe(c, campo)).toBeNull();
   });
 });
 
@@ -96,12 +113,27 @@ describe('escribirHojaContratos', () => {
     const filas = new Map<string, ExcelJS.Cell>();
     ws.eachRow((r) => filas.set(String(r.getCell(2).value), r.getCell(3)));
     expect(filas.get('Nit')?.value).toBe('Completar en Contratos');
-    expect(filas.get('Vr. Mano Obra')?.value).toBe(1000);
-    expect(filas.get('Vr. Mano Obra')?.numFmt).toBe('$#,##0');
+    expect(filas.get('Vr. Mano Obra')?.value).toBe('Completar en Contratos'); // sin % de I.U. guardado no se puede dar con A.I.U.
     expect(filas.get('Valor Contrato (mensual, incluye IVA)')?.value).toBe(5000);
-    expect(filas.get('% A.I.U.')?.value).toBe('Completar en Contratos'); // sin % de I.U. guardado no se calcula
+    expect(filas.get('Valor Contrato (mensual, incluye IVA)')?.numFmt).toBe('$#,##0');
+    expect(filas.get('% A.I.U.')?.value).toBe('Completar en Contratos');
     expect(String(ws.getCell('B5').value)).toContain('Solicitud #1 — Adjudicada');
     expect(String(ws.getCell('B5').value)).toContain('más de una solicitud');
+  });
+  it('con el % de I.U. guardado la hoja trae los seis valores con A.I.U. en formato moneda y la nota que lo explica', async () => {
+    const wb = new ExcelJS.Workbook();
+    escribirHojaContratos(wb, { procesoCodigo: 'P-1', procesoNombre: null, solicitud: elegirSolicitud([adjudicada()]), totales, resultado: { porcentajeIU: 8, valorMesIncluidoIva: 5000 } });
+    const ws = wb.getWorksheet('Contratos')!;
+    const filas = new Map<string, ExcelJS.Cell>();
+    const notas: string[] = [];
+    ws.eachRow((r) => {
+      filas.set(String(r.getCell(2).value), r.getCell(3));
+      notas.push(String(r.getCell(1).value));
+    });
+    expect(filas.get('Vr. Mano Obra')?.value).toBe(1080);
+    expect(filas.get('Vr. Mano Obra')?.numFmt).toBe('$#,##0');
+    expect(filas.get('% A.I.U.')?.value).toBe(8);
+    expect(notas.some((n) => n.includes('llevan el % A.I.U. incluido'))).toBe(true);
   });
   it('sin solicitud lo dice en el origen', () => {
     const wb = new ExcelJS.Workbook();
