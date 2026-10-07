@@ -34,6 +34,12 @@ const fakePrisma = {
     },
     async create(args: unknown) { createSpy(args); return { id: 999 }; },
   },
+  // Hoja «Contratos»: solicitud adjudicada que comparte el código de proceso del costeo.
+  solicitud: {
+    async findMany() {
+      return [{ id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: 'Cliente de prueba', objeto: 'Aseo y cafetería', nitContacto: '900123456', direccionContacto: 'Calle 1 # 2-3', estadoSolicitud: 'Cerrada', asignaciones: [{ estadoRevision: 'CERRADO_ADJUDICADO' }] }];
+    },
+  },
 };
 vi.mock('@/lib/prisma', () => ({ default: fakePrisma }));
 
@@ -137,8 +143,13 @@ describe('POST /api/costos-estructura/[id]/exportar', () => {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buf as unknown as ExcelJS.Buffer);
     const nombres = wb.worksheets.map((ws) => ws.name);
-    expect(nombres).toEqual(['Resumen', 'Mano de Obra', 'EPP y Dotación', 'Exámenes Médicos', 'Insumos', 'Maquinaria y Equipos', 'Costos Administrativos', 'Resultado']);
+    expect(nombres).toEqual(['Resumen', 'Mano de Obra', 'EPP y Dotación', 'Exámenes Médicos', 'Insumos', 'Maquinaria y Equipos', 'Costos Administrativos', 'Resultado', 'Contratos']);
     expect(createSpy).not.toHaveBeenCalled();
+
+    // Hoja «Contratos»: los datos de la solicitud adjudicada con el código de proceso del costeo.
+    const valoresContratos: string[] = [];
+    wb.getWorksheet('Contratos')!.eachRow((row) => valoresContratos.push(String(row.getCell(3).value)));
+    expect(valoresContratos).toEqual(expect.arrayContaining(['Cliente de prueba', '900123456', 'Calle 1 # 2-3']));
 
     // Ajuste "REVISIÓN FUNCIONAL FINAL" §16/§20 — Mano de Obra conserva sus
     // fórmulas reales, y ninguna hoja del workbook contiene un error de Excel.

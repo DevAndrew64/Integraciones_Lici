@@ -23,8 +23,31 @@ import { escribirHojaCostosAdministrativos } from '@/lib/costos-estructura/expor
 import { validarCostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { escribirHojaResultado } from '@/lib/costos-estructura/exportacion/resultado';
+import { elegirSolicitud, escribirHojaContratos } from '@/lib/costos-estructura/exportacion/contratos';
+import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 
 const RUTA_PLANTILLA = path.join(process.cwd(), 'data', 'importaciones', 'Mano de obra', 'Mano de obra.xlsx');
+
+/**
+ * Hoja «Contratos»: `CostoEstructura` solo se vincula a la Solicitud por el código de proceso (texto). Un fallo aquí
+ * nunca bloquea el Excel: la hoja se genera igual, con esos campos para completar en Contratos.
+ */
+async function solicitudDelProceso(codigoProceso: string | null) {
+  if (!codigoProceso) return null;
+  try {
+    const candidatas = await prisma.solicitud.findMany({
+      where: { codigoProceso },
+      // `select` explícito: no depende de columnas ajenas a esta hoja (incidente «column does not exist»).
+      select: { id: true, codigoProceso: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true, estadoSolicitud: true, asignaciones: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 10,
+    });
+    return elegirSolicitud(candidatas);
+  } catch (e) {
+    console.error('[POST /api/costos-estructura/[id]/exportar] hoja Contratos: no se pudo buscar la solicitud', e);
+    return null;
+  }
+}
 
 interface BodyExportar {
   manoObraDto: ExportacionManoObraDto;
@@ -143,6 +166,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     escribirHojaMaquinaria(wb, { estado: moduloMaquinaria?.estado ?? 'NO_INICIADO', ...costos.maquinaria, total: costos.totales.maquinaria });
     escribirHojaCostosAdministrativos(wb, { ...costos.administrativos, total: costos.totales.administrativos });
     escribirHojaResultado(wb, { totales: costos.totales, administrativos: costos.administrativos });
+    // Datos de la oferta con los nombres del formulario «Contratos» (el resto lo digita Contratos).
+    escribirHojaContratos(wb, {
+      procesoCodigo: registro.procesoCodigo, procesoNombre: registro.procesoNombre,
+      solicitud: await solicitudDelProceso(registro.procesoCodigo), totales: costos.totales,
+      resultado: obtenerModulo<ResultadoGuardado>(registro.datos, 'resultado')?.datos ?? null,
+    });
 
     // Orden final de pestañas (§2 del ajuste "REVISIÓN FUNCIONAL FINAL") —
     // `orderNo` es una propiedad PÚBLICA de ExcelJS que solo controla el
@@ -151,7 +180,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // celdas/fórmulas/estilos/merges/área de impresión de ninguna hoja
     // (confirmado: Mano de Obra conserva sus 94 fórmulas, sus 68 merges y
     // su área de impresión exactamente igual con y sin este reordenamiento).
-    const ordenFinalHojas = ['Resumen', 'Mano de Obra', 'EPP y Dotación', 'Exámenes Médicos', 'Insumos', 'Maquinaria y Equipos', 'Costos Administrativos', 'Resultado'];
+    const ordenFinalHojas = ['Resumen', 'Mano de Obra', 'EPP y Dotación', 'Exámenes Médicos', 'Insumos', 'Maquinaria y Equipos', 'Costos Administrativos', 'Resultado', 'Contratos'];
     ordenFinalHojas.forEach((nombre, indice) => {
       const hoja = wb.getWorksheet(nombre) as (ExcelJS.Worksheet & { orderNo: number }) | undefined;
       if (hoja) hoja.orderNo = indice;
