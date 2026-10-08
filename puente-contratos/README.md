@@ -14,7 +14,7 @@ Con el esquema real de la base (ver «Lo que dice la base de Contratos») la ofe
 |---|---|---|---|
 | 1 | **Puente en modo prueba:** servicio, token, contrato JSON v1, validación, huella | — | ✅ |
 | 2 | **Next.js → puente:** cliente HTTP, ruta que arma el JSON, botón «Enviar a Contratos» | — | ✅ |
-| 3 | **Conexión a MySQL y contrato de esquema:** `mysql2` en modo estricto, comprobación de tablas y columnas, `/health` | `information_schema` | ✅ probado con pruebas; falta correrlo contra un MySQL 5.5 |
+| 3 | **Conexión a MySQL y contrato de esquema:** `mysql2` en modo estricto, comprobación de tablas y columnas, `/health` | `information_schema` | ✅ probado también contra un MySQL 5.5 real (Docker) |
 | 4 | Oferta y tarifas: cliente, A.I.U. y los 6 totales de «Operación del Contrato» | `fc_contratos_tarifa_inicial` | ⏳ |
 | 5 | Cargos (Hoja 3/4) | `fc_contratos_cargos_iniciales` | ⏳ |
 | 6 | Equipos, insumos y costos administrativos | `fc_contratos_equipos_iniciales`, `fc_elemxcont`, `fc_preciosventas_oferta`, `fc_contratos_costos_admtivos_iniciales` | ⏳ |
@@ -50,6 +50,18 @@ curl -X POST http://127.0.0.1:4010/contratos \
 Variables: ver `.env.example`. Respuestas: `200` válido (con `huella`, `advertencias` y lo que escribiría) · `401` sin token · `422` datos inválidos (todos los errores a la vez) · `400` JSON inválido · `501` modo `escritura` aún sin escritor.
 
 `GET /health` (público) responde `{ok, servicio, modo, bd}` con `bd` = `sin_configurar` · `ok` · `esquema_distinto` · `sin_conexion`. Solo una palabra: ni tablas ni mensajes.
+
+### Pruebas contra un MySQL 5.5 real
+
+`npm test` no necesita base de datos. Las pruebas contra el servidor real usan una base de PRUEBA en Docker (`mysql:5.5`, latin1, sin modo estricto, igual que la de Contratos) con la estructura de las tablas y sin ningún dato:
+
+```bash
+npm run mysql:prueba:arriba   # levanta la base y crea las tablas (test/mysql/esquema.sql)
+npm run test:mysql            # 9 pruebas: modo estricto, latin1, DECIMAL/fechas, rollback InnoDB vs MyISAM, esquema, arranque del servicio
+npm run mysql:prueba:abajo    # la apaga y la borra
+```
+
+Comprueban, contra el servidor real, que el esquema esperado coincide con lo que MySQL 5.5 reporta, que sin modo estricto MySQL corta un texto sin avisar y con él falla, que los bytes quedan en latin1 como los escribe Visual FoxPro, y que el servicio en modo `escritura` no arranca si una columna cambia. Estas pruebas insertan y borran filas: se niegan a correr contra una base cuyo nombre no termine en `_prueba` o `_test`.
 
 ### MySQL (módulo 3)
 

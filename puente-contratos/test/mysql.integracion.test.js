@@ -5,7 +5,7 @@
  * Estas pruebas INSERTAN y BORRAN filas: solo corren contra una base cuyo nombre termina en «_prueba» o «_test».
  */
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { after, before, describe, it } from 'node:test';
 import { cargarEsquemaEsperado, verificarEsquema } from '../src/esquema.js';
 import { crearPool, SQL_MODE_ESTRICTO } from '../src/mysql.js';
@@ -22,6 +22,39 @@ const config = {
 if (!saltar && !/_(prueba|test)$/.test(String(config.database))) {
   throw new Error(`Por seguridad estas pruebas solo corren contra una base de prueba (nombre terminado en _prueba o _test), no contra «${config.database}».`);
 }
+
+
+const TOKEN = 'token-de-prueba-integracion-0123456789';
+
+/** Arranca `src/server.js` como proceso aparte contra la base de prueba. Resuelve al iniciar o al salir (p. ej. por esquema distinto). */
+function arrancarServicio(puerto, extra = {}) {
+  const hijo = spawn(process.execPath, ['src/server.js'], {
+    cwd: new URL('..', import.meta.url),
+    env: {
+      ...env,
+      PUENTE_TOKEN: TOKEN,
+      PUENTE_PORT: String(puerto),
+      PUENTE_MYSQL_HOST: config.host,
+      PUENTE_MYSQL_PORT: String(config.port),
+      PUENTE_MYSQL_USER: config.user,
+      PUENTE_MYSQL_PASSWORD: config.password,
+      PUENTE_MYSQL_DATABASE: config.database,
+      ...extra,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return new Promise((resolver) => {
+    let salida = '';
+    const alRecibir = (d) => {
+      salida += d;
+      if (salida.includes('puente-contratos-iniciado')) resolver({ iniciado: true, hijo, salida });
+    };
+    hijo.stdout.on('data', alRecibir);
+    hijo.stderr.on('data', (d) => (salida += d));
+    hijo.on('exit', (codigo) => resolver({ iniciado: false, codigo, salida }));
+  });
+}
+const consultarSalud = async (puerto) => (await fetch(`http://127.0.0.1:${puerto}/health`)).json();
 
 const TARIFA = 'fc_contratos_tarifa_inicial';
 const CLIENTE_LARGO = 'C'.repeat(101); // rsocial es varchar(100)
@@ -89,7 +122,8 @@ describe('MySQL 5.5 real', { skip: saltar }, () => {
     await pool.query(`INSERT INTO ${TARIFA} (empresa, undnegocio, num_oferta, nit, rsocial) VALUES ('01', 'BAQ', 900003, '900123456-8', ?)`, [bueno]);
     const [[fila]] = await pool.query(`SELECT rsocial, HEX(CONVERT(rsocial USING latin1)) AS bytes FROM ${TARIFA} WHERE num_oferta = 900003`);
     assert.equal(fila.rsocial, bueno, 'ida y vuelta sin pérdida');
-    assert.match(fila.bytes, /^D1616E6475/, 'quedó guardada como latin1 («Ñ» = 0xD1), igual que lo escribe Visual FoxPro');
+    // «Ñandú “Premium” – € S.A.» en cp1252, byte a byte: Ñ D1 · ú FA · “ 93 · ” 94 · – 96 · € 80 (igual que lo escribe Visual FoxPro)
+    assert.equal(fila.bytes, 'D1616E64FA20935072656D69756D942096208020532E412E');
 
     for (const malo of ['Cliente 😀', 'Mayor ≥ 8', 'Flecha →']) {
       await assert.rejects(pool.query(`INSERT INTO ${TARIFA} (empresa, undnegocio, num_oferta, nit, rsocial) VALUES ('01', 'BAQ', 900004, '900123456-8', ?)`, [malo]), (e) => e.errno === 1366 || e.errno === 1300, malo);
@@ -120,5 +154,39 @@ describe('MySQL 5.5 real', { skip: saltar }, () => {
     const [[{ myisam }]] = await pool.query('SELECT COUNT(*) AS myisam FROM fc_elemxcont WHERE num_oferta = 900006');
     assert.equal(Number(innodb), 0, 'InnoDB: el ROLLBACK deshizo la fila');
     assert.equal(Number(myisam), 1, 'MyISAM: el ROLLBACK no deshace nada');
+  });
+
+  it('el servicio en modo «escritura» arranca con el esquema esperado y /health dice bd: ok', async () => {
+    const r = await arrancarServicio(4021, { PUENTE_MODO: 'escritura' });
+    try {
+      assert.equal(r.iniciado, true, r.salida);
+      assert.deepEqual(await consultarSalud(4021), { ok: true, servicio: 'puente-contratos', modo: 'escritura', bd: 'ok' });
+    } finally {
+      r.hijo?.kill();
+    }
+  });
+
+  it('si Contratos cambia una columna, el modo «escritura» NO arranca y en modo prueba /health avisa «esquema_distinto»', async () => {
+    // fc_preciosventas_oferta.nom_punto: varchar(60) → varchar(50), como si Contratos la hubiera acortado
+    await pool.query('ALTER TABLE fc_preciosventas_oferta MODIFY nom_punto varchar(50) DEFAULT ""');
+    try {
+      const escritura = await arrancarServicio(4022, { PUENTE_MODO: 'escritura' });
+      assert.equal(escritura.iniciado, false, 'no debe arrancar');
+      assert.equal(escritura.codigo, 1);
+      assert.match(escritura.salida, /esquema-distinto/);
+      assert.match(escritura.salida, /nom_punto/, 'dice qué columna cambió');
+      assert.doesNotMatch(escritura.salida, new RegExp(config.password), 'nunca imprime la clave');
+
+      const prueba = await arrancarServicio(4023, { PUENTE_MODO: 'dry-run' });
+      try {
+        assert.equal(prueba.iniciado, true, prueba.salida);
+        assert.equal((await consultarSalud(4023)).bd, 'esquema_distinto');
+      } finally {
+        prueba.hijo?.kill();
+      }
+    } finally {
+      await pool.query('ALTER TABLE fc_preciosventas_oferta MODIFY nom_punto varchar(60) DEFAULT ""');
+    }
+    assert.equal((await verificarEsquema(pool, cargarEsquemaEsperado())).ok, true, 'la base de prueba quedó como estaba');
   });
 });
