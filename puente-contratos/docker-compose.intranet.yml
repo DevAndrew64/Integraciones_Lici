@@ -1,0 +1,27 @@
+# El puente contra el MySQL de la INTRANET: hoy la copia de producción del servidor de Pruebas; el despliegue será muy parecido
+# (este mismo servicio con otros valores en el archivo de entorno). Usa la imagen de producción (Dockerfile) y no levanta ninguna
+# base: la de Contratos ya está en la red. Solo Docker; Docker Compose lee los valores del archivo `.env` de esta carpeta:
+#
+#   copy intranet.env.example .env                                   # complete PUENTE_MYSQL_HOST y PUENTE_MYSQL_PASSWORD (.env no va a git)
+#   docker compose -f docker-compose.intranet.yml up -d --build --wait
+#   curl.exe -s http://127.0.0.1:4010/health                         # {"ok":true,…,"bd":"ok"}
+#   docker compose -f docker-compose.intranet.yml logs puente        # si no arranca, aquí dice por qué
+#   docker compose -f docker-compose.intranet.yml down
+#
+# ESCRIBE DE VERDAD en la base de Contratos a la que apunte (cada envío crea una oferta y gasta un número). El puerto 4010 es el
+# mismo de los puentes de prueba de docker-compose.prueba.yml: apáguelos antes. Ver el README: «Probarlo contra el MySQL de la intranet».
+services:
+  puente:
+    build: .
+    environment:
+      PUENTE_TOKEN: ${PUENTE_TOKEN:-}
+      PUENTE_MODO: ${PUENTE_MODO:-escritura}
+      PUENTE_MYSQL_HOST: ${PUENTE_MYSQL_HOST:-}
+      PUENTE_MYSQL_PORT: ${PUENTE_MYSQL_PORT:-3306}
+      PUENTE_MYSQL_USER: ${PUENTE_MYSQL_USER:-puente}
+      PUENTE_MYSQL_PASSWORD: ${PUENTE_MYSQL_PASSWORD:-}
+      PUENTE_MYSQL_DATABASE: ${PUENTE_MYSQL_DATABASE:-almacen}
+    ports:
+      # 127.0.0.1 = solo este equipo (LiciColba en el mismo equipo). Si LiciColba corre en OTRO equipo de la intranet, ponga en el
+      # archivo .env PUENTE_PUBLICAR=0.0.0.0 y use la IP de este equipo: el token es lo único que protege el puerto.
+      - "${PUENTE_PUBLICAR:-127.0.0.1}:4010:4010"
