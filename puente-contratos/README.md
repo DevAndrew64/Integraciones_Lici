@@ -65,6 +65,79 @@ npm run mysql:prueba:abajo    # la apaga y la borra
 
 Comprueban, contra el servidor real, que el esquema esperado coincide con lo que MySQL 5.5 reporta, que sin modo estricto MySQL corta un texto sin avisar y con él falla, que los bytes quedan en latin1 como los escribe Visual FoxPro, y que el servicio en modo `escritura` no arranca si una columna cambia. Estas pruebas insertan y borran filas: se niegan a correr contra una base cuyo nombre no termine en `_prueba` o `_test`.
 
+### Probarlo a mano con LiciColba (`npm run dev`)
+
+El puente corre aparte; LiciColba solo necesita dos variables en `.env.local` (el token debe ser el mismo `PUENTE_TOKEN` del puente):
+
+```
+PUENTE_CONTRATOS_URL=http://127.0.0.1:4010
+PUENTE_CONTRATOS_TOKEN=<el mismo token>
+```
+
+Luego, en LiciColba, abra los costos **desde la ficha de una solicitud con NIT**, deje resueltos los módulos y guardada la pestaña **Resultado** (con su % de I.U.), llene los cinco datos del envío (empresa, UEN, tipo de tarifa, origen y concepto) y pulse **Enviar a Contratos**. Hay dos niveles de prueba:
+
+1. **Modo prueba, sin ninguna base de datos:** valida y muestra qué escribiría.
+
+   ```bash
+   cd puente-contratos
+   # PowerShell:  $env:PUENTE_TOKEN = "un-token-de-16-o-mas-caracteres"
+   npm start
+   ```
+
+2. **Escritura real contra la base de PRUEBA de Docker** (nunca la de producción):
+
+   ```bash
+   npm run mysql:prueba:arriba   # MySQL 5.5 con la estructura de Contratos y sin datos
+   npm run mysql:prueba:datos    # cliente, contadores, concepto y horarios ficticios
+   npm run start:prueba          # el puente en modo escritura; su token local está en test/mysql/puente-local.env
+   ```
+
+   El envío falla con un mensaje claro si el cliente de la solicitud no existe en esa base: agregue el suyo con su NIT «base-DV» (el comando está en el encabezado de `test/mysql/datos-prueba.sql`). Para ver lo escrito:
+
+   ```bash
+   docker compose -f test/mysql/docker-compose.yml exec -T mysql55 mysql -uroot -pprueba-root-local almacen_prueba -e "SELECT * FROM fc_contratos_tarifa_inicial\G"
+   npm run mysql:prueba:abajo    # la apaga y la borra
+   ```
+
+### Probarlo en un equipo que solo tiene Docker
+
+No hace falta Node ni npm: las pruebas, la base y el puente corren en contenedores (`docker-compose.prueba.yml`). Requisitos: Docker con Compose 2.20 o más nuevo (`docker compose version`) y esta carpeta. La primera vez baja las imágenes (`mysql:5.5` y `node:22-alpine`) y las dependencias. Todo, desde la carpeta `puente-contratos`:
+
+1. **Todas las pruebas** (unitarias y contra el MySQL 5.5 real). Al final debe decir `pass 150` y `fail 0`:
+
+   ```bash
+   docker compose -f docker-compose.prueba.yml run --rm pruebas
+   ```
+
+2. **A mano:** datos ficticios, el puente en modo escritura y un envío de ejemplo (el JSON que arma LiciColba). En Linux o macOS use `curl` en vez de `curl.exe`:
+
+   ```bash
+   docker compose -f docker-compose.prueba.yml run --rm datos
+   docker compose -f docker-compose.prueba.yml up -d --build --wait puente
+   curl.exe -s http://127.0.0.1:4010/health
+   curl.exe -s -X POST http://127.0.0.1:4010/contratos -H "Authorization: Bearer token-local-de-prueba-0123456789" -H "Content-Type: application/json" --data-binary "@test/fixtures/payload-licicolba.json"
+   ```
+
+   Un segundo envío responde `409 YA_ENVIADA` con la oferta ya creada. Para ver lo escrito y los registros del puente:
+
+   ```bash
+   docker compose -f docker-compose.prueba.yml exec -T mysql55 mysql -uroot -pprueba-root-local almacen_prueba -e "SELECT * FROM fc_contratos_tarifa_inicial\G"
+   docker compose -f docker-compose.prueba.yml logs puente
+   ```
+
+3. **Con LiciColba:** en su `.env.local`, `PUENTE_CONTRATOS_TOKEN=token-local-de-prueba-0123456789` y `PUENTE_CONTRATOS_URL` según dónde corra:
+   - en el mismo equipo (`npm run dev`): `http://127.0.0.1:4010`;
+   - en Docker en el mismo equipo: `http://host.docker.internal:4010`;
+   - en OTRO equipo de la intranet: cambie el puerto de `puente` en `docker-compose.prueba.yml` a `"4010:4010"`, abra el 4010 solo para la intranet y use `http://<IP de este equipo>:4010`. Queda abierto a la red: el token es lo único que lo protege, así que solo para pruebas.
+
+   El cliente de la solicitud debe existir en la base de prueba (el comando para agregarlo está en el encabezado de `test/mysql/datos-prueba.sql`; con este compose use `docker compose -f docker-compose.prueba.yml exec -T mysql55 mysql ...`).
+
+4. **Apagar y borrar todo** (contenedores, red y volúmenes):
+
+   ```bash
+   docker compose -f docker-compose.prueba.yml --profile "*" down -v
+   ```
+
 ### MySQL (módulo 3)
 
 Se activa con `PUENTE_MYSQL_HOST` (+ `_USER`, `_PASSWORD`, `_DATABASE`). Cada conexión queda en `sql_mode = STRICT_ALL_TABLES`: lo que no cabe es un error, nunca un truncado silencioso. En modo `escritura` el servicio **no arranca** si la base no responde o si alguna tabla o columna que usa ya no es la esperada (`src/esquema-esperado.json`, solo estructura). Si Contratos cambia una tabla a propósito:

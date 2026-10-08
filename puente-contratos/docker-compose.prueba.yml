@@ -1,0 +1,64 @@
+# Entorno de PRUEBA completo con SOLO Docker (sin Node ni npm en el equipo). Nada de esto sirve para producción: la base es
+# un MySQL 5.5 local con la ESTRUCTURA de Contratos y sin datos, y el token y las claves son de ejemplo.
+#
+#   docker compose -f docker-compose.prueba.yml run --rm pruebas            # corre TODAS las pruebas (unitarias + contra el MySQL 5.5)
+#   docker compose -f docker-compose.prueba.yml run --rm datos              # carga el cliente, los contadores, el concepto y los horarios ficticios
+#   docker compose -f docker-compose.prueba.yml up -d --build --wait puente # el puente en modo escritura, en http://127.0.0.1:4010
+#   docker compose -f docker-compose.prueba.yml --profile "*" down -v       # lo apaga y lo borra todo
+#
+# Requiere Docker Compose 2.20 o más nuevo (usa `include`). Ver el README: «Probarlo en un equipo que solo tiene Docker».
+include:
+  - test/mysql/docker-compose.yml # servicio mysql55: MySQL 5.5 de prueba, latin1, sin modo estricto, con la estructura de Contratos
+
+services:
+  pruebas:
+    image: node:22-alpine
+    profiles: ["pruebas"]
+    depends_on:
+      mysql55:
+        condition: service_healthy
+    working_dir: /app
+    volumes:
+      - .:/app
+      - modulos_pruebas:/app/node_modules # las dependencias quedan en un volumen: no se toca la carpeta del equipo
+    environment:
+      PUENTE_TEST_MYSQL_HOST: mysql55
+      PUENTE_TEST_MYSQL_PORT: "3306"
+      PUENTE_TEST_MYSQL_USER: puente
+      PUENTE_TEST_MYSQL_PASSWORD: prueba-local-sin-valor
+      PUENTE_TEST_MYSQL_DATABASE: almacen_prueba
+      PUENTE_TEST_MYSQL_ROOT_PASSWORD: prueba-root-local
+    # Con PUENTE_TEST_MYSQL_HOST definido, `npm test` incluye las pruebas contra el MySQL 5.5 real.
+    command: ["sh", "-c", "npm ci --silent && npm test -- --test-reporter=spec"]
+
+  datos:
+    image: mysql:5.5
+    profiles: ["datos"]
+    depends_on:
+      mysql55:
+        condition: service_healthy
+    volumes:
+      - ./test/mysql/datos-prueba.sql:/datos-prueba.sql:ro
+    command: ["sh", "-c", "mysql -hmysql55 -uroot -pprueba-root-local almacen_prueba < /datos-prueba.sql && echo 'Datos de prueba cargados.'"]
+
+  puente:
+    build: .
+    profiles: ["puente"]
+    depends_on:
+      mysql55:
+        condition: service_healthy
+    environment:
+      PUENTE_TOKEN: token-local-de-prueba-0123456789
+      PUENTE_MODO: escritura
+      PUENTE_MYSQL_HOST: mysql55
+      PUENTE_MYSQL_PORT: "3306"
+      PUENTE_MYSQL_USER: puente
+      PUENTE_MYSQL_PASSWORD: prueba-local-sin-valor
+      PUENTE_MYSQL_DATABASE: almacen_prueba
+    ports:
+      # Solo este equipo. Si LiciColba corre en OTRO equipo de la intranet, cambie a "4010:4010" (queda abierto a la red: el token
+      # es lo único que lo protege) y use esta dirección IP en PUENTE_CONTRATOS_URL.
+      - "127.0.0.1:4010:4010"
+
+volumes:
+  modulos_pruebas: {}
