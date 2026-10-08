@@ -6,9 +6,33 @@
 #   docker compose -f docker-compose.prueba.yml up -d --build --wait puente # el puente en modo escritura, en http://127.0.0.1:4010
 #   docker compose -f docker-compose.prueba.yml --profile "*" down -v       # lo apaga y lo borra todo
 #
+# Con la COPIA de producción (clientes, conceptos y horarios reales) en vez de los datos ficticios:
+#   $env:COPIA_SQL_DIR = "C:\ruta\a\los\sql"   # PowerShell; en bash: export COPIA_SQL_DIR=/ruta/a/los/sql
+#   docker compose -f docker-compose.prueba.yml run --rm copia                 # carga los .sql en la base almacen_copia
+#   docker compose -f docker-compose.prueba.yml up -d --build --wait puente-copia   # el puente contra esa base (4010; apague «puente» antes)
+#
 # Requiere Docker Compose 2.20 o más nuevo (usa `include`). Ver el README: «Probarlo en un equipo que solo tiene Docker».
 include:
   - test/mysql/docker-compose.yml # servicio mysql55: MySQL 5.5 de prueba, latin1, sin modo estricto, con la estructura de Contratos
+
+# Lo que comparten los dos puentes (con datos ficticios y con la copia): misma imagen, puerto y credenciales de PRUEBA.
+x-puente: &puente
+  build: .
+  depends_on:
+    mysql55:
+      condition: service_healthy
+  ports:
+    # Solo este equipo. Si LiciColba corre en OTRO equipo de la intranet, cambie a "4010:4010" (queda abierto a la red: el token
+    # es lo único que lo protege) y use esta dirección IP en PUENTE_CONTRATOS_URL.
+    - "127.0.0.1:4010:4010"
+
+x-puente-entorno: &puente-entorno
+  PUENTE_TOKEN: token-local-de-prueba-0123456789
+  PUENTE_MODO: escritura
+  PUENTE_MYSQL_HOST: mysql55
+  PUENTE_MYSQL_PORT: "3306"
+  PUENTE_MYSQL_USER: puente
+  PUENTE_MYSQL_PASSWORD: prueba-local-sin-valor
 
 services:
   pruebas:
@@ -42,23 +66,19 @@ services:
     command: ["sh", "-c", "mysql -hmysql55 -uroot -pprueba-root-local almacen_prueba < /datos-prueba.sql && echo 'Datos de prueba cargados.'"]
 
   puente:
-    build: .
+    <<: *puente
     profiles: ["puente"]
-    depends_on:
-      mysql55:
-        condition: service_healthy
     environment:
-      PUENTE_TOKEN: token-local-de-prueba-0123456789
-      PUENTE_MODO: escritura
-      PUENTE_MYSQL_HOST: mysql55
-      PUENTE_MYSQL_PORT: "3306"
-      PUENTE_MYSQL_USER: puente
-      PUENTE_MYSQL_PASSWORD: prueba-local-sin-valor
-      PUENTE_MYSQL_DATABASE: almacen_prueba
-    ports:
-      # Solo este equipo. Si LiciColba corre en OTRO equipo de la intranet, cambie a "4010:4010" (queda abierto a la red: el token
-      # es lo único que lo protege) y use esta dirección IP en PUENTE_CONTRATOS_URL.
-      - "127.0.0.1:4010:4010"
+      <<: *puente-entorno
+      PUENTE_MYSQL_DATABASE: almacen_prueba # datos ficticios (npm run mysql:prueba:datos / servicio «datos»)
+
+  # El mismo puente contra la copia de producción cargada con el servicio «copia» (clientes, conceptos y horarios reales).
+  puente-copia:
+    <<: *puente
+    profiles: ["puente-copia"]
+    environment:
+      <<: *puente-entorno
+      PUENTE_MYSQL_DATABASE: almacen_copia
 
 volumes:
   modulos_pruebas: {}

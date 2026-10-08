@@ -25,3 +25,23 @@ services:
       interval: 3s
       timeout: 3s
       retries: 60
+
+  # Carga la COPIA de producción (los .sql por tabla) en una base aparte, almacen_copia, para probar con clientes, conceptos y
+  # horarios REALES. Es un contenedor de una sola vez (perfil «copia»); COPIA_SQL_DIR es la carpeta con los .sql:
+  #   PowerShell:  $env:COPIA_SQL_DIR = "C:\ruta\a\los\sql" ; docker compose -f test/mysql/docker-compose.yml run --rm copia
+  # La copia queda solo en este contenedor (nunca en git); el script no imprime filas. Ver test/mysql/cargar-copia.sh.
+  copia:
+    image: mysql:5.5
+    profiles: ["copia"]
+    depends_on:
+      mysql55:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${COPIA_SQL_DIR:-.} # sin definirla, apunta a esta carpeta: el script avisa que no hay volcados y no toca nada
+        target: /copia
+        read_only: true
+      - ./esquema.sql:/esquema.sql:ro
+      - ./cargar-copia.sh:/cargar-copia.sh:ro
+    # El script puede llegar con saltos de línea de Windows (CRLF) si el repositorio se bajó con autocrlf: se quitan al vuelo.
+    command: ["sh", "-c", "tr -d '\\r' < /cargar-copia.sh > /tmp/cargar-copia.sh && sh /tmp/cargar-copia.sh"]

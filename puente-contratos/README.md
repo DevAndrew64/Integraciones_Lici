@@ -130,12 +130,50 @@ No hace falta Node ni npm: las pruebas, la base y el puente corren en contenedor
    - en Docker en el mismo equipo: `http://host.docker.internal:4010`;
    - en OTRO equipo de la intranet: cambie el puerto de `puente` en `docker-compose.prueba.yml` a `"4010:4010"`, abra el 4010 solo para la intranet y use `http://<IP de este equipo>:4010`. Queda abierto a la red: el token es lo único que lo protege, así que solo para pruebas.
 
-   El cliente de la solicitud debe existir en la base de prueba (el comando para agregarlo está en el encabezado de `test/mysql/datos-prueba.sql`; con este compose use `docker compose -f docker-compose.prueba.yml exec -T mysql55 mysql ...`).
+   El cliente de la solicitud debe existir en la base de prueba (el comando para agregarlo está en el encabezado de `test/mysql/datos-prueba.sql`; con este compose use `docker compose -f docker-compose.prueba.yml exec -T mysql55 mysql ...`). Para probar con **clientes, conceptos y horarios reales**, use la copia de producción: ver la sección siguiente.
 
 4. **Apagar y borrar todo** (contenedores, red y volúmenes):
 
    ```bash
    docker compose -f docker-compose.prueba.yml --profile "*" down -v
+   ```
+
+### Probarlo con la copia de producción (clientes, conceptos y horarios reales)
+
+Con los datos ficticios, un NIT o un concepto reales fallan con «no existe en Contratos». Para probar con lo que hay de verdad, cargue los volcados `.sql` por tabla de la copia (la carpeta con `fc_clientes.sql`, `fc_conceptos.sql`…; las subcarpetas no importan) en una base aparte, `almacen_copia`, del mismo MySQL 5.5 de Docker. Desde la carpeta `puente-contratos`:
+
+```bash
+# PowerShell:  $env:COPIA_SQL_DIR = "C:\ruta\a\los\sql"      (bash: export COPIA_SQL_DIR=/ruta/a/los/sql)
+docker compose -f docker-compose.prueba.yml run --rm copia                      # carga la copia; imprime solo conteos
+docker compose -f docker-compose.prueba.yml stop puente                         # si corría con los datos ficticios (ambos usan el 4010)
+docker compose -f docker-compose.prueba.yml up -d --build --wait puente-copia   # el puente en modo escritura contra la copia
+curl.exe -s http://127.0.0.1:4010/health                                        # {"ok":true,…,"bd":"ok"}
+```
+
+Con npm: `npm run mysql:prueba:arriba`, `npm run mysql:copia:cargar` y `npm run start:copia` (mismo token de prueba). El token y la URL de LiciColba son los de la sección anterior.
+
+- **Qué carga:** `gl_undnegocios`, `fc_clientes`, `fc_conceptos`, `fc_horarios`, `fc_contratos_tarifa_inicial` y `fc_contratos_cargos_iniciales`, **tal como vienen** (estructura y datos, en latin1 como en Contratos). Las demás tablas del contrato de esquema quedan con su estructura y vacías. **No carga** `fc_empresas` ni `fc_control` (guardan usuario y clave de conexión): los contadores de oferta se derivan de la mayor oferta de la tarifa por (empresa, UEN), así que la numeración continúa donde quedó la copia (la de Contratos puede tener, además, UEN sin contador).
+- **Qué comprueba de más:** el arranque del puente verifica la estructura **real** de esas tablas contra `src/esquema-esperado.json` (con los datos ficticios solo comprobaba la estructura que escribimos nosotros), y los envíos usan clientes, conceptos y horarios que existen de verdad.
+- **Dónde quedan los datos:** solo dentro del contenedor (`docker compose -f docker-compose.prueba.yml --profile "*" down -v` los borra); el script no imprime filas y nada de esto va a git. Cada envío de prueba crea una oferta en esa copia local, no en Contratos.
+- Volver a correr `copia` vacía y recarga las tablas de `almacen_copia` (se pierden las ofertas de prueba y los contadores vuelven al de la copia); el puente no necesita reiniciarse.
+
+#### Contra el MySQL de Pruebas de Contratos (la estructura viva, no un volcado)
+
+Si el equipo llega al servidor de Pruebas, el puente puede apuntar directo a él. **Escribe de verdad en esa base:** cada envío crea una oferta y gasta un número del contador.
+
+1. Cree el usuario del puente con permisos mínimos. Los `GRANT` salen del contrato de esquema (con solo Docker, desde esta carpeta) y los ejecuta quien administre esa base, por ejemplo en SQLyog:
+
+   ```bash
+   # PowerShell
+   docker run --rm -v "${PWD}:/app:ro" -w /app node:22-alpine node src/herramientas/generar-permisos.js --usuario puente --base almacen
+   ```
+
+2. Levante el puente con ese usuario (la clave va solo en la variable de entorno). Si la estructura viva difiere del contrato, **no arranca** y el registro dice qué tabla o columna cambió:
+
+   ```bash
+   docker build -t puente-contratos .
+   docker run -d --name puente-contratos -p 127.0.0.1:4010:4010 -e PUENTE_TOKEN=<token de 16+ caracteres> -e PUENTE_MODO=escritura -e PUENTE_MYSQL_HOST=<servidor de Pruebas> -e PUENTE_MYSQL_USER=puente -e PUENTE_MYSQL_PASSWORD=<clave> -e PUENTE_MYSQL_DATABASE=almacen puente-contratos
+   docker logs puente-contratos
    ```
 
 ### MySQL (módulo 3)
