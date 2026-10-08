@@ -527,3 +527,23 @@ CREATE TABLE `fc_conceptos` (
   PRIMARY KEY (`id`),
   KEY `codcpto` (`codcpto`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='tabla de conceptos de facturacion';
+
+-- fc_control va reducida a lo que el puente usa: la real tiene 157 columnas, entre ellas usuario y clave de conexión.
+-- Una fila por (empresa, UEN); num_oferta guarda el ÚLTIMO número de oferta usado.
+CREATE TABLE `fc_control` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `empresa` char(2) DEFAULT '',
+  `undnegocio` char(3) DEFAULT NULL,
+  `num_oferta` decimal(10,0) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- fc_horarios va reducida a lo que el puente consulta (la real tiene 120 columnas, todas de cálculo de horas); utf8 como la real.
+CREATE TABLE `fc_horarios` (
+  `id` int(5) NOT NULL AUTO_INCREMENT,
+  `codigo` char(5) DEFAULT NULL,
+  `horario` char(200) DEFAULT '',
+  `snactivo` int(1) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `codigo` (`codigo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

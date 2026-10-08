@@ -5,20 +5,22 @@ import { requireEditarCostos } from '@/lib/authz';
 import { auditFromRequest } from '@/lib/audit';
 import { CLAVES_MODULO_NO_APLICA, obtenerModulo, resolverPendientesModulos } from '@/lib/costos-estructura/guardado-modular';
 import type { ClaveModulo, EstadoModuloResultado } from '@/lib/costos-estructura/guardado-modular';
-import { validarCostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
+import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
+import { cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
 import { enviarAlPuente } from '@/lib/contratos-puente/cliente';
-import { armarPayloadContratos, describirError, etiquetaCampo } from '@/lib/contratos-puente/payload';
+import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, leerDestino } from '@/lib/contratos-puente/payload';
 
 /**
- * Módulo 2 del puente — envía a Contratos (vía `puente-contratos/`) los datos de la oferta con el JSON v1: razón social,
- * NIT, dirección, objeto, % A.I.U. (el % de I.U. del costeo), valor mensual y plazo. Hoy el puente responde en modo prueba (valida y
- * no escribe en MySQL).
+ * Puente a Contratos (módulos 2 y 4) — envía a Contratos (vía `puente-contratos/`) los datos de la oferta con el JSON v1:
+ * razón social, NIT, dirección, objeto, % A.I.U. (el % de I.U. del costeo), valor mensual, plazo, la clave de la oferta
+ * (empresa, UEN, tipo de tarifa, origen y concepto, que elige quien envía) y los seis valores de la tarifa. En modo prueba
+ * el puente valida y NO escribe; en modo escritura crea la oferta en Contratos y responde su número.
  *
  * Mismo criterio que el export: los módulos de costos deben estar resueltos (fuente de verdad server-side) y los totales
  * llegan de la pantalla (`costosDto`, validado). El vínculo Solicitud↔Costeo es EXPLÍCITO: la pantalla manda el
  * `solicitudId` de la ficha desde la que se abrió el costeo, y el servidor comprueba que el código de proceso coincida.
- * Lee `Resultado` de lo guardado: sin esa pestaña guardada el valor mensual, el plazo y el A.I.U. viajan vacíos.
+ * Lee `Resultado` de lo guardado: sin esa pestaña guardada el valor mensual, el plazo, el A.I.U. y la tarifa viajan vacíos.
  * Requiere el permiso de editar costos (Administrador o Equipo Comercial).
  */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   try {
     const { id } = await ctx.params;
-    const body = (await req.json().catch(() => null)) as { solicitudId?: unknown; costosDto?: unknown } | null;
+    const body = (await req.json().catch(() => null)) as { solicitudId?: unknown; costosDto?: unknown; contratos?: unknown; cargos?: unknown } | null;
     const solicitudId = Number(body?.solicitudId);
     if (!Number.isInteger(solicitudId) || solicitudId < 1) {
       return NextResponse.json({ ok: false, error: 'SOLICITUD_REQUERIDA', mensaje: 'Abra los costos desde la ficha de la solicitud para enviarlos a Contratos.' }, { status: 400 });
@@ -47,6 +49,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const validacion = validarCostosPantallaDto(body?.costosDto);
     if (!validacion.ok) return NextResponse.json({ ok: false, error: 'COSTOS_DTO_INVALIDO', mensaje: 'Los totales de la pantalla no son válidos. Recargue e intente de nuevo.' }, { status: 400 });
 
+    // Módulo 5: las líneas de cargo de la pantalla deben sumar la Mano de Obra del panel; si no, no se envía nada.
+    let cargos: ReturnType<typeof cargosParaPuente> | null = null;
+    if (body?.cargos !== undefined && body.cargos !== null) {
+      const vc = validarCargosPantalla(body.cargos, (body.costosDto as CostosPantallaDto).totales.manoObra);
+      if (!vc.ok) return NextResponse.json({ ok: false, error: 'CARGOS_INVALIDOS', mensaje: `Los cargos de la pantalla no son válidos: ${vc.errores.join(' ')} Recargue e intente de nuevo.` }, { status: 400 });
+      cargos = cargosParaPuente(vc.cargos);
+    }
+
     // `select` explícito: no depende de columnas ajenas a este envío (incidente «column does not exist»).
     const solicitud = await prisma.solicitud.findUnique({
       where: { id: solicitudId },
@@ -61,6 +71,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       solicitud,
       procesoCodigo: registro.procesoCodigo,
       resultado: obtenerModulo<ResultadoGuardado>(registro.datos, 'resultado')?.datos ?? null,
+      totales: (body?.costosDto as CostosPantallaDto).totales, // ya validado arriba
+      destino: leerDestino(body?.contratos),
+      cargos,
     });
     const r = await enviarAlPuente(payload);
 
@@ -69,19 +82,42 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       accion: 'CONTRATOS_PUENTE_ENVIO',
       recurso: 'costos-estructura',
       recursoId: String(registro.id),
-      detalle: { solicitudId, resultado: r.ok ? 'OK' : r.tipo, ...(r.ok ? { modo: r.modo, huella: r.huella, advertencias: r.advertencias.length } : {}) },
+      detalle: {
+        solicitudId,
+        resultado: r.ok ? 'OK' : r.tipo,
+        ...(r.ok ? { modo: r.modo, huella: r.huella, advertencias: r.advertencias.length, ...(r.oferta ?? {}) } : {}),
+        ...(!r.ok && r.tipo === 'YA_ENVIADA' ? (r.oferta ?? {}) : {}),
+      },
     });
 
     if (r.ok) {
+      const creada = r.oferta ? `Oferta ${r.oferta.numOferta} creada en Contratos (empresa ${r.oferta.empresa}, UEN ${r.oferta.undnegocio}).` : null;
       const nota = r.modo === 'dry-run' ? ' (modo prueba: aún no se escribe en Contratos)' : '';
-      const avisos = r.advertencias.length > 0 ? ` Quedan por completar en Contratos: ${r.advertencias.map((a) => etiquetaCampo(a.campo)).join(', ')}.` : '';
-      return NextResponse.json({ ok: true, modo: r.modo, huella: r.huella, advertencias: r.advertencias, mensaje: `Datos validados por el puente de Contratos${nota}.${avisos}` });
+      const avisos = r.advertencias.length > 0 ? ` Quedan por revisar: ${r.advertencias.map((a) => describirCampo(a.campo, payload.cargos)).join(', ')}.` : '';
+      const etiquetaNoEscrito = (campo: string) => (campo === 'cargos' ? 'sección, estudios, dotación, bonos y recargos de los cargos' : etiquetaCampo(campo));
+      const aparte = r.noEscrito.length > 0 ? ` Se digitan en Contratos: ${r.noEscrito.map((n) => etiquetaNoEscrito(n.campo)).join(', ')}.` : '';
+      return NextResponse.json({
+        ok: true,
+        modo: r.modo,
+        huella: r.huella,
+        advertencias: r.advertencias,
+        oferta: r.oferta,
+        noEscrito: r.noEscrito,
+        mensaje: `${creada ?? `Datos validados por el puente de Contratos${nota}.`}${avisos}${aparte}`,
+      });
     }
     switch (r.tipo) {
       case 'NO_CONFIGURADO':
         return NextResponse.json({ ok: false, error: 'PUENTE_NO_CONFIGURADO', mensaje: 'La integración con Contratos aún no está habilitada en este ambiente.' }, { status: 503 });
       case 'DATOS_INVALIDOS':
-        return NextResponse.json({ ok: false, error: 'DATOS_INVALIDOS', mensaje: `Corrija antes de enviar: ${r.errores.map(describirError).join(' · ')}`, errores: r.errores }, { status: 422 });
+        return NextResponse.json({ ok: false, error: 'DATOS_INVALIDOS', mensaje: `Corrija antes de enviar: ${r.errores.map((e) => describirError(e, payload.cargos)).join(' · ')}`, errores: r.errores }, { status: 422 });
+      case 'YA_ENVIADA': {
+        const donde = r.oferta ? ` como la oferta ${r.oferta.numOferta} (empresa ${r.oferta.empresa}, UEN ${r.oferta.undnegocio})` : '';
+        const cambios = r.sinCambios ? '' : ' Los datos cambiaron desde entonces: Contratos conserva lo enviado la primera vez; modifíquelo allá.';
+        return NextResponse.json({ ok: false, error: 'YA_ENVIADA', mensaje: `Esta solicitud ya se envió a Contratos${donde}.${cambios}`, oferta: r.oferta, sinCambios: r.sinCambios }, { status: 409 });
+      }
+      case 'CONFLICTO':
+        return NextResponse.json({ ok: false, error: r.codigo, mensaje: r.mensaje }, { status: 409 });
       case 'TIMEOUT':
         return NextResponse.json({ ok: false, error: 'PUENTE_TIMEOUT', mensaje: r.mensaje }, { status: 504 });
       default:

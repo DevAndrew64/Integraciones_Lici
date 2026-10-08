@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "origen": {
+    "solicitudId": 7,
+    "procesoCodigo": "SED-LP-2026-0091"
+  },
+  "cliente": {
+    "razonSocial": "Cliente de Prueba S.A.S.",
+    "nit": "900123456",
+    "direccion": "Calle 1 # 2-3"
+  },
+  "contrato": {
+    "objeto": "Servicio de aseo integral",
+    "porcentajeAIU": 8,
+    "valorMensual": 16000000,
+    "plazoMeses": 12
+  },
+  "oferta": {
+    "empresa": "01",
+    "undnegocio": "BAQ",
+    "tipoAdm": "A",
+    "origenProceso": "LIC",
+    "codServicio": "ASE",
+    "descripcionServicio": "Aseo y cafetería"
+  },
+  "tarifa": {
+    "manoObra": 13111200,
+    "insumos": 0,
+    "maquinaria": 0,
+    "administrativos": 5400,
+    "valorAgregado": 0,
+    "serviciosNoContinuos": 0
+  },
+  "cargos": [
+    {
+      "nombre": "ASEADOR",
+      "cantidad": 4,
+      "horasSemana": 48,
+      "jornada": 8,
+      "salario": 1423500,
+      "riesgo": 1,
+      "valorUnitario": 2285000,
+      "valorTotal": 9140000,
+      "codigoHorario": "941"
+    },
+    {
+      "nombre": "Turnante — bloque integrado de 42h",
+      "cantidad": 1,
+      "horasSemana": 42,
+      "jornada": 0,
+      "salario": 1423500,
+      "riesgo": 2,
+      "valorUnitario": 3000000,
+      "valorTotal": 3000000,
+      "codigoHorario": null
+    }
+  ]
+}

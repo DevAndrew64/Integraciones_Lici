@@ -86,6 +86,7 @@ import {
 import matrizIcaData from '@/data/costos-estructura/matriz-ica-por-empresa-municipio.json';
 import { CATALOGO_VACUNAS, type VacunaCatalogo } from '@/data/costos-estructura/catalogo-vacunas';
 import type { ExportacionManoObraDto, FichaManoObraExportDto, DetalleUnitarioExportDto } from '@/lib/costos-mano-obra/exportacion/tipos-exportacion';
+import type { CargoPantallaDto } from '@/lib/contratos-puente/cargos';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { calcularMinutosSemanaDistribucion, calcularTotalSemanalCargo, evaluarProgramacionSemanal, puedeGuardarProgramacion as puedeGuardarProgramacionLib } from '@/lib/costos-mano-obra/horarios/distribucion-semanal';
 import { materializarFechasProgramadas } from '@/lib/costos-mano-obra/horarios/materializar-fechas-programadas';
@@ -11322,6 +11323,13 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   // Módulo 2 del puente (Enviar a Contratos): su propio estado, para no mezclarlo con el de "Exportar costos".
   const [enviandoContratos,setEnviandoContratos]=useState(false);
   const [envioContratos,setEnvioContratos]=useState<{ok:boolean;texto:string}|null>(null);
+  // Datos del envío que LiciColba no tiene y la oferta de Contratos exige: los elige quien envía (nada se infiere) y se
+  // recuerdan en este navegador para no reescribirlos en cada oferta.
+  const [destinoContratos,setDestinoContratos]=useState({empresa:'',undnegocio:'',tipoAdm:'',origenProceso:'',codServicio:''});
+  useEffect(()=>{try{const g=window.localStorage.getItem('contratosDestino');if(g)setDestinoContratos(d=>({...d,...JSON.parse(g)}));}catch{/* sin almacenamiento local: se digita de nuevo */}},[]);
+  function cambiarDestinoContratos(clave:string,valor:string){
+    setDestinoContratos(d=>{const n={...d,[clave]:valor};try{window.localStorage.setItem('contratosDestino',JSON.stringify(n));}catch{/* sin almacenamiento local */}return n;});
+  }
 
   // ── BORRADOR / AUTOSAVE (localStorage) ────────────────────────────────────
   // Clave por usuario (tomado de la sesión en sessionStorage) para que el
@@ -14518,6 +14526,33 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   }
 
   /**
+   * Líneas de cargo para "Enviar a Contratos" (módulo 5 del puente): una por línea de Mano de Obra (sin las marcadas Valor
+   * Agregado, cuyo costo va a ese subtotal) más las líneas automáticas de turnantes. El costo de cada línea es el que la
+   * pantalla ya calculó —laboral + otros costos (`costoMensualTotalLinea`) + bonos no prestacionales— sin A.I.U.; la suma de
+   * todas es exactamente `tarifaMensualTotalManoObra`. Aquí no se calcula nada: el servidor lo vuelve a comprobar contra el
+   * total del panel y el puente contra la tarifa.
+   */
+  function construirCargosContratosDto():CargoPantallaDto[]{
+    const deLinea=(l:LineaMOExtra,cantidad:number,valorTotal:number,esTurnante:boolean):CargoPantallaDto=>({
+      id:l.id,nombre:l.nombreCargo,cantidad,
+      horasSemana:Number(l.horasSemanal)>0?Number(l.horasSemanal):null,
+      jornada:Number(l.nHoras)>0?Number(l.nHoras):null,
+      salario:Number(l.salarioBase)>0?Number(l.salarioBase):null,
+      arlKey:l.arlKey,codigoHorario:l.codigoHorario,valorTotal,esTurnante,
+    });
+    const principales=lineasExtra.filter(l=>!l.esValorAgregado).map(l=>{
+      const r=resultadosLineasExtraConOtrosCostos.find(x=>x.id===l.id)?.resultado;
+      const bonos=resultadosLineasExtraMensuales.find(x=>x.id===l.id)?.bonosNoPrestacionales.totalLinea??0;
+      return deLinea(l,r?.cantidadTrabajadores??0,(r?.costoMensualTotalLinea??0)+bonos,false);
+    });
+    const turnantes=resultadosTurnantesConOtrosCostosParaAgregado.flatMap(x=>{
+      const l=cargosTurnantes.find(c=>c.id===x.id);
+      return l&&x.resultado?[deLinea(l,x.resultado.cantidadTrabajadores,x.resultado.costoMensualTotalLinea,true)]:[];
+    });
+    return[...principales,...turnantes];
+  }
+
+  /**
    * Ajuste "EXPORTAR COSTOS — EXCEL GENERAL CON TODAS LAS PESTAÑAS"
    * (reemplaza el flujo legacy anterior, que hacía `POST
    * /api/costos-estructura` con un objeto plano y creaba un
@@ -14624,7 +14659,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     setEnviandoContratos(true);
     try{
       const res=await fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos`,{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:construirCostosPantallaDto()}),
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:construirCostosPantallaDto(),contratos:destinoContratos,cargos:construirCargosContratosDto()}),
       });
       const d=await res.json().catch(()=>({}));
       setEnvioContratos({ok:res.ok,texto:String(d.mensaje||(res.ok?'Datos enviados a Contratos.':'No se pudo enviar a Contratos.'))});
@@ -20402,7 +20437,21 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                 {/* Módulo 2 del puente: mismos permisos que editar costos (el servidor los vuelve a exigir). */}
                 {puedeEditarCostosUI&&solicitudProceso?.id!=null&&(
                   <>
-                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos} title="Envía los datos de esta oferta a Contratos a través del puente (hoy en modo prueba: valida y no escribe)"
+                    {/* Datos que LiciColba no tiene y la oferta de Contratos exige (clave de la oferta y tipo de tarifa). */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginTop:8}}>
+                      <div><label style={lbl}>Empresa (código)</label><input style={inp} value={destinoContratos.empresa} maxLength={6} placeholder="Ej. 01" onChange={e=>cambiarDestinoContratos('empresa',e.target.value)}/></div>
+                      <div><label style={lbl}>UEN (código)</label><input style={inp} value={destinoContratos.undnegocio} maxLength={9} placeholder="Ej. BAQ" onChange={e=>cambiarDestinoContratos('undnegocio',e.target.value)}/></div>
+                      <div><label style={lbl}>Tipo de tarifa</label>
+                        <select style={inp} value={destinoContratos.tipoAdm} onChange={e=>cambiarDestinoContratos('tipoAdm',e.target.value)}>
+                          <option value="">Seleccione…</option><option value="A">A · Administración</option><option value="C">C · Admon. y costos asumidos</option>
+                        </select></div>
+                      <div><label style={lbl}>Origen del proceso</label>
+                        <select style={inp} value={destinoContratos.origenProceso} onChange={e=>cambiarDestinoContratos('origenProceso',e.target.value)}>
+                          <option value="">Seleccione…</option><option value="LIC">LIC · Licitación pública</option><option value="INV">INV · Invitación privada</option>
+                        </select></div>
+                      <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Concepto de facturación (código)</label><input style={inp} value={destinoContratos.codServicio} maxLength={3} placeholder="Código del concepto en Contratos" onChange={e=>cambiarDestinoContratos('codServicio',e.target.value)}/></div>
+                    </div>
+                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos} title="Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número)"
                       style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos)?'default':'pointer',opacity:(saving||enviandoContratos)?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
                       {enviandoContratos?'Enviando…':'Enviar a Contratos'}
                     </button>

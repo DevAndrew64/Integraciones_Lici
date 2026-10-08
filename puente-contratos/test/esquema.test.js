@@ -125,7 +125,7 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
       'fc_elemxcont',
       'fc_preciosventas_oferta',
     ]);
-    assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_empresas', 'gl_undnegocios']);
+    assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
   });
 
   it('la clave de la oferta y los largos que importan están donde se esperan', () => {
@@ -146,11 +146,13 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
   it('nunca incluye columnas de credenciales (las tablas de configuración guardan claves en texto plano)', () => {
     const nombres = Object.values(real.tablas).flatMap((t) => Object.keys(t.columnas));
     assert.deepEqual(nombres.filter((n) => /pass|clave|^user_cont|^server_|^usernomina|^servernomina/i.test(n)), []);
-    assert.ok(!('fc_control' in real.tablas), 'fc_control guarda usuario y clave de conexión');
+    // fc_control guarda usuario y clave de conexión: solo puede figurar con las tres columnas del contador de ofertas.
+    assert.deepEqual(Object.keys(real.tablas.fc_control.columnas).sort(), ['empresa', 'num_oferta', 'undnegocio']);
   });
 
   it('el archivo está en el formato canónico (una columna por línea), así el comando de actualizar no mete ruido', () => {
-    const texto = readFileSync(new URL('../src/esquema-esperado.json', import.meta.url), 'utf8');
+    // Git en Windows (autocrlf) entrega el archivo con CRLF: el formato canónico se compara con saltos de línea LF.
+    const texto = readFileSync(new URL('../src/esquema-esperado.json', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
     assert.equal(serializarEsquema(real), texto);
   });
 });

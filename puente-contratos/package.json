@@ -13,7 +13,8 @@
     "test:mysql": "node --env-file=test/mysql/prueba.env --test test/mysql.integracion.test.js",
     "mysql:prueba:arriba": "docker compose -f test/mysql/docker-compose.yml up -d --wait",
     "mysql:prueba:abajo": "docker compose -f test/mysql/docker-compose.yml down -v",
-    "esquema:actualizar": "node src/herramientas/exportar-esquema.js"
+    "esquema:actualizar": "node src/herramientas/exportar-esquema.js",
+    "permisos:generar": "node src/herramientas/generar-permisos.js"
   },
   "dependencies": {
     "express": "^5.2.1",

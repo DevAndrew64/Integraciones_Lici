@@ -8,6 +8,8 @@ const payload: PayloadContratosV1 = {
   origen: { solicitudId: 7, procesoCodigo: 'SED-LP-2026-0091' },
   cliente: { razonSocial: 'Cliente de prueba', nit: '900123456', direccion: null },
   contrato: { objeto: 'Aseo', porcentajeAIU: 12.32, valorMensual: 5000000, plazoMeses: 12 },
+  oferta: { empresa: '01', undnegocio: 'BAQ', tipoAdm: 'A', origenProceso: 'LIC', codServicio: 'ASE', descripcionServicio: null },
+  tarifa: { manoObra: 61155743, insumos: 0, maquinaria: 0, administrativos: 5000000, valorAgregado: 0, serviciosNoContinuos: 0 },
 };
 
 // Puente simulado con un servidor HTTP real: se prueba el `fetch`, los encabezados, el cuerpo y el tiempo de espera.
@@ -48,8 +50,40 @@ describe('enviarAlPuente', () => {
   it('envía el JSON con el token y devuelve modo, huella y advertencias', async () => {
     comportamiento = responder(200, { ok: true, modo: 'dry-run', huella: 'abc', advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato' }], escribiria: {} });
     const r = await enviarAlPuente(payload, entorno());
-    expect(r).toEqual({ ok: true, modo: 'dry-run', huella: 'abc', advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato' }] });
+    expect(r).toEqual({ ok: true, modo: 'dry-run', huella: 'abc', advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato' }], oferta: null, noEscrito: [] });
     expect(ultimaPeticion).toEqual({ auth: 'Bearer token-de-prueba-0123456789', tipo: 'application/json', cuerpo: payload });
+  });
+
+  it('en modo escritura devuelve la oferta creada (empresa, UEN y número) y lo que no se escribió', async () => {
+    comportamiento = responder(200, {
+      ok: true, modo: 'escritura', huella: 'abc', advertencias: [],
+      escrito: { empresa: '01', undnegocio: 'BAQ', numOferta: 937, tarifa: { nit: '900123456-8' } },
+      noEscrito: [{ campo: 'contrato.plazoMeses', motivo: 'Va en las fechas del contrato.' }],
+    });
+    expect(await enviarAlPuente(payload, entorno())).toEqual({
+      ok: true, modo: 'escritura', huella: 'abc', advertencias: [],
+      oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 937 },
+      noEscrito: [{ campo: 'contrato.plazoMeses', motivo: 'Va en las fechas del contrato.' }],
+    });
+  });
+
+  it('una «oferta» incompleta en la respuesta no se toma (solo se confía en la clave completa)', async () => {
+    comportamiento = responder(200, { ok: true, modo: 'escritura', huella: 'abc', advertencias: [], escrito: { empresa: '01', numOferta: '937' } });
+    expect(await enviarAlPuente(payload, entorno())).toMatchObject({ ok: true, oferta: null });
+  });
+
+  it('409 YA_ENVIADA → la oferta que ya existe y si los datos cambiaron desde entonces', async () => {
+    comportamiento = responder(409, { ok: false, error: 'YA_ENVIADA', mensaje: 'x', oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 930 }, sinCambios: false });
+    expect(await enviarAlPuente(payload, entorno())).toEqual({ ok: false, tipo: 'YA_ENVIADA', oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 930 }, sinCambios: false });
+  });
+
+  it('otros rechazos que el usuario puede entender (ocupado, contador desfasado, base sin conexión) conservan su código y su mensaje', async () => {
+    comportamiento = responder(409, { ok: false, error: 'OCUPADO', mensaje: 'Hay otro envío de esta solicitud en curso.' });
+    expect(await enviarAlPuente(payload, entorno())).toEqual({ ok: false, tipo: 'CONFLICTO', codigo: 'OCUPADO', mensaje: 'Hay otro envío de esta solicitud en curso.' });
+    comportamiento = responder(503, { ok: false, error: 'BD_NO_DISPONIBLE', mensaje: 'No se pudo conectar con la base de datos de Contratos.' });
+    expect(await enviarAlPuente(payload, entorno())).toMatchObject({ ok: false, tipo: 'CONFLICTO', codigo: 'BD_NO_DISPONIBLE' });
+    comportamiento = responder(409, { ok: false, error: 'SIN_MENSAJE' }); // sin mensaje no se confía: error genérico
+    expect(await enviarAlPuente(payload, entorno())).toMatchObject({ ok: false, tipo: 'ERROR_PUENTE' });
   });
 
   it('422 del puente → DATOS_INVALIDOS con los errores por campo', async () => {

@@ -1,5 +1,7 @@
 import { crearApp } from './app.js';
-import { crearEstadoBD, verificarEsquema } from './esquema.js';
+import { crearEscritorMySQL } from './escritor-mysql.js';
+import { cargarEsquemaEsperado, crearEstadoBD, esquemaHastaModulo, verificarEsquema } from './esquema.js';
+import { MODULO_IMPLEMENTADO } from './modulos.js';
 import { crearPool, leerConfigMySQL } from './mysql.js';
 
 const token = process.env.PUENTE_TOKEN ?? '';
@@ -29,10 +31,12 @@ if (modo === 'escritura' && !configMySQL) {
 }
 
 const pool = configMySQL ? crearPool(configMySQL) : null;
+// Solo las tablas de los módulos ya implementados: el usuario de MySQL del puente tiene permisos solo sobre esas.
+const esquema = esquemaHastaModulo(cargarEsquemaEsperado(), MODULO_IMPLEMENTADO);
 if (pool && modo === 'escritura') {
   // Fail-closed: si la base no responde o su estructura ya no es la esperada, el servicio no arranca.
   try {
-    const { ok, problemas } = await verificarEsquema(pool);
+    const { ok, problemas } = await verificarEsquema(pool, esquema);
     if (!ok) {
       console.error(JSON.stringify({ evento: 'esquema-distinto', cantidad: problemas.length, primeros: problemas.slice(0, 5) }));
       process.exit(1);
@@ -43,6 +47,7 @@ if (pool && modo === 'escritura') {
   }
 }
 
-crearApp({ token, modo, estadoBD: pool ? crearEstadoBD(pool) : undefined }).listen(puerto, host, () => {
+const escritor = pool && modo === 'escritura' ? crearEscritorMySQL(pool) : undefined;
+crearApp({ token, modo, escritor, estadoBD: pool ? crearEstadoBD(pool, esquema) : undefined }).listen(puerto, host, () => {
   console.log(JSON.stringify({ evento: 'puente-contratos-iniciado', host, puerto, modo, mysql: pool ? 'configurado' : 'sin_configurar' }));
 });

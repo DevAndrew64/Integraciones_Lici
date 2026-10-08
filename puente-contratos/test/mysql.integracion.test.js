@@ -6,9 +6,15 @@
  */
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { after, before, describe, it } from 'node:test';
-import { cargarEsquemaEsperado, verificarEsquema } from '../src/esquema.js';
+import { ErrorNegocio } from '../src/errores.js';
+import { crearEscritorMySQL } from '../src/escritor-mysql.js';
+import { cargarEsquemaEsperado, esquemaHastaModulo, verificarEsquema } from '../src/esquema.js';
+import { MODULO_IMPLEMENTADO } from '../src/modulos.js';
 import { crearPool, SQL_MODE_ESTRICTO } from '../src/mysql.js';
+import { sentenciasDePermisos } from '../src/permisos.js';
+import { huella, validarContrato } from '../src/validar.js';
 
 const env = process.env;
 const saltar = env.PUENTE_TEST_MYSQL_HOST ? false : 'sin base de prueba: defina PUENTE_TEST_MYSQL_HOST (npm run test:mysql)';
@@ -167,14 +173,14 @@ describe('MySQL 5.5 real', { skip: saltar }, () => {
   });
 
   it('si Contratos cambia una columna, el modo «escritura» NO arranca y en modo prueba /health avisa «esquema_distinto»', async () => {
-    // fc_preciosventas_oferta.nom_punto: varchar(60) → varchar(50), como si Contratos la hubiera acortado
-    await pool.query('ALTER TABLE fc_preciosventas_oferta MODIFY nom_punto varchar(50) DEFAULT ""');
+    // fc_contratos_tarifa_inicial.codservicio: char(3) → char(4), como si Contratos la hubiera cambiado (el contrato exige el tipo exacto)
+    await pool.query("ALTER TABLE fc_contratos_tarifa_inicial MODIFY codservicio char(4) DEFAULT ''");
     try {
       const escritura = await arrancarServicio(4022, { PUENTE_MODO: 'escritura' });
       assert.equal(escritura.iniciado, false, 'no debe arrancar');
       assert.equal(escritura.codigo, 1);
       assert.match(escritura.salida, /esquema-distinto/);
-      assert.match(escritura.salida, /nom_punto/, 'dice qué columna cambió');
+      assert.match(escritura.salida, /codservicio/, 'dice qué columna cambió');
       assert.doesNotMatch(escritura.salida, new RegExp(config.password), 'nunca imprime la clave');
 
       const prueba = await arrancarServicio(4023, { PUENTE_MODO: 'dry-run' });
@@ -185,8 +191,391 @@ describe('MySQL 5.5 real', { skip: saltar }, () => {
         prueba.hijo?.kill();
       }
     } finally {
-      await pool.query('ALTER TABLE fc_preciosventas_oferta MODIFY nom_punto varchar(60) DEFAULT ""');
+      await pool.query("ALTER TABLE fc_contratos_tarifa_inicial MODIFY codservicio char(3) DEFAULT ''");
     }
     assert.equal((await verificarEsquema(pool, cargarEsquemaEsperado())).ok, true, 'la base de prueba quedó como estaba');
+  });
+
+  it('el cambio en una tabla de un módulo que aún no se usa no tumba el servicio (solo se verifican las tablas de los módulos hechos)', async () => {
+    await pool.query('ALTER TABLE fc_preciosventas_oferta MODIFY nom_punto varchar(50) DEFAULT ""');
+    try {
+      const r = await arrancarServicio(4024, { PUENTE_MODO: 'escritura' });
+      try {
+        assert.equal(r.iniciado, true, r.salida);
+        assert.equal((await consultarSalud(4024)).bd, 'ok');
+      } finally {
+        r.hijo?.kill();
+      }
+    } finally {
+      await pool.query('ALTER TABLE fc_preciosventas_oferta MODIFY nom_punto varchar(60) DEFAULT ""');
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Módulos 4 y 5 — oferta, tarifa y cargos. Todo el flujo corre con un usuario de MySQL de permisos MÍNIMOS (`puente_min`), creado aquí
+// con los GRANT que genera `npm run permisos:generar`: si esos permisos no alcanzaran, estas pruebas fallarían.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+const CLAVE_MINIMO = 'prueba-minimo-sin-valor';
+const CLAVE_RAIZ = env.PUENTE_TEST_MYSQL_ROOT_PASSWORD;
+const saltarModulo4 = saltar || (CLAVE_RAIZ ? false : 'sin PUENTE_TEST_MYSQL_ROOT_PASSWORD (npm run test:mysql la define)');
+
+/** El contrato v1 completo de una solicitud; `cambios` reemplaza campos sección por sección. */
+function armar(solicitudId, cambios = {}) {
+  const base = {
+    version: 1,
+    origen: { solicitudId, procesoCodigo: `PROC-${solicitudId}` },
+    cliente: { razonSocial: 'Cliente de Prueba S.A.S.', nit: '900123456', direccion: 'Calle 1 # 2-3' },
+    contrato: { objeto: 'Servicio de aseo integral', porcentajeAIU: 12.32, valorMensual: 5000000, plazoMeses: 12 },
+    oferta: { empresa: '01', undnegocio: 'BAQ', tipoAdm: 'A', origenProceso: 'LIC', codServicio: 'ASE', descripcionServicio: 'Aseo y cafetería' },
+    tarifa: { manoObra: 56160000, insumos: 1000000, maquinaria: 500000, administrativos: 5000000, valorAgregado: 0, serviciosNoContinuos: 250000 },
+    // Los cargos suman 50.000.000,12345 sin A.I.U.; con el 12,32 % son 56.160.000, la mano de obra de la tarifa.
+    cargos: [
+      { nombre: 'Aseador', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 10000000, valorTotal: 40000000, codigoHorario: '941' },
+      { nombre: 'Supervisor', cantidad: 1, horasSemana: 44, jornada: 7.33, salario: 2500000, riesgo: 2, valorUnitario: 10000000.12345, valorTotal: 10000000.12345 },
+    ],
+  };
+  for (const [seccion, campos] of Object.entries(cambios)) base[seccion] = Array.isArray(campos) ? campos : { ...base[seccion], ...campos };
+  return base;
+}
+
+describe('Módulos 4 y 5 — oferta, tarifa y cargos en MySQL 5.5 real, con el usuario de permisos mínimos', { skip: saltarModulo4 }, () => {
+  let admin; // usuario completo de la base de prueba: siembra y verifica
+  let raiz; // solo para crear el usuario mínimo y simular cambios de estructura
+  let minimo; // el del puente
+  let escritor;
+
+  const contador = async (empresa, uen) => Number((await admin.query('SELECT num_oferta FROM fc_control WHERE empresa = ? AND undnegocio = ?', [empresa, uen]))[0][0].num_oferta);
+  const filasDe = async (solicitudId) => (await admin.query('SELECT * FROM fc_contratos_tarifa_inicial WHERE pc_add LIKE ?', [`LICICOLBA:${solicitudId}:%`]))[0];
+  const enviar = (solicitudId, cambios) => {
+    const r = validarContrato(armar(solicitudId, cambios), { paraEscribir: true });
+    assert.equal(r.ok, true, JSON.stringify(r.errores));
+    return escritor.escribir(r.datos, { huella: huella(r.datos) });
+  };
+  const fallo = (promesa) => promesa.then(() => assert.fail('debía fallar'), (e) => e);
+  const limpiar = async () => {
+    for (const tabla of ['fc_contratos_cargos_iniciales', 'fc_contratos_tarifa_inicial', 'fc_clientes', 'fc_control', 'fc_conceptos', 'fc_horarios']) await admin.query(`DELETE FROM ${tabla}`);
+  };
+
+  before(async () => {
+    admin = crearPool(config);
+    raiz = crearPool({ ...config, user: 'root', password: CLAVE_RAIZ });
+    // MySQL 5.5: GRANT USAGE crea el usuario si no existe; luego se le quita todo y se le dan SOLO los permisos generados.
+    await raiz.query("GRANT USAGE ON *.* TO 'puente_min'@'%' IDENTIFIED BY ?", [CLAVE_MINIMO]);
+    await raiz.query("REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'puente_min'@'%'");
+    for (const sentencia of sentenciasDePermisos(cargarEsquemaEsperado(), { usuario: 'puente_min', base: config.database, hastaModulo: MODULO_IMPLEMENTADO })) await raiz.query(sentencia);
+    minimo = crearPool({ ...config, user: 'puente_min', password: CLAVE_MINIMO });
+    escritor = crearEscritorMySQL(minimo);
+
+    await limpiar();
+    await admin.query('INSERT INTO fc_clientes (undnegocio, nit, sucursal, rsocial, snbasertf) VALUES ?', [[
+      ['BAQ', '900123456-8', '00', 'CLIENTE DE PRUEBA S.A.S.', 'N'],
+      ['BAQ', '800197268-4 ', '00', 'Ñandú “Premium” S.A.S.', 'N'], // NIT guardado con un espacio al final y texto con latin1
+      ['BAQ', '860034313-7', '01', 'CASA DE SUCURSAL UNO', 'N'],
+      ['BAQ', '860034313-7', '00', 'CASA MATRIZ BARRANQUILLA', 'N'],
+      ['BOG', '860034313-7', '00', 'SEDE BOGOTA', 'N'],
+    ]]);
+    // Una fila por (empresa, UEN); num_oferta = el ÚLTIMO número usado. (03, XXX) está duplicada a propósito.
+    await admin.query('INSERT INTO fc_control (empresa, undnegocio, num_oferta) VALUES ?', [[['01', 'BAQ', 936], ['01', 'BOG', 219], ['02', 'BAQ', 7], ['03', 'XXX', 1], ['03', 'XXX', 1]]]);
+    await admin.query('INSERT INTO fc_conceptos (empresa, undnegocio, codcpto) VALUES ?', [[['01', 'BAQ', 'ASE'], ['01', 'BOG', 'ASE'], ['02', 'BAQ', 'VIG']]]);
+    await admin.query('INSERT INTO fc_horarios (codigo, horario, snactivo) VALUES ?', [[['941', 'LUN-VIE 6-14', 1], ['942', 'LUN-SAB 14-22', 1]]]);
+  });
+  after(async () => {
+    await limpiar();
+    await minimo?.end();
+    await raiz?.end();
+    await admin?.end();
+  });
+
+  it('con permisos mínimos escribe la tarifa: reserva el número, llena las columnas de VFP y deja el contador al día', async () => {
+    const antes = await contador('01', 'BAQ');
+    const r = await enviar(1001);
+    assert.equal(r.escrito.numOferta, antes + 1);
+    assert.equal(await contador('01', 'BAQ'), antes + 1, 'num_oferta guarda el ÚLTIMO número usado');
+
+    const filas = await filasDe(1001);
+    assert.equal(filas.length, 1);
+    const f = filas[0];
+    assert.deepEqual(
+      {
+        empresa: f.empresa, undnegocio: f.undnegocio, num_oferta: f.num_oferta, ncontrato: f.ncontrato, nit: f.nit, rsocial: f.rsocial, consec: f.consec,
+        codservicio: f.codservicio, descripcion: f.descripcion, tipo_adm: f.tipo_adm, origen_proceso: f.origen_proceso, user_add: f.user_add,
+      },
+      {
+        empresa: '01', undnegocio: 'BAQ', num_oferta: String(antes + 1), ncontrato: '', nit: '900123456-8', rsocial: 'CLIENTE DE PRUEBA S.A.S.', consec: 1,
+        codservicio: 'ASE', descripcion: 'Aseo y cafetería', tipo_adm: 'A', origen_proceso: 'LIC', user_add: 'LICICOLBA',
+      },
+    );
+    // Importes y A.I.U. exactos (DECIMAL como texto, sin coma flotante).
+    assert.deepEqual(
+      { aiu: f.aiu, tarifa: f.tarifa, tar_manoobra: f.tar_manoobra, tar_impuestos: f.tar_impuestos, tar_insumos: f.tar_insumos, tar_maquinaria: f.tar_maquinaria, tar_otros: f.tar_otros, tar_nocontinuos: f.tar_nocontinuos, tar_examenes: f.tar_examenes, tar_dotacion: f.tar_dotacion },
+      { aiu: '0.1232000000', tarifa: '62910000', tar_manoobra: '56160000', tar_impuestos: '5000000', tar_insumos: '1000000', tar_maquinaria: '500000', tar_otros: 0, tar_nocontinuos: '250000.00', tar_examenes: '0', tar_dotacion: '0' },
+    );
+    assert.match(f.pc_add, /^LICICOLBA:1001:[0-9a-f]{12}$/);
+    // Lo que el formulario no escribe queda en su valor por defecto.
+    assert.deepEqual({ dias: f.dias_tarifa, moneda: f.moneda, marco: f.marco, tipo: f.tipo, fmod: f.fmod }, { dias: 30, moneda: 'COP', marco: 0, tipo: '', fmod: '0000-00-00 00:00:00' });
+    const [[reciente]] = await admin.query('SELECT TIMESTAMPDIFF(SECOND, fadd, NOW()) AS seg FROM fc_contratos_tarifa_inicial WHERE id = ?', [f.id]);
+    assert.ok(Number(reciente.seg) >= 0 && Number(reciente.seg) < 60, 'fadd lo pone el servidor con NOW()');
+  });
+
+  it('escribe los cargos con el número de oferta, código consecutivo, ítem, horario y los valores exactos; lo demás queda como lo deja el formulario', async () => {
+    const [[{ n }]] = await admin.query("SELECT num_oferta AS n FROM fc_contratos_tarifa_inicial WHERE pc_add LIKE 'LICICOLBA:1001:%'");
+    const [cargos] = await admin.query('SELECT * FROM fc_contratos_cargos_iniciales WHERE pc_add LIKE ? ORDER BY item', ['LICICOLBA:1001:%']);
+    assert.equal(cargos.length, 2);
+    const [aseador, supervisor] = cargos;
+    assert.deepEqual(
+      { empresa: aseador.empresa, undnegocio: aseador.undnegocio, num_oferta: aseador.num_oferta, ncontrato: aseador.ncontrato, consec: aseador.consec, concepto: aseador.concepto, item: aseador.item, cargo: aseador.cargo, nom_cargo: aseador.nom_cargo, codhorario: aseador.codhorario },
+      { empresa: '01', undnegocio: 'BAQ', num_oferta: n, ncontrato: '', consec: '1', concepto: 'ASE', item: '1', cargo: '1', nom_cargo: 'Aseador', codhorario: '941' },
+    );
+    assert.deepEqual(
+      { jornada: aseador.jornada, horassem: aseador.horassem, cantidad: aseador.cantidad, vlr_unitario: aseador.vlr_unitario, vlr_total: aseador.vlr_total, salario: aseador.salario, riesgo: aseador.riesgo, user_add: aseador.user_add },
+      { jornada: '8.00', horassem: '48', cantidad: '4', vlr_unitario: '10000000.00000', vlr_total: '40000000.00000', salario: '1423500', riesgo: '1', user_add: 'LICICOLBA' },
+    );
+    assert.deepEqual(
+      { item: supervisor.item, cargo: supervisor.cargo, jornada: supervisor.jornada, vlr_unitario: supervisor.vlr_unitario, vlr_total: supervisor.vlr_total, codhorario: supervisor.codhorario },
+      { item: '2', cargo: '2', jornada: '7.33', vlr_unitario: '10000000.12345', vlr_total: '10000000.12345', codhorario: '' },
+    );
+    // Lo que LiciColba no trae queda en el valor con que el formulario lo inserta (el de la base).
+    assert.deepEqual(
+      { cod_seccion: aseador.cod_seccion, dotm: aseador.dotm, epp: aseador.epp, snextras: aseador.snextras, rnocturno: aseador.rnocturno, nivel_educacion: aseador.nivel_educacion, experiencia: aseador.experiencia, clasebono_alim: aseador.clasebono_alim, vlr_cargos: aseador.vlr_cargos, fmod: aseador.fmod },
+      { cod_seccion: '0', dotm: '', epp: '', snextras: '0', rnocturno: '0', nivel_educacion: '', experiencia: 0, clasebono_alim: '', vlr_cargos: 0, fmod: '0000-00-00 00:00:00' },
+    );
+    assert.match(aseador.pc_add, /^LICICOLBA:1001:[0-9a-f]{12}$/);
+    assert.notEqual(aseador.fadd, '0000-00-00 00:00:00');
+  });
+
+  it('el reenvío de la misma solicitud no crea otra oferta ni gasta otro número', async () => {
+    const antes = await contador('01', 'BAQ');
+    const e = await fallo(enviar(1001));
+    assert.ok(e instanceof ErrorNegocio);
+    assert.equal(e.codigo, 'YA_ENVIADA');
+    assert.equal(e.estado, 409);
+    assert.equal(e.extra.oferta.numOferta, antes);
+    assert.equal(e.extra.sinCambios, true);
+    assert.equal(await contador('01', 'BAQ'), antes);
+    assert.equal((await filasDe(1001)).length, 1);
+
+    const cambiado = await fallo(enviar(1001, { tarifa: { manoObra: 1 } }));
+    assert.equal(cambiado.extra.sinCambios, false, 'avisa que lo reenviado cambió y que Contratos conserva lo anterior');
+  });
+
+  it('ocho solicitudes distintas a la vez reciben ocho números consecutivos distintos', async () => {
+    const antes = await contador('01', 'BAQ');
+    const ids = [2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008];
+    const resultados = await Promise.all(ids.map((id) => enviar(id)));
+    assert.deepEqual(resultados.map((r) => r.escrito.numOferta).sort((a, b) => a - b), ids.map((_, i) => antes + 1 + i));
+    assert.equal(await contador('01', 'BAQ'), antes + 8);
+    const [[{ n }]] = await admin.query("SELECT COUNT(DISTINCT num_oferta) AS n FROM fc_contratos_tarifa_inicial WHERE empresa = '01' AND undnegocio = 'BAQ' AND pc_add LIKE 'LICICOLBA:200%'");
+    assert.equal(Number(n), 8);
+  });
+
+  it('la MISMA solicitud enviada seis veces a la vez produce una sola oferta', async () => {
+    const antes = await contador('01', 'BAQ');
+    const resultados = await Promise.allSettled(Array.from({ length: 6 }, () => enviar(3001)));
+    assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1);
+    for (const r of resultados.filter((x) => x.status === 'rejected')) {
+      assert.ok(r.reason instanceof ErrorNegocio && ['YA_ENVIADA', 'OCUPADO'].includes(r.reason.codigo), String(r.reason));
+    }
+    assert.equal((await filasDe(3001)).length, 1);
+    assert.equal(await contador('01', 'BAQ'), antes + 1, 'solo se gastó un número');
+  });
+
+  it('si el contador iba por detrás de lo ya usado, salta ese número y avisa cuál', async () => {
+    const antes = await contador('01', 'BOG');
+    await admin.query("INSERT INTO fc_contratos_tarifa_inicial (empresa, undnegocio, num_oferta, nit) VALUES ('01', 'BOG', ?, '111-1')", [antes + 1]);
+    const r = await enviar(4001, { oferta: { undnegocio: 'BOG' } });
+    assert.equal(r.escrito.numOferta, antes + 2);
+    assert.deepEqual(r.escrito.numerosSaltados, [antes + 1]);
+    assert.equal(await contador('01', 'BOG'), antes + 2);
+  });
+
+  it('cliente que no existe, concepto que no existe y UEN sin contador: errores por campo y NINGÚN número reservado', async () => {
+    const antes = { baq: await contador('01', 'BAQ'), bog: await contador('01', 'BOG') };
+    const e1 = await fallo(enviar(5001, { cliente: { nit: '700000007' }, oferta: { codServicio: 'ZZZ' } }));
+    assert.equal(e1.codigo, 'DATOS_INVALIDOS');
+    assert.deepEqual(e1.extra.errores.map((x) => x.campo), ['cliente.nit', 'oferta.codServicio']);
+    const e2 = await fallo(enviar(5002, { oferta: { undnegocio: 'CAL' } }));
+    assert.deepEqual(e2.extra.errores.map((x) => x.campo), ['oferta.undnegocio']);
+    assert.deepEqual({ baq: await contador('01', 'BAQ'), bog: await contador('01', 'BOG') }, antes);
+    assert.equal((await filasDe(5001)).length + (await filasDe(5002)).length, 0);
+  });
+
+  it('un contador duplicado para (empresa, UEN) se rechaza sin tocarlo', async () => {
+    const e = await fallo(enviar(6001, { oferta: { empresa: '03', undnegocio: 'XXX' } }));
+    assert.equal(e.codigo, 'CONTADOR_AMBIGUO');
+    const [filas] = await admin.query("SELECT num_oferta FROM fc_control WHERE empresa = '03' AND undnegocio = 'XXX'");
+    assert.deepEqual(filas.map((f) => Number(f.num_oferta)), [1, 1]);
+  });
+
+  it('el NIT guardado con espacios se encuentra por su base, se escribe como está en Contratos y la razón social viaja en latin1 sin perderse', async () => {
+    const r = await enviar(7001, { cliente: { nit: '800197268', razonSocial: 'Otro nombre del cliente' } });
+    assert.equal(r.escrito.cliente.nit, '800197268-4');
+    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cliente.razonSocial'], 'la razón social de LiciColba difiere: se avisa y se usa la de Contratos');
+    const [f] = await filasDe(7001);
+    assert.equal(f.nit, '800197268-4');
+    assert.equal(f.rsocial, 'Ñandú “Premium” S.A.S.');
+    const [[{ hex }]] = await admin.query('SELECT HEX(CONVERT(rsocial USING latin1)) AS hex FROM fc_contratos_tarifa_inicial WHERE id = ?', [f.id]);
+    assert.equal(hex, 'D1616E64FA20935072656D69756D9420532E412E532E', 'los bytes son los de cp1252, como los escribe Visual FoxPro');
+  });
+
+  it('con varios clientes del mismo NIT elige el de la misma UEN y la sucursal 00', async () => {
+    const baq = await enviar(7101, { cliente: { nit: '860034313' } });
+    assert.equal(baq.escrito.cliente.rsocial, 'CASA MATRIZ BARRANQUILLA');
+    const bog = await enviar(7102, { cliente: { nit: '860034313' }, oferta: { undnegocio: 'BOG' } });
+    assert.equal(bog.escrito.cliente.rsocial, 'SEDE BOGOTA');
+  });
+
+  it('la clave de la oferta llega en minúsculas y se escribe como está en Contratos', async () => {
+    const antes = await contador('01', 'BAQ');
+    const r = await enviar(7201, { oferta: { undnegocio: 'baq', codServicio: 'ase' } });
+    assert.equal(r.escrito.numOferta, antes + 1);
+    const [f] = await filasDe(7201);
+    assert.deepEqual({ empresa: f.empresa, undnegocio: f.undnegocio, codservicio: f.codservicio }, { empresa: '01', undnegocio: 'BAQ', codservicio: 'ASE' });
+  });
+
+  it('el archivo de contrato de LiciColba (el JSON que arma su código) se escribe tal cual, sin advertencias; el guion largo del turnante queda en latin1', async () => {
+    const archivo = JSON.parse(readFileSync(new URL('./fixtures/payload-licicolba.json', import.meta.url), 'utf8'));
+    const r = validarContrato(archivo, { paraEscribir: true });
+    assert.equal(r.ok, true, JSON.stringify(r.errores));
+    const antes = await contador('01', 'BAQ');
+    const escrito = await escritor.escribir(r.datos, { huella: huella(r.datos) });
+    assert.deepEqual(escrito.advertencias, []);
+    assert.equal(escrito.escrito.numOferta, antes + 1);
+    const [tarifa] = await filasDe(archivo.origen.solicitudId);
+    assert.deepEqual([tarifa.tar_manoobra, tarifa.tar_impuestos, tarifa.aiu], ['13111200', '5400', '0.0800000000']);
+    const [cargos] = await admin.query('SELECT cargo, item, nom_cargo, jornada, riesgo, codhorario, HEX(CONVERT(nom_cargo USING latin1)) AS hex FROM fc_contratos_cargos_iniciales WHERE pc_add LIKE ? ORDER BY item', [`LICICOLBA:${archivo.origen.solicitudId}:%`]);
+    assert.deepEqual(cargos.map((c) => [c.cargo, c.item, c.nom_cargo, c.jornada, c.riesgo, c.codhorario]), [
+      ['1', '1', 'ASEADOR', '8.00', '1', '941'],
+      ['2', '2', 'Turnante — bloque integrado de 42h', '0.00', '2', ''],
+    ]);
+    assert.ok(cargos[1].hex.startsWith('5475726E616E7465209720'), 'el guion largo es el byte 0x97 de cp1252, como lo escribe Visual FoxPro');
+  });
+
+  it('un horario que no existe en Contratos se rechaza por línea y no gasta ningún número', async () => {
+    const antes = await contador('01', 'BAQ');
+    const e = await fallo(enviar(7301, { cargos: [{ ...armar(1).cargos[0], codigoHorario: '999' }, armar(1).cargos[1]] }));
+    assert.equal(e.codigo, 'DATOS_INVALIDOS');
+    assert.deepEqual(e.extra.errores.map((x) => x.campo), ['cargos[0].codigoHorario']);
+    assert.equal(await contador('01', 'BAQ'), antes);
+    assert.equal((await filasDe(7301)).length, 0);
+  });
+
+  it('un envío sin cargos crea solo la tarifa', async () => {
+    const sin = armar(7401);
+    delete sin.cargos;
+    const r = validarContrato(sin, { paraEscribir: true });
+    const escrito = await escritor.escribir(r.datos, { huella: huella(r.datos) });
+    assert.deepEqual(escrito.escrito.cargos, []);
+    assert.equal((await filasDe(7401)).length, 1);
+    const [[{ n }]] = await admin.query("SELECT COUNT(*) AS n FROM fc_contratos_cargos_iniciales WHERE pc_add LIKE 'LICICOLBA:7401:%'");
+    assert.equal(Number(n), 0);
+  });
+
+  it('si falla el INSERT de un cargo se revierte TAMBIÉN la tarifa (todo o nada) y el número se pierde', async () => {
+    await raiz.query('ALTER TABLE fc_contratos_cargos_iniciales DROP COLUMN experiencia');
+    try {
+      const antes = await contador('01', 'BAQ');
+      const e = await fallo(enviar(7501));
+      assert.ok(!(e instanceof ErrorNegocio));
+      assert.equal(e.errno, 1054);
+      assert.equal((await filasDe(7501)).length, 0, 'la tarifa, que ya se había insertado, se deshizo con el ROLLBACK');
+      const [[{ n }]] = await admin.query("SELECT COUNT(*) AS n FROM fc_contratos_cargos_iniciales WHERE pc_add LIKE 'LICICOLBA:7501:%'");
+      assert.equal(Number(n), 0);
+      assert.equal(await contador('01', 'BAQ'), antes + 1);
+    } finally {
+      await raiz.query("ALTER TABLE fc_contratos_cargos_iniciales ADD COLUMN experiencia int(3) NOT NULL DEFAULT '0' AFTER curso_formacion");
+    }
+    assert.equal((await verificarEsquema(admin, cargarEsquemaEsperado())).ok, true, 'la base de prueba quedó como estaba');
+  });
+
+  it('si el INSERT falla se revierte, el número se pierde (como en Visual FoxPro) y el candado queda libre', async () => {
+    await raiz.query('ALTER TABLE fc_contratos_tarifa_inicial DROP COLUMN tar_nocontinuos');
+    try {
+      const antes = await contador('01', 'BAQ');
+      const e = await fallo(enviar(8001));
+      assert.ok(!(e instanceof ErrorNegocio), 'un fallo inesperado no se disfraza de error de negocio');
+      assert.equal(e.errno, 1054);
+      assert.equal((await filasDe(8001)).length, 0, 'ROLLBACK: no queda ninguna fila');
+      assert.equal(await contador('01', 'BAQ'), antes + 1, 'fc_control es MyISAM: el número reservado no se devuelve');
+
+      const conexion = await admin.getConnection();
+      try {
+        const [[{ ok }]] = await conexion.query("SELECT GET_LOCK('puente-contratos:solicitud:8001', 0) AS ok");
+        assert.equal(Number(ok), 1, 'el candado de la solicitud quedó libre');
+        await conexion.query("SELECT RELEASE_LOCK('puente-contratos:solicitud:8001')");
+      } finally {
+        conexion.release();
+      }
+    } finally {
+      await raiz.query("ALTER TABLE fc_contratos_tarifa_inicial ADD COLUMN tar_nocontinuos decimal(18,2) DEFAULT '0.00' AFTER tar_otros");
+    }
+    assert.equal((await verificarEsquema(admin, cargarEsquemaEsperado())).ok, true, 'la base de prueba quedó como estaba');
+  });
+
+  it('el usuario mínimo NO puede leer credenciales ni tocar lo que el puente no usa', async () => {
+    const denegado = async (sql) => {
+      const e = await fallo(minimo.query(sql));
+      assert.ok([1142, 1143].includes(e.errno), `${sql} → ${e.errno} ${e.code}`);
+    };
+    await denegado('SELECT * FROM fc_control'); // la fila real trae usuario y clave de conexión
+    await denegado('SELECT id FROM fc_control');
+    await denegado('UPDATE fc_control SET empresa = "99"');
+    await denegado('SELECT direccion FROM fc_clientes');
+    await denegado('SELECT * FROM fc_empresas');
+    await denegado('DELETE FROM fc_contratos_tarifa_inicial');
+    await denegado('UPDATE fc_contratos_tarifa_inicial SET tarifa = 0');
+    await denegado('DROP TABLE fc_contratos_tarifa_inicial');
+    await denegado('ALTER TABLE fc_contratos_tarifa_inicial ADD COLUMN x int');
+    await denegado('SELECT * FROM fc_contratos_cargos_iniciales'); // los cargos solo se insertan: el puente no los lee
+    await denegado('DELETE FROM fc_contratos_cargos_iniciales');
+    await denegado('UPDATE fc_horarios SET snactivo = 0');
+    await denegado('SELECT horario FROM fc_horarios'); // del horario solo se consulta el código
+    await denegado('SELECT * FROM fc_contratos_equipos_iniciales'); // módulo 6: todavía sin permisos
+    // Lo que sí necesita:
+    assert.equal(Number((await minimo.query('SELECT num_oferta FROM fc_control WHERE empresa = "01" AND undnegocio = "BAQ"'))[0][0].num_oferta) > 0, true);
+  });
+
+  it('visto con el usuario mínimo, el esquema de los módulos hechos coincide; el completo no (las demás tablas no se ven)', async () => {
+    const esperado = cargarEsquemaEsperado();
+    assert.deepEqual((await verificarEsquema(minimo, esquemaHastaModulo(esperado, MODULO_IMPLEMENTADO))).problemas, []);
+    const completo = await verificarEsquema(minimo, esperado);
+    assert.equal(completo.ok, false);
+    assert.ok(completo.problemas.some((p) => p.tabla === 'fc_contratos_equipos_iniciales' && p.problema === 'La tabla no existe.'));
+    assert.ok(!completo.problemas.some((p) => p.tabla === 'fc_contratos_cargos_iniciales'), 'los cargos (módulo 5) sí se ven: solo tienen INSERT, pero las columnas son visibles');
+  });
+
+  it('el servicio completo (proceso aparte, modo escritura, usuario mínimo): /health ok, escribe, reenvío 409 y 422 sin oferta', async () => {
+    const r = await arrancarServicio(4031, { PUENTE_MODO: 'escritura', PUENTE_MYSQL_USER: 'puente_min', PUENTE_MYSQL_PASSWORD: CLAVE_MINIMO });
+    try {
+      assert.equal(r.iniciado, true, r.salida);
+      assert.deepEqual(await consultarSalud(4031), { ok: true, servicio: 'puente-contratos', modo: 'escritura', bd: 'ok' });
+      const post = (cuerpo) => fetch('http://127.0.0.1:4031/contratos', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` }, body: JSON.stringify(cuerpo) });
+
+      const antes = await contador('01', 'BAQ');
+      const creada = await post(armar(9001));
+      const j = await creada.json();
+      assert.equal(creada.status, 200, JSON.stringify(j));
+      assert.equal(j.modo, 'escritura');
+      assert.equal(j.escrito.numOferta, antes + 1);
+      assert.deepEqual(j.advertencias, []);
+      assert.deepEqual(j.noEscrito.map((n) => n.campo), ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion', 'cargos']);
+      assert.deepEqual(j.escrito.cargos.map((c) => c.cargo), [1, 2]);
+
+      const repetida = await post(armar(9001));
+      assert.equal(repetida.status, 409);
+      const rj = await repetida.json();
+      assert.equal(rj.error, 'YA_ENVIADA');
+      assert.equal(rj.oferta.numOferta, antes + 1);
+
+      const sinOferta = armar(9002);
+      delete sinOferta.oferta;
+      const faltante = await post(sinOferta);
+      assert.equal(faltante.status, 422);
+      assert.deepEqual((await faltante.json()).errores.map((e) => e.campo), ['oferta']);
+      assert.equal(await contador('01', 'BAQ'), antes + 1);
+    } finally {
+      r.hijo?.kill();
+    }
   });
 });

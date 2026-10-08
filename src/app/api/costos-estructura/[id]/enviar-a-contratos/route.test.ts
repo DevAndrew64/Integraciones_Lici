@@ -1,6 +1,7 @@
 /**
- * Módulo 2 del puente — POST /api/costos-estructura/[id]/enviar-a-contratos: arma el JSON v1 con la solicitud, el
- * Resultado guardado y los totales de la pantalla, lo envía al puente y traduce su respuesta. El puente se simula.
+ * Puente a Contratos (módulos 2 y 4) — POST /api/costos-estructura/[id]/enviar-a-contratos: arma el JSON v1 con la
+ * solicitud, el Resultado guardado, los totales de la pantalla y el destino que elige quien envía, lo manda al puente y
+ * traduce su respuesta. El puente se simula.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
@@ -59,7 +60,10 @@ function costosDto(): CostosPantallaDto {
 }
 const req = (body: unknown) => new NextRequest('http://localhost/api/costos-estructura/1/enviar-a-contratos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const ctx = () => ({ params: Promise.resolve({ id: '1' }) });
-const enviarOk = (): ResultadoPuente => ({ ok: true, modo: 'dry-run', huella: 'h'.repeat(64), advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato: se completa en Contratos.' }] });
+const enviarOk = (): ResultadoPuente => ({
+  ok: true, modo: 'dry-run', huella: 'h'.repeat(64), advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato: se completa en Contratos.' }], oferta: null, noEscrito: [],
+});
+const DESTINO = { empresa: '01', undnegocio: 'baq', tipoAdm: 'a', origenProceso: 'lic', codServicio: 'ase', descripcionServicio: 'Aseo y cafetería' };
 
 beforeEach(() => {
   sesionActual = { id: 1, usuario: 'ana.perez', email: 'ana.perez@grupocolba.com', rol: 'Analista Comercial' };
@@ -77,8 +81,7 @@ async function llamar(body: unknown) {
 }
 
 describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
-  // A.I.U.: directos 12.140.000 · I.U. 8 % de (12.140.000 + 5.000) = 971.600 · (5.000 + 971.600) ÷ 12.140.000 = 8,04 %
-  it('arma el JSON v1 (NIT sin puntos ni dígito de verificación, A.I.U. con la «A», valor mensual del Resultado guardado) y lo envía', async () => {
+  it('arma el JSON v1 (NIT sin puntos ni dígito de verificación, A.I.U. = % de I.U. del Resultado, valor mensual del Resultado guardado) y lo envía', async () => {
     const { res, json } = await llamar({ solicitudId: 7, costosDto: costosDto() });
     expect(res.status).toBe(200);
     expect(mocks.enviar).toHaveBeenCalledTimes(1);
@@ -87,10 +90,92 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       origen: { solicitudId: 7, procesoCodigo: 'SED-LP-2026-0091' },
       cliente: { razonSocial: 'Cliente SAS', nit: '900123456', direccion: null },
       contrato: { objeto: 'Aseo integral', porcentajeAIU: 8, valorMensual: 16000000, plazoMeses: 12 },
+      // Sin destino elegido viaja vacío (nunca se infiere); la tarifa sale de los totales con el A.I.U. incluido (8 %).
+      oferta: { empresa: null, undnegocio: null, tipoAdm: null, origenProceso: null, codServicio: null, descripcionServicio: null },
+      tarifa: { manoObra: 13111200, insumos: 0, maquinaria: 0, administrativos: 5400, valorAgregado: 0, serviciosNoContinuos: 0 },
     });
     expect(json.ok).toBe(true);
     expect(String(json.mensaje)).toContain('modo prueba');
     expect(String(json.mensaje)).toContain('Dirección del cliente'); // lo que queda por completar en Contratos
+  });
+
+  const CARGOS = () => [
+    { id: 1, nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, arlKey: 'I', codigoHorario: '941', valorTotal: 9140000, esTurnante: false },
+    { id: 2, nombre: 'Turnante — bloque integrado de 42h', cantidad: 1, horasSemana: 42, jornada: null, salario: 1423500, arlKey: 'II', codigoHorario: '', valorTotal: 3000000, esTurnante: true },
+  ];
+
+  it('los cargos de la pantalla viajan al puente en su forma (valor por trabajador = total ÷ personas, riesgo en número) cuando suman la Mano de Obra', async () => {
+    await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: CARGOS() });
+    expect(mocks.enviar.mock.calls[0][0].cargos).toEqual([
+      { nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 2285000, valorTotal: 9140000, codigoHorario: '941' },
+      { nombre: 'Turnante — bloque integrado de 42h', cantidad: 1, horasSemana: 42, jornada: 0, salario: 1423500, riesgo: 2, valorUnitario: 3000000, valorTotal: 3000000, codigoHorario: null },
+    ]);
+  });
+
+  it('cargos que no suman la Mano de Obra del panel: 400 y no se envía nada a Contratos', async () => {
+    const r = await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: [CARGOS()[0]] });
+    expect(r.res.status).toBe(400);
+    expect(r.json.error).toBe('CARGOS_INVALIDOS');
+    expect(String(r.json.mensaje)).toContain('no cuadran con la Mano de Obra del panel');
+    expect(mocks.enviar).not.toHaveBeenCalled();
+    const malformado = await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: 'x' });
+    expect(malformado.res.status).toBe(400);
+    expect(mocks.enviar).not.toHaveBeenCalled();
+  });
+
+  it('sin «cargos» en la petición el JSON viaja sin esa clave (la oferta se crea sin mano de obra)', async () => {
+    await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect('cargos' in mocks.enviar.mock.calls[0][0]).toBe(false);
+  });
+
+  it('un error del puente en un cargo se nombra por su posición y su nombre, y dice dónde corregirlo', async () => {
+    mocks.enviar.mockResolvedValueOnce({ ok: false, tipo: 'DATOS_INVALIDOS', errores: [{ campo: 'cargos[0].codigoHorario', mensaje: 'El horario «941» no existe en Contratos.' }] });
+    const r = await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: CARGOS() });
+    expect(r.res.status).toBe(422);
+    expect(String(r.json.mensaje)).toContain('Cargo 1 «ASEADOR» · Horario: El horario «941» no existe en Contratos. Revise el horario del cargo en Mano de Obra.');
+  });
+
+  it('el destino que elige quien envía llega al puente normalizado (códigos en mayúsculas); lo desconocido se ignora', async () => {
+    await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: { ...DESTINO, rol: 'Administrador' } });
+    expect(mocks.enviar.mock.calls[0][0].oferta).toEqual({
+      empresa: '01', undnegocio: 'BAQ', tipoAdm: 'A', origenProceso: 'LIC', codServicio: 'ASE', descripcionServicio: 'Aseo y cafetería',
+    });
+  });
+
+  it('en modo escritura responde con la oferta creada en Contratos y la audita con su número (sin datos del cliente)', async () => {
+    mocks.enviar.mockResolvedValueOnce({
+      ok: true, modo: 'escritura', huella: 'h'.repeat(64), advertencias: [], oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 937 },
+      noEscrito: [{ campo: 'contrato.plazoMeses', motivo: 'Va en las fechas del contrato.' }],
+    } satisfies ResultadoPuente);
+    const { res, json } = await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: DESTINO });
+    expect(res.status).toBe(200);
+    expect(json.oferta).toEqual({ empresa: '01', undnegocio: 'BAQ', numOferta: 937 });
+    expect(String(json.mensaje)).toContain('Oferta 937 creada en Contratos (empresa 01, UEN BAQ).');
+    expect(String(json.mensaje)).toContain('Se digitan en Contratos: Plazo (meses).');
+    expect(String(json.mensaje)).not.toContain('modo prueba');
+    const [, , params] = mocks.auditoria.mock.calls[0] as [unknown, unknown, { detalle: Record<string, unknown> }];
+    expect(params.detalle).toMatchObject({ solicitudId: 7, resultado: 'OK', modo: 'escritura', numOferta: 937, empresa: '01', undnegocio: 'BAQ' });
+    expect(JSON.stringify(params)).not.toMatch(/Cliente SAS|900123456/);
+  });
+
+  it('un reenvío (la solicitud ya está en Contratos) responde 409 con la oferta existente y avisa si los datos cambiaron', async () => {
+    mocks.enviar.mockResolvedValueOnce({ ok: false, tipo: 'YA_ENVIADA', oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 930 }, sinCambios: true });
+    const igual = await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(igual.res.status).toBe(409);
+    expect(igual.json.error).toBe('YA_ENVIADA');
+    expect(String(igual.json.mensaje)).toContain('como la oferta 930 (empresa 01, UEN BAQ)');
+    expect(String(igual.json.mensaje)).not.toContain('cambiaron');
+
+    mocks.enviar.mockResolvedValueOnce({ ok: false, tipo: 'YA_ENVIADA', oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 930 }, sinCambios: false });
+    const cambiado = await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(String(cambiado.json.mensaje)).toContain('Los datos cambiaron desde entonces');
+  });
+
+  it('un rechazo del puente que el usuario puede entender (servicio ocupado, contador desfasado) llega con su mensaje', async () => {
+    mocks.enviar.mockResolvedValueOnce({ ok: false, tipo: 'CONFLICTO', codigo: 'OCUPADO', mensaje: 'Hay otro envío de esta solicitud en curso. Intente de nuevo en unos segundos.' });
+    const r = await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(r.res.status).toBe(409);
+    expect(r.json).toMatchObject({ ok: false, error: 'OCUPADO', mensaje: 'Hay otro envío de esta solicitud en curso. Intente de nuevo en unos segundos.' });
   });
 
   it('audita el envío sin datos del cliente: solo ids, resultado y huella', async () => {
@@ -133,10 +218,11 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
     expect(mocks.enviar).not.toHaveBeenCalled();
   });
 
-  it('sin el Resultado guardado el valor mensual, el plazo y el A.I.U. viajan vacíos (nunca se inventan)', async () => {
+  it('sin el Resultado guardado el valor mensual, el plazo, el A.I.U. y la tarifa viajan vacíos (nunca se inventan)', async () => {
     registro = { id: 1, procesoCodigo: 'SED-LP-2026-0091', datos: estructura({ resultado: undefined }) };
     await llamar({ solicitudId: 7, costosDto: costosDto() });
     expect(mocks.enviar.mock.calls[0][0].contrato).toEqual({ objeto: 'Aseo integral', porcentajeAIU: null, valorMensual: null, plazoMeses: null });
+    expect(mocks.enviar.mock.calls[0][0].tarifa).toEqual({ manoObra: null, insumos: null, maquinaria: null, administrativos: null, valorAgregado: null, serviciosNoContinuos: null });
   });
 
   it('traduce las respuestas del puente: datos inválidos (422, con etiquetas legibles), sin configurar (503), sin conexión (502), tiempo agotado (504)', async () => {

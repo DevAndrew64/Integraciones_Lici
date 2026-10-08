@@ -2,7 +2,7 @@
  "version": 1,
  "origen": "Copia de producción del 2026-10-07 (solo estructura). Se regenera contra el MySQL real con: npm run esquema:actualizar",
  "tablas": {
-  "fc_contratos_tarifa_inicial": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_contratos_tarifa_inicial": {"motor": "InnoDB", "uso": "escritura", "modulo": 4, "columnas": {
    "id": {"tipo": "int(18)", "nulable": false},
    "empresa": {"tipo": "char(6)", "nulable": true},
    "undnegocio": {"tipo": "char(9)", "nulable": true},
@@ -57,7 +57,7 @@
    "aplica_curso": {"tipo": "int(1)", "nulable": false},
    "curso_vta": {"tipo": "int(1)", "nulable": false}
   }},
-  "fc_contratos_cargos_iniciales": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_contratos_cargos_iniciales": {"motor": "InnoDB", "uso": "escritura", "modulo": 5, "permisos": ["INSERT"], "columnas": {
    "id": {"tipo": "int(18)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
@@ -153,7 +153,7 @@
    "curso_formacion": {"tipo": "varchar(100)", "nulable": false},
    "experiencia": {"tipo": "int(3)", "nulable": false}
   }},
-  "fc_contratos_equipos_iniciales": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_contratos_equipos_iniciales": {"motor": "InnoDB", "uso": "escritura", "modulo": 6, "columnas": {
    "id": {"tipo": "int(18)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
@@ -188,7 +188,7 @@
    "clase": {"tipo": "int(1)", "nulable": true},
    "valor_inicial_va": {"tipo": "decimal(15,5)", "nulable": true}
   }},
-  "fc_contratos_costos_admtivos_iniciales": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_contratos_costos_admtivos_iniciales": {"motor": "InnoDB", "uso": "escritura", "modulo": 6, "columnas": {
    "id": {"tipo": "int(18)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
@@ -208,7 +208,7 @@
    "fmod": {"tipo": "datetime", "nulable": true},
    "pc_mod": {"tipo": "varchar(60)", "nulable": true}
   }},
-  "fc_contratos_no_continuos_iniciales": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_contratos_no_continuos_iniciales": {"motor": "InnoDB", "uso": "escritura", "modulo": 7, "columnas": {
    "id": {"tipo": "int(18)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
@@ -276,7 +276,7 @@
    "valor_va": {"tipo": "decimal(15,5)", "nulable": true},
    "vlr_mes_va": {"tipo": "decimal(15,5)", "nulable": true}
   }},
-  "fc_contratos_vlrs_agregs_iniciales": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_contratos_vlrs_agregs_iniciales": {"motor": "InnoDB", "uso": "escritura", "modulo": 7, "columnas": {
    "id": {"tipo": "bigint(20)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
@@ -293,7 +293,7 @@
    "usuario": {"tipo": "varchar(50)", "nulable": true},
    "pc": {"tipo": "varchar(50)", "nulable": true}
   }},
-  "fc_elemxcont": {"motor": "MyISAM", "uso": "escritura", "columnas": {
+  "fc_elemxcont": {"motor": "MyISAM", "uso": "escritura", "modulo": 6, "permisos": ["SELECT","INSERT","DELETE"], "columnas": {
    "id": {"tipo": "int(10)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
@@ -319,7 +319,7 @@
    "clase": {"tipo": "int(1)", "nulable": true},
    "vlr_unitario_va": {"tipo": "decimal(15,5)", "nulable": true}
   }},
-  "fc_preciosventas_oferta": {"motor": "InnoDB", "uso": "escritura", "columnas": {
+  "fc_preciosventas_oferta": {"motor": "InnoDB", "uso": "escritura", "modulo": 6, "columnas": {
    "id": {"tipo": "int(10) unsigned", "nulable": false},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
    "num_oferta": {"tipo": "int(10)", "nulable": true},
@@ -337,7 +337,7 @@
    "pc_mod": {"tipo": "char(60)", "nulable": true},
    "vr_costo": {"tipo": "decimal(15,4)", "nulable": true}
   }},
-  "fc_clientes": {"motor": "MyISAM", "uso": "lectura", "columnas": {
+  "fc_clientes": {"motor": "MyISAM", "uso": "lectura", "modulo": 4, "columnas": {
    "undnegocio": {"tipo": "char(3)", "nulable": true},
    "nit": {"tipo": "varchar(20)", "nulable": false},
    "sucursal": {"tipo": "char(2)", "nulable": false},
@@ -354,11 +354,18 @@
    "undnegocio": {"tipo": "char(3)", "nulable": false},
    "rsocial": {"tipo": "char(60)", "nulable": false}
   }},
-  "fc_conceptos": {"motor": "MyISAM", "uso": "lectura", "columnas": {
+  "fc_conceptos": {"motor": "MyISAM", "uso": "lectura", "modulo": 4, "columnas": {
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
-   "codigo": {"tipo": "char(3)", "nulable": true},
-   "descrip": {"tipo": "char(60)", "nulable": true}
+   "codcpto": {"tipo": "char(3)", "nulable": true}
+  }},
+  "fc_control": {"motor": "MyISAM", "uso": "contador de ofertas: solo se cuenta y se actualiza num_oferta (la fila trae credenciales)", "modulo": 4, "permisos": ["SELECT (empresa, undnegocio, num_oferta)","UPDATE (num_oferta)"], "columnas": {
+   "empresa": {"tipo": "char(2)", "nulable": true},
+   "undnegocio": {"tipo": "char(3)", "nulable": true},
+   "num_oferta": {"tipo": "decimal(10,0)", "nulable": true}
+  }},
+  "fc_horarios": {"motor": "InnoDB", "uso": "lectura", "modulo": 5, "columnas": {
+   "codigo": {"tipo": "char(5)", "nulable": true}
   }}
  }
 }

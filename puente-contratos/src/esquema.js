@@ -15,10 +15,22 @@ export function serializarEsquema(esquema) {
     const columnas = Object.entries(t.columnas).map(
       ([c, v], j, cols) => `   ${JSON.stringify(c)}: {"tipo": ${JSON.stringify(v.tipo)}, "nulable": ${v.nulable}}${j < cols.length - 1 ? ',' : ''}`,
     );
-    const cabecera = `  ${JSON.stringify(nombre)}: {"motor": ${JSON.stringify(t.motor)}, "uso": ${JSON.stringify(t.uso)}, "columnas": {`;
+    // `modulo` (módulo del plan que usa la tabla) y `permisos` (cláusulas de GRANT que se apartan de lo habitual) son opcionales.
+    const opcionales = [t.modulo === undefined ? '' : `"modulo": ${t.modulo}, `, t.permisos === undefined ? '' : `"permisos": ${JSON.stringify(t.permisos)}, `].join('');
+    const cabecera = `  ${JSON.stringify(nombre)}: {"motor": ${JSON.stringify(t.motor)}, "uso": ${JSON.stringify(t.uso)}, ${opcionales}"columnas": {`;
     return [cabecera, ...columnas, `  }}${i < todas.length - 1 ? ',' : ''}`].join('\n');
   });
   return `{\n "version": ${esquema.version},\n "origen": ${JSON.stringify(esquema.origen)},\n "tablas": {\n${tablas.join('\n')}\n }\n}\n`;
+}
+
+/**
+ * Solo las tablas que usan los módulos ya implementados (`modulo` ≤ `hastaModulo`). Las que no declaran módulo no se
+ * usan todavía. Es lo que el servicio exige y verifica: con un usuario de MySQL de permisos mínimos, las tablas de
+ * módulos futuros ni siquiera son visibles.
+ */
+export function esquemaHastaModulo(esquema, hastaModulo) {
+  const tablas = Object.fromEntries(Object.entries(esquema.tablas).filter(([, t]) => t.modulo !== undefined && t.modulo <= hastaModulo));
+  return { ...esquema, tablas };
 }
 
 const norm = (texto) => String(texto).toLowerCase().replace(/\s+/g, ' ').trim();
