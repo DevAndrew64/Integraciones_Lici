@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import LicyTopbar from '@/components/licycolba/LicyTopbar';
 import ProcesosCardsView from '@/components/licycolba/ProcesosCardsView';
+import NitEntidad from '@/components/licycolba/NitEntidad';
 import '@/components/licycolba/procesos-cards.css';
 import { puedeConBD, puedeVerModuloConBD, esSoloLectura } from '@/lib/licycolba/permisos';
 import { esMercadeo, isAdmin, esProcesoPrivadoPorAlias, esEquipoComercial } from '@/lib/roles';
@@ -20304,7 +20305,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                       <span style={{fontSize:11,fontWeight:700,color:'#374151',fontFamily:F}}>Entidad contratante</span>
                     </div>
                     <div style={{display:'flex',flexDirection:'column' as const,gap:8}}>
-                      {solicitudProceso.nitContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>NIT</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:'monospace'}}>{solicitudProceso.nitContacto}</div></div>)}
+                      <NitEntidad solicitudId={solicitudProceso.id} nit={solicitudProceso.nitContacto} fontFamily={F} onNit={(n)=>setSolicitudProceso(p=>p?{...p,nitContacto:n}:p)}/>
                       <div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Organización</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.entidad||'—'}</div></div>
                       {solicitudProceso.direccionContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Dirección</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.direccionContacto}</div></div>)}
                       {solicitudProceso.ciudad&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Ciudad</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.ciudad}</div></div>)}
@@ -31245,7 +31246,7 @@ function VistFicha({sol,sesion,variante,onVolver,onGuardado}:{sol:Solicitud;sesi
                   <span style={{fontSize:11,fontWeight:700,color:'#374151',fontFamily:F}}>Entidad contratante</span>
                 </div>
                 <div style={{display:'flex',flexDirection:'column' as const,gap:8}}>
-                  {solE.nitContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>NIT</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:'monospace'}}>{solE.nitContacto}</div></div>)}
+                  <NitEntidad solicitudId={solActual.id||null} nit={solE.nitContacto} fontFamily={F} puedeDigitar={!esMercadeo(sesion?.rol)}/>
                   <div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Organización</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solActual.entidad||'—'}</div></div>
                   {solE.direccionContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Dirección</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solE.direccionContacto}</div></div>)}
                   {solActual.ciudad&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Ciudad</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solActual.ciudad}</div></div>)}

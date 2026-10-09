@@ -8,6 +8,7 @@ import { requireSession, requireAdministradorProcesos, canAccessSolicitud, hasPe
 import { puedeConBD } from '@/lib/licycolba/permisos';
 import { auditFromRequest } from '@/lib/audit';
 import { crearSolicitudConIdentidad, SolicitudIdentidadError } from '@/lib/solicitudes/crear-solicitud';
+import { completarNitEntidad } from '@/lib/solicitudes/nit-entidad';
 import { resolverResponsableElegible } from '@/lib/solicitudes/validar-responsable';
 import { puedeReasignarSolicitud } from '@/lib/solicitudes/autorizacion-asignacion';
 import { ESTADOS_QUE_EXIGEN_RESPONSABLE } from '@/lib/solicitudes/validar-estado-asignacion';
@@ -902,6 +903,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
       }
       throw e;
+    }
+
+    // NIT de la entidad desde los datos abiertos de SECOP, sin demorar la respuesta (la ficha lo vuelve a intentar si falta).
+    if (!solicitud.nitContacto && process.env.NODE_ENV !== 'test') {
+      void completarNitEntidad(prisma as unknown as Parameters<typeof completarNitEntidad>[0], solicitud.id).catch(() => {});
     }
 
     let sqrNumero: string | null = null;
