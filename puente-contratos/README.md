@@ -156,7 +156,7 @@ La base de PRUEBA acordada es la copia de producción de la intranet: la base `a
 
    Se regeneran con `npm run permisos:generar -- --usuario puente --base almacen` (cada módulo nuevo agrega permisos).
 
-2. **Archivo de entorno:** `copy intranet.env.example .env` (Linux o macOS: `cp`) y complete `PUENTE_MYSQL_HOST` (la IP del servidor de Pruebas, la de SQLyog) y, si el usuario tiene clave, `PUENTE_MYSQL_PASSWORD` (la del paso 1; vacía si no tiene). `.env` no va a git. El token es el `PUENTE_CONTRATOS_TOKEN` de LiciColba.
+2. **Archivo de entorno:** `copy intranet.env.example .env` (Linux o macOS: `cp`) y complete `PUENTE_MYSQL_HOST` (la IP del servidor de Pruebas, la de SQLyog) y `PUENTE_MYSQL_PASSWORD` (la clave del paso 1; vacía si el servidor solo restringe por IP). `.env` no va a git. El token es el `PUENTE_CONTRATOS_TOKEN` de LiciColba.
 
 3. **Levantar** (apague antes los puentes de `docker-compose.prueba.yml`: todos usan el 4010):
 
@@ -195,7 +195,7 @@ Con npm: `npm run mysql:prueba:arriba`, `npm run mysql:copia:cargar` y `npm run 
 
 ### MySQL (módulo 3)
 
-Se activa con `PUENTE_MYSQL_HOST` (+ `_USER`, `_DATABASE` y `_PASSWORD`, esta opcional). Cada conexión queda en `sql_mode = STRICT_ALL_TABLES`: lo que no cabe es un error, nunca un truncado silencioso. En modo `escritura` el servicio **no arranca** si la base no responde o si alguna tabla o columna que usa ya no es la esperada (`src/esquema-esperado.json`, solo estructura). Si Contratos cambia una tabla a propósito:
+Se activa con `PUENTE_MYSQL_HOST` (+ `_USER`, `_PASSWORD`, `_DATABASE`). Cada conexión queda en `sql_mode = STRICT_ALL_TABLES`: lo que no cabe es un error, nunca un truncado silencioso. En modo `escritura` el servicio **no arranca** si la base no responde o si alguna tabla o columna que usa ya no es la esperada (`src/esquema-esperado.json`, solo estructura). Si Contratos cambia una tabla a propósito:
 
 ```bash
 npm run esquema:actualizar               # muestra las diferencias contra el MySQL real

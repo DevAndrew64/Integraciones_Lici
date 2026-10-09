@@ -7734,11 +7734,10 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   // elegir uno (máx. 1) y traer Entidad/N.° de proceso/Objeto desde ahí.
   interface SolicitudCosteoInfo{
     id:number;entidad:string|null;codigoProceso:string|null;objeto:string|null;nombreProceso:string|null;perfil?:string|null;
-    estadoFuente?:string|null;estadoSolicitud?:string|null;valor?:number|null;modalidad?:string|null;fuente?:string|null;aliasFuente?:string|null;
+    estadoFuente?:string|null;estadoSolicitud?:string|null;resultadoFinal?:string|null;valor?:number|null;modalidad?:string|null;fuente?:string|null;aliasFuente?:string|null;
     departamento?:string|null;ciudad?:string|null;fechaVencimiento?:string|null;
     nitContacto?:string|null;direccionContacto?:string|null;correoContacto?:string|null;personaContacto?:string|null;telefonoContacto?:string|null;
     linkSecop?:string|null;linkDetalle?:string|null;linkSecopReg?:string|null;
-    resultadoFinal?:string|null;
   }
   // Ajuste "COSTOS COMPLETOS DENTRO DE LA MISMA FICHA" — en modo embebido el
   // proceso ya se conoce (`solicitudIdEmbebida`, viene de la ficha), así que
@@ -7952,12 +7951,11 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       if(!d.ok||!sol){setErrorProcesos(d.error??'Error al cargar la solicitud');return null;}
       setSolicitudProceso({
         id:sol.id,entidad:sol.entidad??null,codigoProceso:sol.codigoProceso??null,objeto:sol.objeto??null,nombreProceso:sol.nombreProceso??null,
-        perfil:sol.perfil??null,estadoFuente:sol.estadoFuente??null,estadoSolicitud:sol.estadoSolicitud??null,valor:sol.valor??null,modalidad:sol.modalidad??null,
+        perfil:sol.perfil??null,estadoFuente:sol.estadoFuente??null,estadoSolicitud:sol.estadoSolicitud??null,resultadoFinal:sol.resultadoFinal??null,valor:sol.valor??null,modalidad:sol.modalidad??null,
         fuente:sol.fuente??null,aliasFuente:sol.aliasFuente??null,departamento:sol.departamento??null,ciudad:sol.ciudad??null,
         fechaVencimiento:sol.fechaVencimiento??null,nitContacto:sol.nitContacto??null,direccionContacto:sol.direccionContacto??null,
         correoContacto:sol.correoContacto??null,personaContacto:sol.personaContacto??null,telefonoContacto:sol.telefonoContacto??null,
         linkSecop:sol.linkSecop??null,linkDetalle:sol.linkDetalle??null,linkSecopReg:sol.linkSecopReg??null,
-        resultadoFinal:sol.resultadoFinal??null,
       });
       // "perfil" de la Solicitud (Aseocolba/Vigicolba/Tempocolba) es la empresa del
       // grupo — la mapeamos a "Empresa" en Datos generales, ya que corresponde.
@@ -14658,6 +14656,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     if(!costoEstructuraIdActual){setEnvioContratos({ok:false,texto:'Debes guardar la información de la estructura de costos antes de enviarla a Contratos.'});return;}
     if(!solicitudProceso?.id){setEnvioContratos({ok:false,texto:'Abre los costos desde la ficha de la solicitud para enviarlos a Contratos.'});return;}
     if(modulosConCambiosSinGuardar.length>0){setEnvioContratos({ok:false,texto:`Guarde los cambios de ${modulosConCambiosSinGuardar.join(', ')} antes de enviar a Contratos.`});return;}
+    if(solicitudProceso.resultadoFinal!=='Adjudicado'){setEnvioContratos({ok:false,texto:'Solo se puede enviar a Contratos un proceso Adjudicado.'});return;}
     setEnviandoContratos(true);
     try{
       const res=await fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos`,{
@@ -20453,7 +20452,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                         </select></div>
                       <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Concepto de facturación (código)</label><input style={inp} value={destinoContratos.codServicio} maxLength={3} placeholder="Código del concepto en Contratos" onChange={e=>cambiarDestinoContratos('codServicio',e.target.value)}/></div>
                     </div>
-                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado'} title={solicitudProceso?.resultadoFinal!=='Adjudicado'?'Solo se envían a Contratos las solicitudes adjudicadas':'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número)'}
+                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado'} title={solicitudProceso?.resultadoFinal==='Adjudicado'?'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número). Lo enviado queda pactado y no se cambia desde aquí':'Solo se puede enviar a Contratos cuando el proceso está Adjudicado'}
                       style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado')?'default':'pointer',opacity:(saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado')?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
                       {enviandoContratos?'Enviando…':'Enviar a Contratos'}
                     </button>

@@ -12,19 +12,18 @@ export const SQL_MODE_ESTRICTO = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION';
 
 /**
  * Lee la configuración de MySQL del entorno. Sin PUENTE_MYSQL_HOST no hay MySQL (el puente sigue en modo prueba).
- * La clave es opcional (vacía = usuario sin clave).
  * @returns {null | {host: string, port: number, user: string, password: string, database: string}}
- * @throws {Error} si hay host pero falta o es inválido otro dato obligatorio (el mensaje no incluye la clave)
+ * @throws {Error} si hay host pero falta o es inválido otro dato (el mensaje no incluye la clave)
  */
 export function leerConfigMySQL(env = process.env) {
   const host = env.PUENTE_MYSQL_HOST?.trim();
   if (!host) return null;
   const errores = [];
-  const port = Number(env.PUENTE_MYSQL_PORT || 3306); // vacío ⇒ puerto por defecto
+  const port = Number(env.PUENTE_MYSQL_PORT || 3306);
   if (!Number.isInteger(port) || port < 1 || port > 65535) errores.push('PUENTE_MYSQL_PORT debe ser un puerto válido (1-65535)');
   const user = env.PUENTE_MYSQL_USER?.trim();
   if (!user) errores.push('PUENTE_MYSQL_USER es obligatorio');
-  const password = env.PUENTE_MYSQL_PASSWORD ?? ''; // opcional: hay usuarios de MySQL sin clave
+  const password = env.PUENTE_MYSQL_PASSWORD ?? ''; // opcional: hay servidores que solo restringen por IP
   const database = env.PUENTE_MYSQL_DATABASE?.trim();
   if (!database) errores.push('PUENTE_MYSQL_DATABASE es obligatorio');
   if (errores.length > 0) throw new Error(errores.join('; '));

@@ -34,12 +34,12 @@ const ESQUEMA = {
   },
   // Módulo 4 — la clave de la oferta en Contratos y los datos de su tarifa que LiciColba no tiene: los elige quien envía.
   oferta: {
-    empresa: { tipo: 'codigo', max: 6, escribe: true }, // fc_contratos_tarifa_inicial.empresa char(6)
-    undnegocio: { tipo: 'codigo', max: 9, escribe: true }, // .undnegocio char(9)
+    empresa: { tipo: 'codigo', max: 6, escribe: true },
+    undnegocio: { tipo: 'codigo', max: 9, escribe: true },
     tipoAdm: { tipo: 'opcion', opciones: ['A', 'C'], escribe: true }, // A = Administración, C = Admon. y costos asumidos
     origenProceso: { tipo: 'opcion', opciones: ['LIC', 'INV'], escribe: true }, // LIC = licitación pública, INV = invitación privada
     codServicio: { tipo: 'codigo', max: 3, escribe: true }, // concepto de facturación (fc_conceptos.codcpto)
-    descripcionServicio: { tipo: 'texto', max: 254 }, // .descripcion varchar(254)
+    descripcionServicio: { tipo: 'texto', max: 254 },
   },
   // Módulo 4 — los seis valores de «Operación del Contrato»: con el A.I.U. incluido, antes de IVA, en pesos enteros
   // (los calcula LiciColba: son los de la hoja «Contratos» del Excel de costos).
@@ -64,15 +64,15 @@ const LISTAS = {
     max: 300,
     aviso: 'Sin cargos: la oferta se crea sin mano de obra y se completa en Contratos.',
     campos: {
-      nombre: { tipo: 'texto', max: 100, requerido: true }, // nom_cargo varchar(100)
-      cantidad: { tipo: 'entero', min: 1, max: 99999, requerido: true }, // cantidad decimal(5,0): personas
-      horasSemana: { tipo: 'entero', min: 1, max: 168, escribe: true }, // horassem decimal(5,0)
-      jornada: { tipo: 'numero', min: 0, max: 24, escribe: true }, // jornada decimal(5,2): horas por día
-      salario: { tipo: 'pesos', max: 9_999_999_999, escribe: true }, // salario decimal(10,0)
-      riesgo: { tipo: 'entero', min: 1, max: 5, escribe: true }, // riesgo decimal(1,0): clase de riesgo ARL I a V
-      valorUnitario: { tipo: 'monto', max: 9_999_999_999, requerido: true }, // vlr_unitario decimal(15,5): costo mensual por trabajador
-      valorTotal: { tipo: 'monto', max: 9_999_999_999_999, requerido: true }, // vlr_total decimal(18,5): costo mensual de la línea
-      codigoHorario: { tipo: 'codigo', max: 5, silencioso: true }, // codhorario char(5): debe existir en fc_horarios
+      nombre: { tipo: 'texto', max: 100, requerido: true },
+      cantidad: { tipo: 'entero', min: 1, max: 99999, requerido: true }, // personas
+      horasSemana: { tipo: 'entero', min: 1, max: 168, escribe: true },
+      jornada: { tipo: 'numero', min: 0, max: 24, escribe: true }, // horas por día
+      salario: { tipo: 'pesos', max: 9_999_999_999, escribe: true },
+      riesgo: { tipo: 'entero', min: 1, max: 5, escribe: true }, // clase de riesgo ARL I a V
+      valorUnitario: { tipo: 'monto', max: 9_999_999_999, requerido: true }, // costo mensual por trabajador
+      valorTotal: { tipo: 'monto', max: 9_999_999_999_999, requerido: true }, // costo mensual de la línea
+      codigoHorario: { tipo: 'codigo', max: 5, silencioso: true }, // debe existir en fc_horarios
     },
   },
 };

@@ -151,7 +151,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
   const errores = [];
   const advertencias = [];
   const cargos = datos.cargos ?? [];
-  if (cargos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] }; // sin la clave de la oferta no hay dónde escribirlos
+  if (cargos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
   const { oferta, origen, contrato, tarifa } = datos;
 
   const codigos = new Map();
