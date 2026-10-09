@@ -21,6 +21,7 @@ import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, l
  * llegan de la pantalla (`costosDto`, validado). El vínculo Solicitud↔Costeo es EXPLÍCITO: la pantalla manda el
  * `solicitudId` de la ficha desde la que se abrió el costeo, y el servidor comprueba que el código de proceso coincida.
  * Lee `Resultado` de lo guardado: sin esa pestaña guardada el valor mensual, el plazo, el A.I.U. y la tarifa viajan vacíos.
+ * Solo se envía si la solicitud está adjudicada (`resultadoFinal === 'Adjudicado'`).
  * Requiere el permiso de editar costos (Administrador o Equipo Comercial).
  */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -60,11 +61,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // `select` explícito: no depende de columnas ajenas a este envío (incidente «column does not exist»).
     const solicitud = await prisma.solicitud.findUnique({
       where: { id: solicitudId },
-      select: { id: true, codigoProceso: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true },
+      select: { id: true, codigoProceso: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true, resultadoFinal: true },
     });
     if (!solicitud) return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ENCONTRADA', mensaje: 'La solicitud no existe.' }, { status: 404 });
     if (solicitud.codigoProceso && registro.procesoCodigo && solicitud.codigoProceso !== registro.procesoCodigo) {
       return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_CORRESPONDE', mensaje: 'La solicitud no corresponde a este costeo (el código de proceso no coincide).' }, { status: 409 });
+    }
+    // Solo una solicitud adjudicada se convierte en oferta de Contratos.
+    if (solicitud.resultadoFinal !== 'Adjudicado') {
+      return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ADJUDICADA', mensaje: 'Solo se envían a Contratos las solicitudes adjudicadas.' }, { status: 409 });
     }
 
     const payload = armarPayloadContratos({

@@ -28,7 +28,12 @@ describe('leerConfigMySQL', () => {
         return true;
       },
     );
-    assert.throws(() => leerConfigMySQL({ ...completo, PUENTE_MYSQL_PASSWORD: '' }), /PUENTE_MYSQL_PASSWORD/);
+  });
+
+  it('la clave es opcional: vacía o ausente es un usuario sin clave', () => {
+    assert.equal(leerConfigMySQL({ ...completo, PUENTE_MYSQL_PASSWORD: '' }).password, '');
+    const { PUENTE_MYSQL_PASSWORD, ...sinClave } = completo;
+    assert.equal(leerConfigMySQL(sinClave).password, '');
   });
 });
 

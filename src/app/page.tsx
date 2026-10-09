@@ -7738,6 +7738,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     departamento?:string|null;ciudad?:string|null;fechaVencimiento?:string|null;
     nitContacto?:string|null;direccionContacto?:string|null;correoContacto?:string|null;personaContacto?:string|null;telefonoContacto?:string|null;
     linkSecop?:string|null;linkDetalle?:string|null;linkSecopReg?:string|null;
+    resultadoFinal?:string|null;
   }
   // Ajuste "COSTOS COMPLETOS DENTRO DE LA MISMA FICHA" — en modo embebido el
   // proceso ya se conoce (`solicitudIdEmbebida`, viene de la ficha), así que
@@ -7956,6 +7957,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
         fechaVencimiento:sol.fechaVencimiento??null,nitContacto:sol.nitContacto??null,direccionContacto:sol.direccionContacto??null,
         correoContacto:sol.correoContacto??null,personaContacto:sol.personaContacto??null,telefonoContacto:sol.telefonoContacto??null,
         linkSecop:sol.linkSecop??null,linkDetalle:sol.linkDetalle??null,linkSecopReg:sol.linkSecopReg??null,
+        resultadoFinal:sol.resultadoFinal??null,
       });
       // "perfil" de la Solicitud (Aseocolba/Vigicolba/Tempocolba) es la empresa del
       // grupo — la mapeamos a "Empresa" en Datos generales, ya que corresponde.
@@ -20451,8 +20453,8 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                         </select></div>
                       <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Concepto de facturación (código)</label><input style={inp} value={destinoContratos.codServicio} maxLength={3} placeholder="Código del concepto en Contratos" onChange={e=>cambiarDestinoContratos('codServicio',e.target.value)}/></div>
                     </div>
-                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos} title="Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número)"
-                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos)?'default':'pointer',opacity:(saving||enviandoContratos)?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
+                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado'} title={solicitudProceso?.resultadoFinal!=='Adjudicado'?'Solo se envían a Contratos las solicitudes adjudicadas':'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número)'}
+                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado')?'default':'pointer',opacity:(saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado')?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
                       {enviandoContratos?'Enviando…':'Enviar a Contratos'}
                     </button>
                     {envioContratos&&<div style={{fontSize:11,fontWeight:600,color:envioContratos.ok?'#16a34a':RED,fontFamily:F}}>{envioContratos.texto}</div>}

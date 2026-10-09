@@ -26,7 +26,7 @@ try {
   process.exit(1);
 }
 if (modo === 'escritura' && !configMySQL) {
-  console.error('El modo «escritura» necesita MySQL: define PUENTE_MYSQL_HOST, _USER, _PASSWORD y _DATABASE.');
+  console.error('El modo «escritura» necesita MySQL: define PUENTE_MYSQL_HOST, _USER y _DATABASE (_PASSWORD si el usuario tiene clave).');
   process.exit(1);
 }
 

@@ -2,7 +2,7 @@
 # (este mismo servicio con otros valores en el archivo de entorno). Usa la imagen de producción (Dockerfile) y no levanta ninguna
 # base: la de Contratos ya está en la red. Solo Docker; Docker Compose lee los valores del archivo `.env` de esta carpeta:
 #
-#   copy intranet.env.example .env                                   # complete PUENTE_MYSQL_HOST y PUENTE_MYSQL_PASSWORD (.env no va a git)
+#   copy intranet.env.example .env                                   # complete PUENTE_MYSQL_HOST (y PUENTE_MYSQL_PASSWORD si hay clave; .env no va a git)
 #   docker compose -f docker-compose.intranet.yml up -d --build --wait
 #   curl.exe -s http://127.0.0.1:4010/health                         # {"ok":true,…,"bd":"ok"}
 #   docker compose -f docker-compose.intranet.yml logs puente        # si no arranca, aquí dice por qué

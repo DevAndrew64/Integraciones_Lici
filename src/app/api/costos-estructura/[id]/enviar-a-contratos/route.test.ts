@@ -18,7 +18,7 @@ vi.mock('@/lib/authz', () => ({
 vi.mock('@/lib/audit', () => ({ auditFromRequest: (...a: unknown[]) => { mocks.auditoria(...a); return Promise.resolve(); } }));
 vi.mock('@/lib/contratos-puente/cliente', () => ({ enviarAlPuente: (...a: unknown[]) => mocks.enviar(...a) }));
 
-type Solicitud = { id: number; codigoProceso: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null };
+type Solicitud = { id: number; codigoProceso: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null; resultadoFinal: string | null };
 let registro: { id: number; procesoCodigo: string | null; datos: Record<string, unknown> } | null = null;
 let solicitud: Solicitud | null = null;
 
@@ -68,7 +68,7 @@ const DESTINO = { empresa: '01', undnegocio: 'baq', tipoAdm: 'a', origenProceso:
 beforeEach(() => {
   sesionActual = { id: 1, usuario: 'ana.perez', email: 'ana.perez@grupocolba.com', rol: 'Analista Comercial' };
   registro = { id: 1, procesoCodigo: 'SED-LP-2026-0091', datos: estructura() };
-  solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: null };
+  solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: null, resultadoFinal: 'Adjudicado' };
   mocks.enviar.mockReset().mockResolvedValue(enviarOk());
   mocks.auditoria.mockReset();
 });
@@ -200,6 +200,16 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
     const r = await llamar({ solicitudId: 7, costosDto: costosDto() });
     expect(r.res.status).toBe(409);
     expect(r.json.error).toBe('SOLICITUD_NO_CORRESPONDE');
+    expect(mocks.enviar).not.toHaveBeenCalled();
+  });
+
+  it('solo envía solicitudes adjudicadas (409 SOLICITUD_NO_ADJUDICADA)', async () => {
+    for (const resultadoFinal of [null, 'No adjudicado', 'Desierto']) {
+      solicitud = { ...solicitud!, resultadoFinal };
+      const r = await llamar({ solicitudId: 7, costosDto: costosDto() });
+      expect(r.res.status).toBe(409);
+      expect(r.json.error).toBe('SOLICITUD_NO_ADJUDICADA');
+    }
     expect(mocks.enviar).not.toHaveBeenCalled();
   });
 
