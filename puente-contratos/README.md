@@ -197,6 +197,8 @@ Con npm: `npm run mysql:prueba:arriba`, `npm run mysql:copia:cargar` y `npm run 
 
 Se activa con `PUENTE_MYSQL_HOST` (+ `_USER`, `_PASSWORD`, `_DATABASE`). Cada conexión queda en `sql_mode = STRICT_ALL_TABLES`: lo que no cabe es un error, nunca un truncado silencioso. En modo `escritura` el servicio **no arranca** si la base no responde o si alguna tabla o columna que usa ya no es la esperada (`src/esquema-esperado.json`, solo estructura). Si Contratos cambia una tabla a propósito:
 
+**Destino actual (2026-10-09): `fc_ofertas_adjudicadas`.** En la base viva de Contratos (Bq-srvdatosgc, MySQL 5.7) `fc_contratos_tarifa_inicial` y `fc_contratos_cargos_iniciales` no se pueden usar, y no se crea ni se cambia nada en Contratos. El puente escribe UNA fila por oferta adjudicada: empresa, UEN, n.º de oferta (de `fc_control`), NIT y razón social (de `fc_clientes`), los seis valores en pesos enteros (`vlr_impuestos` = costos administrativos, `vlr_otros` = valor agregado, `vlr_adjudicado` = la suma), `user_add`, `fadd` = NOW() y la marca de origen en `pc_add` (reenvío → 409). Al arrancar lee si el `id` es auto_increment (si no, lo asigna con MAX(id)+1 en la misma transacción) y el largo real de `user_add`/`pc_add`; se detiene si hay una columna obligatoria sin valor por defecto que el puente no llena. Los cargos, el A.I.U., el tipo de tarifa, el origen y el concepto se informan como no escritos. `fc_preciosventas_oferta` queda para una fase siguiente.
+
 ```bash
 npm run esquema:actualizar               # muestra las diferencias contra el MySQL real
 npm run esquema:actualizar -- --escribir  # actualiza el archivo (revisar el cambio en git antes de aprobarlo)

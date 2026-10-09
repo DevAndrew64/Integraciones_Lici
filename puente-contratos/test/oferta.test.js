@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
-  MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeTarifa, USUARIO_PUENTE,
+  marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeOfertaAdjudicada, planDeTarifa, USUARIO_PUENTE,
 } from '../src/oferta.js';
 import { validarContrato } from '../src/validar.js';
 
@@ -93,27 +93,57 @@ describe('planDeTarifa', () => {
     assert.equal(fila.descripcion, '');
   });
 
-  it('todas las columnas existen en el contrato de esquema y lo que se escribe cabe en ellas', () => {
-    const tabla = cargarEsquemaEsperado().tablas.fc_contratos_tarifa_inicial.columnas;
-    const { fila } = planDeTarifa(datos((e) => { e.oferta.descripcionServicio = 'x'.repeat(254); e.cliente.razonSocial = 'y'.repeat(100); }), {
-      cliente: { nit: '999999999999-9', rsocial: 'y'.repeat(100) }, numOferta: 9999999999, huella: HUELLA,
-    });
-    for (const [columna, valor] of Object.entries(fila)) {
-      const definicion = tabla[columna];
-      assert.ok(definicion, `la columna ${columna} no está en esquema-esperado.json`);
-      const largo = /^(?:var)?char\((\d+)\)$/.exec(definicion.tipo);
-      if (largo && typeof valor === 'string') assert.ok(valor.length <= Number(largo[1]), `${columna}: ${valor.length} > ${largo[1]}`);
-      if (/^int\(/.test(definicion.tipo) && typeof valor === 'number') assert.ok(valor <= MAX_INT10, `${columna} desborda`);
-    }
-    assert.ok(USUARIO_PUENTE.length <= 12, 'user_add es varchar(12)');
-    assert.ok(marcaDeOrigen(2147483647, HUELLA).length <= 60, 'pc_add es varchar(60)');
-  });
-
   it('no escribe columnas que el formulario no escribe ni toca las del contrato', () => {
     const { fila } = planDeTarifa(datos(), { cliente: CLIENTE, huella: HUELLA });
     for (const prohibida of ['tipo', 'tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'sector_economico', 'personas', 'id_oferta_adjudicada', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
       assert.ok(!(prohibida in fila), prohibida);
     }
+  });
+});
+
+describe('planDeOfertaAdjudicada', () => {
+  it('una fila con la clave, el cliente de Contratos y los valores en pesos enteros; adjudicado = suma de los seis', () => {
+    const { errores, fila } = planDeOfertaAdjudicada(datos(), { cliente: CLIENTE, numOferta: 937, huella: HUELLA });
+    assert.deepEqual(errores, []);
+    assert.deepEqual(fila, {
+      empresa: '01', undnegocio: 'BAQ', num_oferta: 937, nit: '900123456-8', rsocial: 'CLIENTE DE PRUEBA S.A.S.',
+      vlr_adjudicado: 61155743 + 1000000 + 500000 + 5000000 + 700000 + 250000,
+      vlr_manoobra: 61155743, vlr_insumos: 1000000, vlr_maquinaria: 500000, vlr_impuestos: 5000000, vlr_otros: 700000, vlr_nocontinuos: 250000,
+      user_add: USUARIO_PUENTE, fadd: AHORA, pc_add: 'LICICOLBA:42:ab12cd34ef56',
+    });
+  });
+
+  it('user_add y pc_add se ajustan al largo real de la columna; la marca corta sigue reconociendo la solicitud', () => {
+    const { fila } = planDeOfertaAdjudicada(datos(), { cliente: CLIENTE, huella: HUELLA, largoUserAdd: 6, largoPcAdd: 20 });
+    assert.equal(fila.user_add, 'LICICO');
+    assert.equal(fila.pc_add, 'LICICOLBA:42:');
+    assert.equal(marcaQueCabe(42, HUELLA, 60), 'LICICOLBA:42:ab12cd34ef56');
+    assert.equal(marcaQueCabe(42, HUELLA, null), 'LICICOLBA:42:ab12cd34ef56');
+  });
+
+  it('sin número reservado (modo prueba) la fila lleva num_oferta nulo; lo que no viene va en 0', () => {
+    const { fila } = planDeOfertaAdjudicada(datos((e) => { e.tarifa.valorAgregado = null; }), { cliente: CLIENTE });
+    assert.equal(fila.num_oferta, null);
+    assert.equal(fila.vlr_otros, 0);
+  });
+
+  it('las columnas int de MySQL no pasan de 2.147.483.647 aunque digan int(18): lo que no cabe es un error', () => {
+    const { errores, fila } = planDeOfertaAdjudicada(datos((e) => { e.tarifa.manoObra = MAX_INT10; }), { cliente: CLIENTE });
+    assert.equal(fila, null);
+    assert.ok(errores.some((e) => /vlr_adjudicado/.test(e.mensaje)));
+  });
+
+  it('todas las columnas existen en el contrato de esquema y lo que se escribe cabe en ellas', () => {
+    const tabla = cargarEsquemaEsperado().tablas.fc_ofertas_adjudicadas.columnas;
+    const { fila } = planDeOfertaAdjudicada(datos(), { cliente: { nit: '999999999999-9', rsocial: 'y'.repeat(60) }, numOferta: 9999999 });
+    for (const [columna, valor] of Object.entries(fila)) {
+      const definicion = tabla[columna];
+      assert.ok(definicion, `la columna ${columna} no está en esquema-esperado.json`);
+      const largo = /^(?:var)?char\((\d+)\)$/.exec(definicion.tipo ?? '');
+      if (largo && typeof valor === 'string') assert.ok(valor.length <= Number(largo[1]), `${columna}: ${valor.length} > ${largo[1]}`);
+      if (/^int\(/.test(definicion.tipo ?? '') && typeof valor === 'number') assert.ok(valor <= MAX_INT10, `${columna} desborda`);
+    }
+    assert.ok(!('id' in fila), 'el id lo pone la base');
   });
 });
 
@@ -131,9 +161,9 @@ describe('marca de origen', () => {
 
 describe('noEscritoEnLaOferta y describirFila', () => {
   it('informa lo que LiciColba envió y este módulo no escribe', () => {
-    assert.deepEqual(noEscritoEnLaOferta(datos()).map((n) => n.campo), ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
+    assert.deepEqual(noEscritoEnLaOferta(datos()).map((n) => n.campo), ['contrato.porcentajeAIU', 'oferta.tipoAdm', 'oferta.origenProceso', 'oferta.codServicio', 'contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
     const sin = datos((e) => { e.contrato.objeto = ''; e.cliente.direccion = ''; });
-    assert.deepEqual(noEscritoEnLaOferta(sin).map((n) => n.campo), ['contrato.valorMensual', 'contrato.plazoMeses']);
+    assert.ok(!noEscritoEnLaOferta(sin).some((n) => ['contrato.objeto', 'cliente.direccion'].includes(n.campo)));
   });
 
   it('NOW() se muestra como texto', () => {
@@ -222,18 +252,6 @@ describe('planDeCargos', () => {
     assert.deepEqual(planDeCargos(datos(), { huella: HUELLA }), { errores: [], advertencias: [], filas: [] });
     const sinOferta = { ...conCargos(), oferta: null };
     assert.deepEqual(planDeCargos(sinOferta, { huella: HUELLA }).filas, []);
-  });
-
-  it('todas las columnas existen en el contrato de esquema y lo que se escribe cabe en ellas', () => {
-    const tabla = cargarEsquemaEsperado().tablas.fc_contratos_cargos_iniciales.columnas;
-    const largo = planDeCargos(conCargos((e) => { e.cargos[0].nombre = 'n'.repeat(100); }), { numOferta: 9999999999, huella: HUELLA }).filas[0];
-    for (const [columna, valor] of Object.entries(largo)) {
-      const definicion = tabla[columna];
-      assert.ok(definicion, `la columna ${columna} no está en esquema-esperado.json`);
-      const texto = /^(?:var)?char\((\d+)\)$/.exec(definicion.tipo);
-      if (texto && typeof valor === 'string') assert.ok(valor.length <= Number(texto[1]), `${columna}: ${valor.length} > ${texto[1]}`);
-    }
-    assert.ok(marcaDeOrigen(2147483647, HUELLA).length <= 40, 'pc_add de cargos es varchar(40), más corto que el de la tarifa');
   });
 
   it('informa lo que de los cargos no se escribe (se completa en Contratos)', () => {

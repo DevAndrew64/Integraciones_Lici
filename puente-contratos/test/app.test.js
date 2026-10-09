@@ -80,58 +80,31 @@ describe('POST /contratos (modo prueba)', () => {
     assert.deepEqual(j.advertencias, []);
   });
 
-  it('muestra la fila de tarifa que escribiría, con el A.I.U. como fracción y sin reservar número', async () => {
+  it('muestra la fila de la oferta adjudicada que escribiría, en pesos enteros y sin reservar número', async () => {
     const j = await (await post(valido())).json();
-    const t = j.escribiria.tarifaInicial;
-    assert.equal(t.empresa, '01');
-    assert.equal(t.undnegocio, 'BAQ');
-    assert.equal(t.num_oferta, null, 'el número de oferta se reserva al escribir, no en modo prueba');
-    assert.equal(t.nit, '900123456-8');
-    assert.equal(t.aiu, '0.1232');
-    assert.equal(t.tarifa, 56160000 + 1000000 + 500000 + 5000000 + 250000);
-    assert.equal(t.tar_impuestos, 5000000, 'los costos administrativos van en tar_impuestos');
-    assert.equal(t.fadd, 'NOW()');
-    assert.equal(t.pc_add, `LICICOLBA:42:${j.huella.slice(0, 12)}`);
+    const o = j.escribiria.ofertaAdjudicada;
+    assert.deepEqual(o, {
+      empresa: '01', undnegocio: 'BAQ', num_oferta: null, nit: '900123456-8', rsocial: 'Cliente de Prueba S.A.S.',
+      vlr_adjudicado: 56160000 + 1000000 + 500000 + 5000000 + 250000,
+      vlr_manoobra: 56160000, vlr_insumos: 1000000, vlr_maquinaria: 500000, vlr_impuestos: 5000000, vlr_otros: 0, vlr_nocontinuos: 250000,
+      user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: `LICICOLBA:42:${j.huella.slice(0, 12)}`,
+    });
     assert.deepEqual(
       j.noEscrito.map((n) => n.campo),
-      ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion', 'cargos'],
-      'lo que no tiene destino todavía se informa, no se pierde en silencio',
+      [...['contrato.porcentajeAIU', 'oferta.tipoAdm', 'oferta.origenProceso', 'oferta.codServicio', 'contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion'], 'cargos'],
+      'lo que no tiene destino en la base de Contratos se informa, no se pierde en silencio',
     );
+    assert.deepEqual(j.advertencias, []);
   });
 
-  it('muestra los cargos que escribiría: código consecutivo por oferta, ítem de la línea y el horario solo si viene', async () => {
-    const j = await (await post(valido())).json();
-    const [a, b] = j.escribiria.cargosIniciales;
-    assert.deepEqual([a.cargo, a.item, a.nom_cargo, a.cantidad, a.codhorario], [1, 1, 'Aseador', 4, '941']);
-    assert.deepEqual([b.cargo, b.item, b.nom_cargo, b.vlr_unitario, b.jornada], [2, 2, 'Supervisor', 10000000.12346, 7.33]);
-    assert.equal('codhorario' in b, false, 'sin horario no se escribe la columna');
-    assert.equal(a.num_oferta, null);
-    assert.equal(a.fadd, 'NOW()');
-    assert.deepEqual(j.advertencias, [], 'los cargos cuadran con la mano de obra de la tarifa');
-  });
-
-  it('sin cargos el envío vale (la oferta se crea sin mano de obra) y se avisa; con cargos que no cuadran con la tarifa también se avisa', async () => {
+  it('sin cargos el envío vale y se avisa; los cargos no se escriben (no hay dónde) y se informan', async () => {
     const sin = valido();
     delete sin.cargos;
     const j = await (await post(sin)).json();
     assert.equal(j.ok, true);
     assert.deepEqual(j.advertencias.map((a) => a.campo), ['cargos']);
+    assert.ok(!j.noEscrito.some((n) => n.campo === 'cargos'));
     assert.equal(j.escribiria.cargosIniciales, undefined);
-
-    const descuadrado = valido();
-    descuadrado.cargos.pop();
-    const d = await (await post(descuadrado)).json();
-    assert.equal(d.ok, true);
-    assert.deepEqual(d.advertencias.map((a) => a.campo), ['cargos']);
-    assert.match(d.advertencias[0].mensaje, /Los cargos suman .* sin A\.I\.U\..* y la mano de obra de la tarifa es .*: revise que estén todos los cargos\./);
-  });
-
-  it('un valor total que no es valorUnitario × cantidad se rechaza en modo prueba como una advertencia y al escribir como error', async () => {
-    const c = valido();
-    c.cargos[0].valorTotal = 1;
-    const j = await (await post(c)).json();
-    assert.equal(j.ok, true);
-    assert.ok(j.advertencias.some((a) => a.campo === 'cargos[0].valorTotal'));
   });
 
   it('un envío de los módulos 1 y 2 (sin oferta ni tarifa) sigue valiendo en modo prueba, con una advertencia por sección', async () => {
@@ -141,16 +114,7 @@ describe('POST /contratos (modo prueba)', () => {
     const j = await (await post(c)).json();
     assert.equal(j.ok, true);
     assert.deepEqual(j.advertencias.map((a) => a.campo), ['oferta', 'tarifa']);
-    assert.equal(j.escribiria.tarifaInicial, undefined);
-  });
-
-  it('lo que impediría escribir (A.I.U. en 0) sale como advertencia en modo prueba, no como rechazo', async () => {
-    const c = valido();
-    c.contrato.porcentajeAIU = 0;
-    const j = await (await post(c)).json();
-    assert.equal(j.ok, true);
-    assert.deepEqual(j.advertencias.map((a) => a.campo), ['contrato.porcentajeAIU']);
-    assert.equal(j.escribiria.tarifaInicial, undefined);
+    assert.equal(j.escribiria.ofertaAdjudicada, undefined);
   });
 
   it('lo opcional que falta no bloquea: se informa como advertencia y queda en null', async () => {
@@ -333,12 +297,12 @@ describe('contrato con LiciColba (archivo compartido con sus pruebas)', () => {
     assert.deepEqual(r.advertencias, []);
   });
 
-  it('el modo prueba lo acepta completo: tarifa, cargos con código consecutivo y sin advertencias (los cargos cuadran con la tarifa)', async () => {
+  it('el modo prueba lo acepta completo: la oferta adjudicada, sin advertencias; los cargos se informan como no escritos', async () => {
     const j = await (await post(archivo())).json();
     assert.equal(j.ok, true, JSON.stringify(j));
     assert.deepEqual(j.advertencias, []);
-    assert.equal(j.escribiria.tarifaInicial.tar_manoobra, 13111200);
-    assert.deepEqual(j.escribiria.cargosIniciales.map((c) => [c.cargo, c.item, c.nom_cargo]), [[1, 1, 'ASEADOR'], [2, 2, 'Turnante — bloque integrado de 42h']]);
+    assert.equal(j.escribiria.ofertaAdjudicada.vlr_manoobra, 13111200);
+    assert.ok(j.noEscrito.some((n) => n.campo === 'cargos'));
   });
 });
 

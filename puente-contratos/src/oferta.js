@@ -1,6 +1,8 @@
 /**
- * Núcleo del módulo 4 — oferta y tarifas. Funciones PURAS (sin base de datos ni reloj): las reglas del formulario de
- * Contratos y la fila que se escribe en `fc_contratos_tarifa_inicial`. El escritor MySQL solo la ejecuta.
+ * Núcleo del módulo 4 — oferta y tarifas. Funciones PURAS (sin base de datos ni reloj). Hoy el escritor usa
+ * `planDeOfertaAdjudicada` (`fc_ofertas_adjudicadas`, la tabla que existe en la base viva). `planDeTarifa` y `planDeCargos`
+ * son las filas de `fc_contratos_tarifa_inicial` y `fc_contratos_cargos_iniciales`, que hoy no se pueden usar en esa base;
+ * se conservan para cuando Contratos las tenga disponibles.
  *
  * Fuente: `cmdGrabar.Click` de `frmcntrto_inicial` (versión de octubre de 2026). Su INSERT de tarifa escribe 30 columnas y el
  * de cargos 47; aquí se escriben esas mismas, en su mismo orden, para que lo guardado sea indistinguible de lo digitado a mano.
@@ -40,6 +42,15 @@ export const marcaDeOrigen = (solicitudId, huella) => `${PREFIJO_MARCA}${solicit
 
 /** Patrón LIKE de cualquier envío de esa solicitud (el id solo tiene dígitos: sin comodines que escapar). */
 export const patronDeSolicitud = (solicitudId) => `${PREFIJO_MARCA}${solicitudId}:%`;
+
+/**
+ * La marca que cabe en una columna de `largo` caracteres (null = largo desconocido): completa si cabe; si no, la corta
+ * «LICICOLBA:<solicitud>:» (sigue reconociendo un reenvío, pero ya no distingue si cambió el contenido).
+ */
+export function marcaQueCabe(solicitudId, huella, largo) {
+  const completa = marcaDeOrigen(solicitudId, huella);
+  return largo === null || largo === undefined || completa.length <= largo ? completa : `${PREFIJO_MARCA}${solicitudId}:`;
+}
 
 /**
  * El A.I.U. se guarda como FRACCIÓN en la tarifa (10 % → 0.1000). El porcentaje tiene máximo 2 decimales (lo valida el
@@ -115,6 +126,54 @@ export function planDeTarifa(datos, { cliente, numOferta = null, huella = '' }) 
     tar_nocontinuos: t.serviciosNoContinuos,
   };
   return { errores, fila };
+}
+
+/**
+ * Fila de `fc_ofertas_adjudicadas` (la tabla que existe en la base viva de Contratos): una por oferta adjudicada, con los
+ * valores de la tarifa en pesos enteros (columnas int). Mismo criterio que la tarifa de Contratos: la columna de impuestos
+ * guarda los costos administrativos y «otros» el valor agregado. `vlr_adjudicado` es la suma de los seis valores.
+ * Las columnas `int` de MySQL admiten hasta 2.147.483.647 aunque se declaren int(18): un valor mayor se rechaza aquí.
+ *
+ * @param {object} datos contrato v1 ya validado, con las secciones `oferta` y `tarifa`
+ * Como en las demás tablas de Contratos: `user_add` = LICICOLBA, `fadd` = NOW() del servidor y en `pc_add` la marca de
+ * origen (así se reconoce un reenvío sin columnas nuevas). `user_mod`, `fmod` y `pc_mod` no se tocan.
+ *
+ * @param {object} datos contrato v1 ya validado, con las secciones `oferta` y `tarifa`
+ * @param {{cliente: {nit: string, rsocial: string}, numOferta?: number | null, huella?: string, largoUserAdd?: number | null, largoPcAdd?: number | null}} contexto
+ *   `numOferta` null = aún no reservado; los largos son los de la base real (null = desconocido)
+ * @returns {{errores: {campo: string, mensaje: string}[], fila: Record<string, unknown> | null}}
+ */
+export function planDeOfertaAdjudicada(datos, { cliente, numOferta = null, huella = '', largoUserAdd = null, largoPcAdd = null }) {
+  const { oferta, tarifa: t, origen } = datos;
+  const pesosEnteros = (v) => Math.round(aEntero(v));
+  const valores = {
+    vlr_manoobra: pesosEnteros(t.manoObra),
+    vlr_insumos: pesosEnteros(t.insumos),
+    vlr_maquinaria: pesosEnteros(t.maquinaria),
+    vlr_impuestos: pesosEnteros(t.administrativos),
+    vlr_otros: pesosEnteros(t.valorAgregado),
+    vlr_nocontinuos: pesosEnteros(t.serviciosNoContinuos),
+  };
+  const vlr_adjudicado = Object.values(valores).reduce((suma, v) => suma + v, 0);
+  const errores = Object.entries({ vlr_adjudicado, ...valores })
+    .filter(([, v]) => v > MAX_INT10)
+    .map(([columna]) => ({ campo: 'tarifa', mensaje: `«${columna}» supera el máximo que admite Contratos (${MAX_INT10.toLocaleString('es-CO')}).` }));
+  if (errores.length > 0) return { errores, fila: null };
+  return {
+    errores,
+    fila: {
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      nit: cliente.nit,
+      rsocial: cliente.rsocial,
+      vlr_adjudicado,
+      ...valores,
+      user_add: largoUserAdd ? USUARIO_PUENTE.slice(0, largoUserAdd) : USUARIO_PUENTE,
+      fadd: AHORA,
+      pc_add: marcaQueCabe(origen.solicitudId, huella, largoPcAdd),
+    },
+  };
 }
 
 /** Las 47 columnas del INSERT de cargos de `cmdGrabar.Click`, en su orden. */
@@ -220,6 +279,10 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
 export const describirFila = (fila) => Object.fromEntries(Object.entries(fila).map(([columna, valor]) => [columna, valor === AHORA ? AHORA.sql : valor]));
 
 const MOTIVOS_NO_ESCRITOS = [
+  ['contrato.porcentajeAIU', 'La oferta adjudicada de Contratos no tiene columna de A.I.U.'],
+  ['oferta.tipoAdm', 'La oferta adjudicada de Contratos no tiene columna de tipo de tarifa.'],
+  ['oferta.origenProceso', 'La oferta adjudicada de Contratos no tiene columna de origen del proceso.'],
+  ['oferta.codServicio', 'La oferta adjudicada de Contratos no tiene columna de concepto de facturación.'],
   ['contrato.objeto', 'Va en «Descripción» y «Objeto» del contrato, que Contratos crea después de la oferta.'],
   ['contrato.valorMensual', 'El total del contrato lo calcula Contratos con las tarifas y el plazo; la tarifa sale de los seis valores.'],
   ['contrato.plazoMeses', 'Va en las fechas del contrato, que Contratos crea después de la oferta.'],
@@ -233,7 +296,7 @@ export function noEscritoEnLaOferta(datos) {
   if (datos.cargos?.length > 0) {
     lista.push({
       campo: 'cargos',
-      motivo: 'Se escriben el cargo, las personas, las horas, el salario, el riesgo, el horario y los valores. La sección de nómina, los estudios y la experiencia, los grupos de dotación, EPP, exámenes y cursos, el tipo de contrato, los bonos y los recargos se completan en Contratos.',
+      motivo: 'La base de Contratos no tiene hoy dónde guardar los cargos de la oferta: se digitan en Contratos.',
     });
   }
   return lista;

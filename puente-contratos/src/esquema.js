@@ -38,7 +38,10 @@ const minusculas = (objeto) => Object.fromEntries(Object.entries(objeto).map(([k
 
 /**
  * Compara el esquema real con el esperado (función pura, sin base de datos). Los nombres no distinguen mayúsculas.
- * Columnas de más en la base NO son un problema: solo importa lo que el puente usa.
+ * Columnas de más en la base NO son un problema, salvo en una tabla de escritura una columna OBLIGATORIA (NOT NULL, sin
+ * valor por defecto ni auto_increment) que el puente no llena: el INSERT fallaría. El `id` lo pone la base
+ * (auto_increment) o el puente (MAX(id) + 1 en la misma transacción).
+ * Un `tipo` null en el contrato = tipo no verificado (columna conocida solo por nombre).
  * @returns {{tabla: string, columna?: string, problema: string}[]}
  */
 export function compararEsquema(esperado, real) {
@@ -57,8 +60,16 @@ export function compararEsquema(esperado, real) {
     for (const [columna, c] of Object.entries(t.columnas)) {
       const rc = columnas[columna.toLowerCase()];
       if (!rc) problemas.push({ tabla, columna, problema: 'La columna no existe.' });
-      else if (norm(rc.tipo) !== norm(c.tipo)) problemas.push({ tabla, columna, problema: `Tipo distinto: se esperaba ${c.tipo} y es ${rc.tipo}.` });
+      else if (c.tipo !== null && norm(rc.tipo) !== norm(c.tipo)) problemas.push({ tabla, columna, problema: `Tipo distinto: se esperaba ${c.tipo} y es ${rc.tipo}.` });
       else if (rc.nulable !== c.nulable) problemas.push({ tabla, columna, problema: `Nulabilidad distinta: se esperaba ${c.nulable ? 'acepta NULL' : 'NOT NULL'}.` });
+    }
+    if (t.uso === 'escritura') {
+      const llenadas = new Set(Object.keys(t.columnas).map((c) => c.toLowerCase()));
+      for (const [columna, rc] of Object.entries(r.columnas)) {
+        if (rc.obligatoria && !llenadas.has(columna.toLowerCase())) {
+          problemas.push({ tabla, columna, problema: 'Columna obligatoria (NOT NULL, sin valor por defecto) que el puente no llena.' });
+        }
+      }
     }
   }
   return problemas;
@@ -67,7 +78,7 @@ export function compararEsquema(esperado, real) {
 /** Lee de `information_schema` cómo están hoy las tablas pedidas en la base a la que apunta la conexión. */
 export async function leerEsquemaReal(pool, tablas) {
   const [columnas] = await pool.query(
-    'SELECT TABLE_NAME AS tabla, COLUMN_NAME AS columna, COLUMN_TYPE AS tipo, IS_NULLABLE AS nulable FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (?)',
+    'SELECT TABLE_NAME AS tabla, COLUMN_NAME AS columna, COLUMN_TYPE AS tipo, IS_NULLABLE AS nulable, COLUMN_DEFAULT AS pordefecto, EXTRA AS extra FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (?)',
     [tablas],
   );
   const [motores] = await pool.query('SELECT TABLE_NAME AS tabla, ENGINE AS motor FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (?)', [tablas]);
@@ -75,15 +86,37 @@ export async function leerEsquemaReal(pool, tablas) {
   for (const m of motores) real[m.tabla] = { motor: m.motor, columnas: {} };
   for (const c of columnas) {
     real[c.tabla] ??= { motor: null, columnas: {} };
-    real[c.tabla].columnas[c.columna] = { tipo: c.tipo, nulable: String(c.nulable).toUpperCase() === 'YES' };
+    const nulable = String(c.nulable).toUpperCase() === 'YES';
+    const autoIncremento = /auto_increment/i.test(String(c.extra ?? ''));
+    const obligatoria = !nulable && c.pordefecto === null && !autoIncremento;
+    real[c.tabla].columnas[c.columna] = { tipo: c.tipo, nulable, ...(obligatoria ? { obligatoria } : {}), ...(autoIncremento ? { autoIncremento } : {}) };
   }
   return real;
 }
 
+/** `real` = la estructura leída (el arranque la usa para adaptar la escritura: auto_increment del id, largos). */
 export async function verificarEsquema(pool, esperado = cargarEsquemaEsperado()) {
   const real = await leerEsquemaReal(pool, Object.keys(esperado.tablas));
   const problemas = compararEsquema(esperado, real);
-  return { ok: problemas.length === 0, problemas };
+  return { ok: problemas.length === 0, problemas, real };
+}
+
+/** Largo de una columna (var)char según su tipo real, o null si no se conoce. */
+export function largoDeColumna(real, tabla, columna) {
+  const c = Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === columna)?.[1];
+  const m = /^(?:var)?char\((\d+)\)$/i.exec(String(c?.tipo ?? ''));
+  return m ? Number(m[1]) : null;
+}
+
+/** Cómo escribir en `fc_ofertas_adjudicadas` según la base real: quién pone el id y cuánto cabe en user_add/pc_add. */
+export function opcionesDeEscritura(real) {
+  const tabla = 'fc_ofertas_adjudicadas';
+  const id = Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === 'id')?.[1];
+  return {
+    idManual: Boolean(id) && !id.autoIncremento,
+    largoUserAdd: largoDeColumna(real, tabla, 'user_add'),
+    largoPcAdd: largoDeColumna(real, tabla, 'pc_add'),
+  };
 }
 
 /**

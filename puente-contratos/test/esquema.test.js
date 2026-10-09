@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { cargarEsquemaEsperado, compararEsquema, crearEstadoBD, leerEsquemaReal, serializarEsquema, verificarEsquema } from '../src/esquema.js';
+import { cargarEsquemaEsperado, compararEsquema, crearEstadoBD, leerEsquemaReal, opcionesDeEscritura, serializarEsquema, verificarEsquema } from '../src/esquema.js';
 
 const esperado = {
   version: 1,
@@ -64,12 +64,56 @@ describe('leerEsquemaReal / verificarEsquema', () => {
   });
 
   it('verificarEsquema devuelve ok o la lista de problemas', async () => {
-    assert.deepEqual(await verificarEsquema(poolFalso(realIgual()), esperado), { ok: true, problemas: [] });
+    const bien = await verificarEsquema(poolFalso(realIgual()), esperado);
+    assert.deepEqual([bien.ok, bien.problemas], [true, []]);
+    assert.ok(bien.real.fc_demo, 'devuelve también la estructura leída');
     const real = realIgual();
     real.fc_demo.columnas.rsocial.tipo = 'varchar(50)';
     const r = await verificarEsquema(poolFalso(real), esperado);
     assert.equal(r.ok, false);
     assert.equal(r.problemas.length, 1);
+  });
+});
+
+describe('compararEsquema — tablas de escritura', () => {
+  const escritura = {
+    version: 1, origen: 'prueba',
+    tablas: { fc_ofertas_demo: { motor: null, uso: 'escritura', columnas: { id: { tipo: 'int(18)', nulable: false }, nit: { tipo: null, nulable: true } } } },
+  };
+  it('una columna conocida solo por nombre (tipo null) no se compara por tipo; sin motor no se compara el motor', () => {
+    const real = { fc_ofertas_demo: { motor: 'InnoDB', columnas: { id: { tipo: 'int(18)', nulable: false }, nit: { tipo: 'varchar(77)', nulable: true } } } };
+    assert.deepEqual(compararEsquema(escritura, real), []);
+  });
+
+  it('una columna obligatoria (NOT NULL sin valor por defecto) que el puente no llena detiene el servicio; el id no (lo pone el puente si no es auto_increment)', () => {
+    const real = { fc_ofertas_demo: { motor: 'InnoDB', columnas: {
+      id: { tipo: 'int(18)', nulable: false, obligatoria: true },
+      nit: { tipo: 'varchar(20)', nulable: true },
+      fecha: { tipo: 'datetime', nulable: false, obligatoria: true },
+      nota: { tipo: 'text', nulable: true },
+    } } };
+    assert.deepEqual(compararEsquema(escritura, real).map((p) => p.columna).sort(), ['fecha']);
+  });
+
+  it('opcionesDeEscritura: id manual si no es auto_increment, y los largos reales de user_add y pc_add', () => {
+    const tabla = (id) => ({ fc_ofertas_adjudicadas: { motor: 'InnoDB', columnas: { id, user_add: { tipo: 'varchar(12)', nulable: true }, pc_add: { tipo: 'char(40)', nulable: true } } } });
+    assert.deepEqual(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, autoIncremento: true })), { idManual: false, largoUserAdd: 12, largoPcAdd: 40 });
+    assert.equal(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, obligatoria: true })).idManual, true);
+  });
+
+  it('leerEsquemaReal marca obligatoria solo NOT NULL sin default y sin auto_increment', async () => {
+    const pool = { async query(sql) {
+      if (sql.includes('information_schema.COLUMNS')) {
+        return [[
+          { tabla: 't', columna: 'id', tipo: 'int(18)', nulable: 'NO', pordefecto: null, extra: 'auto_increment' },
+          { tabla: 't', columna: 'f', tipo: 'datetime', nulable: 'NO', pordefecto: null, extra: '' },
+          { tabla: 't', columna: 'g', tipo: 'int(1)', nulable: 'NO', pordefecto: '0', extra: '' },
+        ], []];
+      }
+      return [[{ tabla: 't', motor: 'InnoDB' }], []];
+    } };
+    const real = await leerEsquemaReal(pool, ['t']);
+    assert.deepEqual(Object.entries(real.t.columnas).filter(([, c]) => c.obligatoria).map(([n]) => n), ['f']);
   });
 });
 
@@ -113,33 +157,28 @@ describe('crearEstadoBD (para /health)', () => {
 describe('esquema-esperado.json (copia de producción, solo estructura)', () => {
   const real = cargarEsquemaEsperado();
 
-  it('cubre las ocho tablas donde el puente escribirá y las de consulta', () => {
+  it('cubre la tabla donde el puente escribe hoy, las de fases siguientes y las de consulta', () => {
     const escritura = Object.entries(real.tablas).filter(([, t]) => t.uso === 'escritura').map(([n]) => n).sort();
     assert.deepEqual(escritura, [
-      'fc_contratos_cargos_iniciales',
       'fc_contratos_costos_admtivos_iniciales',
       'fc_contratos_equipos_iniciales',
       'fc_contratos_no_continuos_iniciales',
-      'fc_contratos_tarifa_inicial',
       'fc_contratos_vlrs_agregs_iniciales',
       'fc_elemxcont',
+      'fc_ofertas_adjudicadas',
       'fc_preciosventas_oferta',
     ]);
     assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
+    assert.ok(!real.tablas.fc_contratos_tarifa_inicial && !real.tablas.fc_contratos_cargos_iniciales, 'ya no se escriben: no se pueden usar en la base viva');
   });
 
-  it('la clave de la oferta y los largos que importan están donde se esperan', () => {
-    const t = real.tablas.fc_contratos_tarifa_inicial.columnas;
-    assert.equal(t.rsocial.tipo, 'varchar(100)');
-    assert.equal(t.nit.tipo, 'varchar(20)');
-    assert.equal(t.aiu.tipo, 'decimal(13,10)');
-    assert.equal(t.num_oferta.tipo, 'decimal(10,0)');
-    assert.equal(t.origen_proceso.tipo, 'varchar(3)');
-    assert.equal(real.tablas.fc_contratos_no_continuos_iniciales.columnas.rhumano.tipo, 'char(254)');
-  });
-
-  it('las tablas de oferta con hijas transaccionales son InnoDB; fc_elemxcont es MyISAM (sin transacción)', () => {
-    assert.equal(real.tablas.fc_contratos_tarifa_inicial.motor, 'InnoDB');
+  it('fc_ofertas_adjudicadas: las columnas leídas de la base viva que el puente llena; los largos no confirmados sin tipo', () => {
+    const t = real.tablas.fc_ofertas_adjudicadas;
+    assert.equal(t.modulo, 4);
+    assert.deepEqual(Object.keys(t.columnas), ['id', 'empresa', 'undnegocio', 'num_oferta', 'nit', 'rsocial', 'vlr_adjudicado', 'vlr_manoobra', 'vlr_insumos', 'vlr_maquinaria', 'vlr_impuestos', 'vlr_otros', 'vlr_nocontinuos', 'user_add', 'fadd', 'pc_add']);
+    assert.equal(t.columnas.rsocial.tipo, null);
+    assert.equal(t.columnas.pc_add.tipo, null);
+    assert.equal(t.columnas.vlr_otros.tipo, 'int(10)');
     assert.equal(real.tablas.fc_elemxcont.motor, 'MyISAM');
   });
 
