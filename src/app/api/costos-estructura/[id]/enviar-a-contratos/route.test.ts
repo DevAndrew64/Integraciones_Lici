@@ -21,11 +21,13 @@ vi.mock('@/lib/contratos-puente/cliente', () => ({ enviarAlPuente: (...a: unknow
 type Solicitud = { id: number; codigoProceso: string | null; resultadoFinal: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null };
 let registro: { id: number; procesoCodigo: string | null; datos: Record<string, unknown> } | null = null;
 let solicitud: Solicitud | null = null;
+let envios: { detalle: Record<string, unknown>; creadoEn: Date }[] = [];
 
 vi.mock('@/lib/prisma', () => ({
   default: {
     costoEstructura: { async findUnique({ where }: { where: { id: number } }) { return registro && where.id === registro.id ? { ...registro } : null; } },
     solicitud: { async findUnique({ where }: { where: { id: number } }) { return solicitud && where.id === solicitud.id ? { ...solicitud } : null; } },
+    auditLog: { async findMany() { return envios; } },
   },
 }));
 
@@ -71,6 +73,7 @@ beforeEach(() => {
   solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', resultadoFinal: 'Adjudicado', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: null };
   mocks.enviar.mockReset().mockResolvedValue(enviarOk());
   mocks.auditoria.mockReset();
+  envios = [];
 });
 afterEach(() => { vi.resetModules(); });
 
@@ -247,5 +250,35 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
     expect((await llamar({ solicitudId: 7, costosDto: costosDto() })).res.status).toBe(502);
     mocks.enviar.mockResolvedValueOnce({ ok: false, tipo: 'TIMEOUT', mensaje: 'El puente de Contratos no respondió a tiempo.' });
     expect((await llamar({ solicitudId: 7, costosDto: costosDto() })).res.status).toBe(504);
+  });
+
+  describe('GET: ¿ya se envió a Contratos?', () => {
+    const consultar = async (solicitudId = 7) => {
+      const { GET } = await import('./route');
+      const res = await GET(new NextRequest(`http://localhost/api/costos-estructura/1/enviar-a-contratos?solicitudId=${solicitudId}`), ctx());
+      return { res, json: (await res.json()) as Record<string, unknown> };
+    };
+    const envio = (detalle: Record<string, unknown>) => ({ detalle: { solicitudId: 7, ...detalle }, creadoEn: new Date('2026-10-09T12:00:00Z') });
+
+    it('sin envíos, o solo con envíos en modo prueba o rechazados, responde que no se ha enviado', async () => {
+      expect((await consultar()).json).toEqual({ ok: true, enviada: false });
+      envios = [envio({ resultado: 'OK', modo: 'dry-run' }), envio({ resultado: 'DATOS_INVALIDOS' }), envio({ resultado: 'OK', modo: 'escritura', numOferta: 937 })];
+      envios[2].detalle.solicitudId = 8;
+      expect((await consultar()).json.enviada).toBe(false);
+    });
+
+    it('con un envío que escribió en Contratos, o un reenvío rechazado por ya existir, responde la oferta', async () => {
+      envios = [envio({ resultado: 'OK', modo: 'escritura', numOferta: 937, empresa: '01', undnegocio: 'BAQ' })];
+      const { json } = await consultar();
+      expect(json).toMatchObject({ ok: true, enviada: true, oferta: { numOferta: 937, empresa: '01', undnegocio: 'BAQ' } });
+      envios = [envio({ resultado: 'YA_ENVIADA', numOferta: 937, empresa: '01', undnegocio: 'BAQ' })];
+      expect((await consultar()).json.enviada).toBe(true);
+    });
+
+    it('exige la solicitud y el permiso de editar costos', async () => {
+      expect((await consultar(0)).res.status).toBe(400);
+      sesionActual = null;
+      expect((await consultar()).res.status).toBe(401);
+    });
   });
 });

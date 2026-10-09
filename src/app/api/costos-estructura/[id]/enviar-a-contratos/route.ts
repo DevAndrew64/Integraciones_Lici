@@ -132,3 +132,38 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ ok: false, error: 'ERROR_ENVIO_CONTRATOS', mensaje: 'No se pudo enviar a Contratos. Intente de nuevo.' }, { status: 500 });
   }
 }
+
+/**
+ * GET ?solicitudId=N — ¿esa solicitud ya se envió a Contratos? Se deduce de la auditoría del envío (solo cuentan los
+ * envíos que escribieron en Contratos o los reenvíos rechazados por ya existir); un envío en modo prueba no cuenta.
+ */
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const session = await getSession(req);
+  const denied = requireEditarCostos(session);
+  if (denied) return denied;
+
+  try {
+    const { id } = await ctx.params;
+    const solicitudId = Number(new URL(req.url).searchParams.get('solicitudId'));
+    if (!Number.isInteger(solicitudId) || solicitudId < 1) {
+      return NextResponse.json({ ok: false, error: 'SOLICITUD_REQUERIDA', mensaje: 'Falta la solicitud.' }, { status: 400 });
+    }
+    const envios = await prisma.auditLog.findMany({
+      where: { accion: 'CONTRATOS_PUENTE_ENVIO', recurso: 'costos-estructura', recursoId: String(Number(id)) },
+      orderBy: { creadoEn: 'desc' },
+      take: 50,
+      select: { detalle: true, creadoEn: true },
+    });
+    const enviado = envios.find(({ detalle }) => {
+      const d = (detalle ?? {}) as Record<string, unknown>;
+      return d.solicitudId === solicitudId && (d.resultado === 'YA_ENVIADA' || (d.resultado === 'OK' && d.modo !== 'dry-run'));
+    });
+    if (!enviado) return NextResponse.json({ ok: true, enviada: false });
+    const d = enviado.detalle as Record<string, unknown>;
+    const oferta = d.numOferta != null ? { numOferta: d.numOferta, empresa: d.empresa ?? null, undnegocio: d.undnegocio ?? null } : null;
+    return NextResponse.json({ ok: true, enviada: true, oferta, fecha: enviado.creadoEn });
+  } catch (e) {
+    console.error('[GET /api/costos-estructura/[id]/enviar-a-contratos]', e);
+    return NextResponse.json({ ok: false, error: 'ERROR_CONSULTA_ENVIO', mensaje: 'No se pudo consultar si ya se envió a Contratos.' }, { status: 500 });
+  }
+}

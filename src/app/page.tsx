@@ -11323,6 +11323,18 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   // Módulo 2 del puente (Enviar a Contratos): su propio estado, para no mezclarlo con el de "Exportar costos".
   const [enviandoContratos,setEnviandoContratos]=useState(false);
   const [envioContratos,setEnvioContratos]=useState<{ok:boolean;texto:string}|null>(null);
+  const [ofertaEnviada,setOfertaEnviada]=useState<{numOferta:number|null;empresa:string|null;undnegocio:string|null}|null>(null);
+  useEffect(()=>{
+    setOfertaEnviada(null);
+    const solId=solicitudProceso?.id;
+    if(!costoEstructuraIdActual||!solId||solicitudProceso?.resultadoFinal!=='Adjudicado')return;
+    let vigente=true;
+    fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos?solicitudId=${solId}`)
+      .then(r=>r.json())
+      .then(d=>{if(vigente&&d?.ok&&d.enviada)setOfertaEnviada({numOferta:d.oferta?.numOferta??null,empresa:d.oferta?.empresa??null,undnegocio:d.oferta?.undnegocio??null});})
+      .catch(()=>{/* sin consulta: el servidor igual rechaza un reenvío */});
+    return()=>{vigente=false;};
+  },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.resultadoFinal]);
   // Datos del envío que LiciColba no tiene y la oferta de Contratos exige: los elige quien envía (nada se infiere) y se
   // recuerdan en este navegador para no reescribirlos en cada oferta.
   const [destinoContratos,setDestinoContratos]=useState({empresa:'',undnegocio:'',tipoAdm:'',origenProceso:'',codServicio:''});
@@ -14656,6 +14668,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     if(!costoEstructuraIdActual){setEnvioContratos({ok:false,texto:'Debes guardar la información de la estructura de costos antes de enviarla a Contratos.'});return;}
     if(!solicitudProceso?.id){setEnvioContratos({ok:false,texto:'Abre los costos desde la ficha de la solicitud para enviarlos a Contratos.'});return;}
     if(modulosConCambiosSinGuardar.length>0){setEnvioContratos({ok:false,texto:`Guarde los cambios de ${modulosConCambiosSinGuardar.join(', ')} antes de enviar a Contratos.`});return;}
+    if(ofertaEnviada){setEnvioContratos({ok:false,texto:'Este proceso adjudicado ya se envió a Contratos.'});return;}
     if(solicitudProceso.resultadoFinal!=='Adjudicado'){setEnvioContratos({ok:false,texto:'Solo se puede enviar a Contratos un proceso Adjudicado.'});return;}
     setEnviandoContratos(true);
     try{
@@ -14664,6 +14677,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       });
       const d=await res.json().catch(()=>({}));
       setEnvioContratos({ok:res.ok,texto:String(d.mensaje||(res.ok?'Datos enviados a Contratos.':'No se pudo enviar a Contratos.'))});
+      if((res.ok&&d.modo!=='dry-run')||d.error==='YA_ENVIADA')setOfertaEnviada({numOferta:d.oferta?.numOferta??null,empresa:d.oferta?.empresa??null,undnegocio:d.oferta?.undnegocio??null});
     }catch{setEnvioContratos({ok:false,texto:'No se pudo conectar para enviar a Contratos.'});}
     finally{setEnviandoContratos(false);}
   }
@@ -20452,8 +20466,11 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                         </select></div>
                       <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Concepto de facturación (código)</label><input style={inp} value={destinoContratos.codServicio} maxLength={3} placeholder="Código del concepto en Contratos" onChange={e=>cambiarDestinoContratos('codServicio',e.target.value)}/></div>
                     </div>
-                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado'} title={solicitudProceso?.resultadoFinal==='Adjudicado'?'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número). Lo enviado queda pactado y no se cambia desde aquí':'Solo se puede enviar a Contratos cuando el proceso está Adjudicado'}
-                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado')?'default':'pointer',opacity:(saving||enviandoContratos||solicitudProceso?.resultadoFinal!=='Adjudicado')?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
+                    {ofertaEnviada&&<div style={{marginTop:8,padding:'9px 12px',borderRadius:8,border:'1px solid #86efac',background:'#f0fdf4',color:'#15803d',fontSize:11.5,fontWeight:700,fontFamily:F,lineHeight:1.5}}>
+                      Este proceso adjudicado ya se envió a Contratos{ofertaEnviada.numOferta!=null?` como la oferta ${ofertaEnviada.numOferta}${ofertaEnviada.empresa?` (empresa ${ofertaEnviada.empresa}, UEN ${ofertaEnviada.undnegocio??''})`:''}`:''}. Lo enviado queda pactado: cualquier cambio se hace en Contratos.
+                    </div>}
+                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||ofertaEnviada!==null||solicitudProceso?.resultadoFinal!=='Adjudicado'} title={ofertaEnviada?'Este proceso adjudicado ya se envió a Contratos':solicitudProceso?.resultadoFinal==='Adjudicado'?'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número). Lo enviado queda pactado y no se cambia desde aquí':'Solo se puede enviar a Contratos cuando el proceso está Adjudicado'}
+                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos||ofertaEnviada||solicitudProceso?.resultadoFinal!=='Adjudicado')?'default':'pointer',opacity:(saving||enviandoContratos||ofertaEnviada||solicitudProceso?.resultadoFinal!=='Adjudicado')?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
                       {enviandoContratos?'Enviando…':'Enviar a Contratos'}
                     </button>
                     {envioContratos&&<div style={{fontSize:11,fontWeight:600,color:envioContratos.ok?'#16a34a':RED,fontFamily:F}}>{envioContratos.texto}</div>}
