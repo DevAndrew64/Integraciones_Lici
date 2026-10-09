@@ -38,6 +38,7 @@ function falso(respuestas = {}) {
     [/COUNT\(\*\) AS n FROM fc_ofertas_adjudicadas/, [[{ n: 0 }]]],
     [/MAX\(id\)/, [[{ id: '501' }]]],
     [/^INSERT INTO fc_ofertas_adjudicadas/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_preciosventas_oferta/, [{ affectedRows: 1 }]],
   ].map(([patron, valor]) => [patron, respuestas[patron.source] ?? valor]);
   const conexion = {
     async query(sql, params = []) {
@@ -304,5 +305,38 @@ describe('escritor MySQL — fallos', () => {
     assert.ok(!(error instanceof ErrorNegocio));
     assert.equal(f.sentencias.at(-1).sql, 'RELEASE');
     assert.ok(f.hubo(/RELEASE_LOCK/));
+  });
+});
+
+describe('escritor MySQL — lista de precios de insumos (módulo 6)', () => {
+  const conInsumos = () => datos((e) => {
+    e.insumos = [{ codigo: '18111', nombre: 'Jabón', valorUnitario: 10000 }, { codigo: '01050', valorUnitario: 500 }];
+  });
+
+  it('escribe la oferta y una fila por insumo en la MISMA transacción, la oferta primero, con el número reservado', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, conInsumos());
+    const precios = f.sentencias.filter((s) => /^INSERT INTO fc_preciosventas_oferta/.test(s.sql));
+    assert.equal(precios.length, 2);
+    const [inicio, oferta, fin] = [/^BEGIN$/, /^INSERT INTO fc_ofertas_adjudicadas/, /^COMMIT$/].map((p) => f.indice(p));
+    const posiciones = f.sentencias.map((s, i) => (/^INSERT INTO fc_preciosventas_oferta/.test(s.sql) ? i : -1)).filter((i) => i >= 0);
+    assert.ok(posiciones.every((i) => i > oferta && i < fin) && inicio < oferta);
+    assert.match(precios[0].sql, /^INSERT INTO fc_preciosventas_oferta \(undnegocio, num_oferta, ncontrato, cliente, nom_punto, codigo, valor, valor_anterior, aiu, fadd, user_add, vr_costo\) VALUES \(\?, \?, \?, \?, \?, \?, \?, \?, \?, NOW\(\), \?, \?\)$/);
+    assert.deepEqual(precios[0].params, ['BAQ', 937, '', 'tmp1', 'BAQ', '18111', 11232, 0, '0.1232', 'LICICOLBA', 10000]);
+    assert.deepEqual(r.escrito.preciosOferta, [{ codigo: '18111', vr_costo: 10000, valor: 11232 }, { codigo: '01050', vr_costo: 500, valor: 561.6 }]);
+  });
+
+  it('si falla una fila de precios se revierte TODO (también la oferta) y el número se pierde', async () => {
+    const f = falso({ [/^INSERT INTO fc_preciosventas_oferta/.source]: () => { throw Object.assign(new Error('Data too long'), { errno: 1406 }); } });
+    const error = await rechaza(escribir(f.pool, conInsumos()), 422, 'DATOS_INVALIDOS');
+    assert.equal(error.extra.numeroPerdido, 937);
+    assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
+  });
+
+  it('sin insumos no toca fc_preciosventas_oferta', async () => {
+    const f = falso();
+    const r = await escribir(f.pool);
+    assert.ok(!f.hubo(/fc_preciosventas_oferta/));
+    assert.deepEqual(r.escrito.preciosOferta, []);
   });
 });

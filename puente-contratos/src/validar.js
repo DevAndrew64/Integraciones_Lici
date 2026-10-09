@@ -55,7 +55,7 @@ const ESQUEMA = {
 
 /**
  * Secciones que son una LISTA de objetos. Siempre opcionales: sin ellas la oferta se crea sin esa parte y se avisa.
- * Los límites son los de la columna de `fc_contratos_cargos_iniciales` donde se escribe cada dato.
+ * Los límites son los de la columna donde se escribe cada dato.
  */
 const LISTAS = {
   // Módulo 5 — la mano de obra de la oferta: una fila por línea de cargo (cargo + horario). Los valores van SIN A.I.U. ni IVA
@@ -73,6 +73,17 @@ const LISTAS = {
       valorUnitario: { tipo: 'monto', max: 9_999_999_999, requerido: true }, // costo mensual por trabajador
       valorTotal: { tipo: 'monto', max: 9_999_999_999_999, requerido: true }, // costo mensual de la línea
       codigoHorario: { tipo: 'codigo', max: 5, silencioso: true }, // debe existir en fc_horarios
+    },
+  },
+  // Módulo 6 — la lista de precios de los insumos de la oferta (`fc_preciosventas_oferta`): una fila por código de elemento
+  // del almacén. El valor va SIN A.I.U. ni IVA (costo unitario): el puente calcula el precio de venta con el A.I.U.
+  insumos: {
+    max: 2000,
+    aviso: null, // sin insumos no hay nada que avisar: la oferta no los exige
+    campos: {
+      codigo: { tipo: 'codigo', max: 10, requerido: true }, // fc_preciosventas_oferta.codigo char(10)
+      nombre: { tipo: 'texto', max: 254, silencioso: true }, // solo para los mensajes: Contratos no lo guarda aquí
+      valorUnitario: { tipo: 'monto', max: 99_999_999_999, requerido: true }, // decimal(15,4)
     },
   },
 };
@@ -189,7 +200,7 @@ export function validarContrato(entrada, { paraEscribir = false } = {}) {
   for (const [seccion, lista] of Object.entries(LISTAS)) {
     const valor = entrada[seccion];
     if (valor === undefined || valor === null || (Array.isArray(valor) && valor.length === 0)) {
-      advertencias.push({ campo: seccion, mensaje: lista.aviso });
+      if (lista.aviso) advertencias.push({ campo: seccion, mensaje: lista.aviso });
       continue;
     }
     if (!Array.isArray(valor)) {

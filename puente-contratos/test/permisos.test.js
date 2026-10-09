@@ -15,10 +15,10 @@ describe('esquemaHastaModulo', () => {
     assert.equal(todas.length, Object.keys(esquema.tablas).length - 2);
   });
 
-  it('el módulo 6 suma lo del 5 y lo del 4', () => {
+  it('el módulo 6 suma la lista de precios de la oferta a lo del 5 y lo del 4', () => {
     const hasta6 = Object.keys(esquemaHastaModulo(esquema, 6).tablas);
-    assert.ok(hasta6.includes('fc_ofertas_adjudicadas') && hasta6.includes('fc_horarios') && hasta6.includes('fc_elemxcont'));
-    assert.ok(!hasta6.includes('fc_contratos_no_continuos_iniciales'));
+    assert.ok(hasta6.includes('fc_ofertas_adjudicadas') && hasta6.includes('fc_horarios') && hasta6.includes('fc_preciosventas_oferta'));
+    assert.ok(!Object.keys(esquemaHastaModulo(esquema, 5).tablas).includes('fc_preciosventas_oferta'));
   });
 
   it('no modifica el contrato original', () => {
@@ -38,10 +38,11 @@ describe('sentenciasDePermisos', () => {
     ]);
   });
 
-  it('módulo implementado (5): suma los horarios (solo el código); ya no pide nada sobre las tablas *_iniciales', () => {
-    assert.equal(MODULO_IMPLEMENTADO, 5);
+  it('módulo implementado (6): oferta adjudicada, lista de precios, clientes, conceptos, contador y horarios; nada de *_iniciales', () => {
+    assert.equal(MODULO_IMPLEMENTADO, 6);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 5);
+    assert.equal(sentencias.length, 6);
+    assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_preciosventas_oferta` TO 'puente'@'%';"));
     assert.ok(!sentencias.some((x) => /_iniciales/.test(x)));
     assert.ok(sentencias.includes("GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';"));
   });
@@ -57,11 +58,10 @@ describe('sentenciasDePermisos', () => {
     assert.ok(!control.includes('SELECT,') && !control.includes('SELECT ON'), 'nunca SELECT de toda la fila: trae usuario y clave de conexión');
   });
 
-  it('DELETE solo donde hay que compensar una tabla sin transacciones (fc_elemxcont, módulo 6)', () => {
-    const con = (modulo) => sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: modulo }).filter((s) => /DELETE/.test(s));
-    assert.deepEqual(con(5), []);
-    assert.equal(con(6).length, 1);
-    assert.match(con(6)[0], /`fc_elemxcont`/);
+  it('nunca pide DELETE ni UPDATE de datos de la oferta: solo el contador de fc_control se actualiza', () => {
+    const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: 99 });
+    assert.deepEqual(sentencias.filter((s) => /DELETE/.test(s)), []);
+    assert.deepEqual(sentencias.filter((s) => /UPDATE/.test(s)).map((s) => /`(\w+)` TO /.exec(s)[1]), ['fc_control']);
   });
 
   it('rechaza identificadores con comillas, espacios o punto y coma (no se arma SQL con texto libre)', () => {

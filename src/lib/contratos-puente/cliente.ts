@@ -1,4 +1,5 @@
 import type { CargoPayload } from './cargos';
+import type { InsumoPayload } from './payload';
 
 /**
  * Cliente HTTP del puente LiciColba → Contratos (`puente-contratos/`). Solo lo usa el servidor.
@@ -36,6 +37,8 @@ export interface PayloadContratosV1 {
     serviciosNoContinuos: number | null;
   };
   cargos?: CargoPayload[];
+  /** Módulo 6: lista de precios de insumos (código de elemento + costo unitario). */
+  insumos?: InsumoPayload[];
 }
 
 export interface ErrorCampo {

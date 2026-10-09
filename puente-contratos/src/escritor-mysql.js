@@ -8,16 +8,18 @@
  *   3. ¿ya se envió? (la marca `LICICOLBA:<solicitud>:` en `pc_add`): se responde 409 con la oferta existente;
  *   4. reserva del número de oferta con UN solo UPDATE atómico sobre `fc_control` (MyISAM: no se puede revertir; un
  *      número reservado y no usado se pierde, igual que en Visual FoxPro) y comprobación de que nadie lo usó;
- *   5. INSERT de UNA fila. Si el `id` no es auto_increment en esa base, se asigna MAX(id) + 1 en la misma transacción.
+ *   5. INSERT de la oferta y de su lista de precios de insumos (`fc_preciosventas_oferta`, módulo 6) en UNA transacción.
+ *      Si el `id` de la oferta no es auto_increment en esa base, se asigna MAX(id) + 1 en la misma transacción.
  *
  * Todas las sentencias llevan parámetros; los nombres de tabla y columna son constantes del código, nunca datos. Nada de
  * lo que se lee de `fc_control` es la fila completa: solo se cuenta y se actualiza `num_oferta` (la fila trae credenciales).
  */
 import { ErrorNegocio } from './errores.js';
 import { digitoVerificacion } from './nit.js';
-import { AHORA, comparable, describirFila, marcaQueCabe, noEscritoEnLaOferta, patronDeSolicitud, planDeOfertaAdjudicada } from './oferta.js';
+import { AHORA, comparable, describirFila, marcaQueCabe, noEscritoEnLaOferta, patronDeSolicitud, planDeOfertaAdjudicada, planDePreciosOferta } from './oferta.js';
 
 const TABLA_OFERTAS = 'fc_ofertas_adjudicadas';
+const TABLA_PRECIOS = 'fc_preciosventas_oferta';
 const INTENTOS_NUMERO = 3;
 const ESPERA_BLOQUEO_S = 10;
 
@@ -160,12 +162,15 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         const contexto = { huella, largoUserAdd, largoPcAdd };
         const plan = planDeOfertaAdjudicada(datosDeContratos, { cliente: cliente ?? { nit: '', rsocial: '' }, ...contexto });
         errores.push(...plan.errores);
+        const precios = planDePreciosOferta(datosDeContratos);
+        errores.push(...precios.errores);
         if (errores.length > 0) throw new ErrorNegocio(422, 'DATOS_INVALIDOS', 'Contratos no puede recibir esta oferta.', { errores });
-        const advertencias = avisosDeCliente(datos, cliente);
+        const advertencias = [...avisosDeCliente(datos, cliente), ...precios.advertencias];
 
         // 4. Número de oferta y 5. escritura.
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
+        const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
         await conexion.beginTransaction();
         try {
           if (idManual) {
@@ -173,6 +178,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
             fila.id = Number(siguiente.id);
           }
           await insertar(conexion, TABLA_OFERTAS, fila);
+          for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);
           await conexion.commit();
         } catch (error) {
           await conexion.rollback().catch(() => {});
@@ -183,7 +189,15 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         return {
           advertencias,
           noEscrito: noEscritoEnLaOferta(datos),
-          escrito: { empresa, undnegocio, numOferta, numerosSaltados: saltados, cliente, ofertaAdjudicada: describirFila(fila) },
+          escrito: {
+            empresa,
+            undnegocio,
+            numOferta,
+            numerosSaltados: saltados,
+            cliente,
+            ofertaAdjudicada: describirFila(fila),
+            preciosOferta: filasDePrecios.map((f) => ({ codigo: f.codigo, vr_costo: f.vr_costo, valor: f.valor })),
+          },
         };
       } catch (error) {
         throw traducirError(error);

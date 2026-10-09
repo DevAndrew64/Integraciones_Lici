@@ -97,6 +97,21 @@ describe('POST /contratos (modo prueba)', () => {
     assert.deepEqual(j.advertencias, []);
   });
 
+  it('muestra la lista de precios de insumos que escribiría (módulo 6) y valida cada fila', async () => {
+    const c = valido();
+    c.insumos = [{ codigo: '18111', nombre: 'Jabón', valorUnitario: 10000 }];
+    const j = await (await post(c)).json();
+    assert.equal(j.ok, true, JSON.stringify(j));
+    assert.deepEqual(j.escribiria.preciosOferta, [
+      { undnegocio: 'BAQ', num_oferta: null, ncontrato: '', cliente: 'tmp1', nom_punto: 'BAQ', codigo: '18111', valor: 11232, valor_anterior: 0, aiu: '0.1232', fadd: 'NOW()', user_add: 'LICICOLBA', vr_costo: 10000 },
+    ]);
+    const malo = valido();
+    malo.insumos = [{ codigo: '18 111', valorUnitario: -1 }];
+    const m = await post(malo);
+    assert.equal(m.status, 422);
+    assert.deepEqual((await m.json()).errores.map((e) => e.campo), ['insumos[0].codigo', 'insumos[0].valorUnitario']);
+  });
+
   it('sin cargos el envío vale y se avisa; los cargos no se escriben (no hay dónde) y se informan', async () => {
     const sin = valido();
     delete sin.cargos;

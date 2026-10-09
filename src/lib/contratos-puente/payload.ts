@@ -1,5 +1,5 @@
 import { porcentajeAIU, valorConAIU, type ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
-import type { TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
+import type { FilaInsumoPantallaDto, TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { CargoPayload } from './cargos';
 import type { ErrorCampo, PayloadContratosV1 } from './cliente';
 
@@ -64,6 +64,24 @@ export function normalizarNit(valor: string | null | undefined): string | null {
   return conDigitoVerificacion ? conDigitoVerificacion[1] : t;
 }
 
+/** Insumo de la lista de precios de la oferta (módulo 6): código de elemento del almacén y costo unitario sin IVA ni A.I.U. */
+export interface InsumoPayload {
+  codigo: string;
+  valorUnitario: number;
+}
+
+/**
+ * Los insumos de la pantalla que van a la lista de precios de Contratos (`fc_preciosventas_oferta`): solo los que traen
+ * código de elemento del almacén (los digitados a mano sin código no tienen dónde ir) y no los marcados como valor
+ * agregado (se listan, pero no se venden). El nombre no viaja: Contratos lo toma de su catálogo por el código.
+ */
+export function insumosParaPuente(filas: FilaInsumoPantallaDto[] | null | undefined): InsumoPayload[] {
+  return (filas ?? [])
+    .filter((f) => !f.valorAgregado && /^[A-Za-z0-9]{1,10}$/.test(String(f.codigo ?? '').trim()))
+    .filter((f) => Number.isFinite(f.valorUnitarioSinIva) && f.valorUnitarioSinIva >= 0)
+    .map((f) => ({ codigo: f.codigo.trim(), valorUnitario: f.valorUnitarioSinIva }));
+}
+
 /**
  * JSON v1 del puente a partir de lo que LiciColba ya tiene: la solicitud, el Resultado guardado y los totales de la pantalla.
  * Los seis valores de la tarifa son los de la hoja «Contratos» del Excel de costos: costo × (1 + A.I.U.), al peso, antes de IVA;
@@ -77,8 +95,10 @@ export function armarPayloadContratos(d: {
   destino?: Partial<DestinoContratos> | null;
   /** Líneas de cargo ya convertidas (`cargosParaPuente`); sin ellas la oferta viaja sin mano de obra. */
   cargos?: CargoPayload[] | null;
+  /** Lista de precios de insumos (`insumosParaPuente`, módulo 6). */
+  insumos?: InsumoPayload[] | null;
 }): PayloadContratosV1 {
-  const { solicitud: s, resultado: r, totales: t, destino: dest, cargos } = d;
+  const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos } = d;
   const aiu = porcentajeAIU(r?.porcentajeIU);
   const conAIU = (costo: number | undefined) => (typeof costo === 'number' && Number.isFinite(costo) ? valorConAIU(costo, aiu) : null);
   return {
@@ -108,6 +128,7 @@ export function armarPayloadContratos(d: {
       serviciosNoContinuos: conAIU(t?.serviciosNoContinuos),
     },
     ...(cargos && cargos.length > 0 ? { cargos } : {}),
+    ...(insumos && insumos.length > 0 ? { insumos } : {}),
   };
 }
 
@@ -130,6 +151,7 @@ const ETIQUETA_CAMPO: Record<string, string> = {
   'oferta.descripcionServicio': 'Descripción del servicio',
   tarifa: 'Tarifa',
   cargos: 'Cargos',
+  insumos: 'Lista de precios de insumos',
   'tarifa.manoObra': 'Vr. Mano de obra',
   'tarifa.insumos': 'Vr. Insumos',
   'tarifa.maquinaria': 'Vr. Maquinaria',

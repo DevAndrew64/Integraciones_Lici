@@ -54,5 +54,15 @@
       "valorTotal": 3000000,
       "codigoHorario": null
     }
+  ],
+  "insumos": [
+    {
+      "codigo": "18111",
+      "valorUnitario": 25000
+    },
+    {
+      "codigo": "01050",
+      "valorUnitario": 1234.5
+    }
   ]
 }

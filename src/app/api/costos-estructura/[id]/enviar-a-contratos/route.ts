@@ -9,7 +9,7 @@ import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-e
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 import { cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
 import { enviarAlPuente } from '@/lib/contratos-puente/cliente';
-import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, leerDestino } from '@/lib/contratos-puente/payload';
+import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, insumosParaPuente, leerDestino } from '@/lib/contratos-puente/payload';
 
 /**
  * Puente a Contratos (módulos 2 y 4) — envía a Contratos (vía `puente-contratos/`) los datos de la oferta con el JSON v1:
@@ -78,6 +78,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       totales: (body?.costosDto as CostosPantallaDto).totales, // ya validado arriba
       destino: leerDestino(body?.contratos),
       cargos,
+      insumos: insumosParaPuente((body?.costosDto as CostosPantallaDto).insumos?.filas),
     });
     const r = await enviarAlPuente(payload);
 

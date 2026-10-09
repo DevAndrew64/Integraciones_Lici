@@ -159,17 +159,11 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
 
   it('cubre la tabla donde el puente escribe hoy, las de fases siguientes y las de consulta', () => {
     const escritura = Object.entries(real.tablas).filter(([, t]) => t.uso === 'escritura').map(([n]) => n).sort();
-    assert.deepEqual(escritura, [
-      'fc_contratos_costos_admtivos_iniciales',
-      'fc_contratos_equipos_iniciales',
-      'fc_contratos_no_continuos_iniciales',
-      'fc_contratos_vlrs_agregs_iniciales',
-      'fc_elemxcont',
-      'fc_ofertas_adjudicadas',
-      'fc_preciosventas_oferta',
-    ]);
+    assert.deepEqual(escritura, ['fc_ofertas_adjudicadas', 'fc_preciosventas_oferta']);
     assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
-    assert.ok(!real.tablas.fc_contratos_tarifa_inicial && !real.tablas.fc_contratos_cargos_iniciales, 'ya no se escriben: no se pueden usar en la base viva');
+    for (const t of ['fc_contratos_tarifa_inicial', 'fc_contratos_cargos_iniciales', 'fc_contratos_equipos_iniciales', 'fc_contratos_costos_admtivos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales', 'fc_elemxcont']) {
+      assert.ok(!real.tablas[t], `${t}: no se usa (no existe o no se puede usar en la base viva)`);
+    }
   });
 
   it('fc_ofertas_adjudicadas: las columnas leídas de la base viva que el puente llena; los largos no confirmados sin tipo', () => {
@@ -179,7 +173,9 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
     assert.equal(t.columnas.rsocial.tipo, null);
     assert.equal(t.columnas.pc_add.tipo, null);
     assert.equal(t.columnas.vlr_otros.tipo, 'int(10)');
-    assert.equal(real.tablas.fc_elemxcont.motor, 'MyISAM');
+    const precios = real.tablas.fc_preciosventas_oferta;
+    assert.equal(precios.modulo, 6);
+    assert.deepEqual([precios.columnas.codigo.tipo, precios.columnas.undnegocio.tipo, precios.columnas.aiu.tipo, precios.columnas.vr_costo.tipo], ['char(10)', 'char(3)', 'decimal(8,4)', 'decimal(15,4)']);
   });
 
   it('nunca incluye columnas de credenciales (las tablas de configuración guardan claves en texto plano)', () => {

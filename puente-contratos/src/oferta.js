@@ -176,6 +176,61 @@ export function planDeOfertaAdjudicada(datos, { cliente, numOferta = null, huell
   };
 }
 
+/** Cliente (plantilla) y punto con que se escribe la lista de precios: LiciColba no maneja puntos de entrega. */
+export const CLIENTE_PLANTILLA = 'tmp1';
+
+const cuatroDecimales = (n) => Math.round(n * 1e4) / 1e4;
+
+/**
+ * Módulo 6 — filas de `fc_preciosventas_oferta` («Listas de Precio en la Oferta»): una por código de elemento de los
+ * insumos, con el costo unitario (`vr_costo`), el A.I.U. como fracción y el precio de venta = costo × (1 + A.I.U.).
+ * Como en Contratos, `cliente` es la plantilla («tmp1», el primer punto) y `nom_punto` el nombre del punto: LiciColba no
+ * maneja puntos de entrega, así que va el código de la UEN y Contratos lo reparte por puntos. Un código repetido se
+ * escribe una sola vez (el primero) y se avisa.
+ *
+ * @param {object} datos contrato v1 ya validado
+ * @param {{numOferta?: number | null}} contexto `numOferta` null = aún no reservado (modo prueba)
+ * @returns {{errores: {campo: string, mensaje: string}[], advertencias: {campo: string, mensaje: string}[], filas: Record<string, unknown>[]}}
+ */
+export function planDePreciosOferta(datos, { numOferta = null } = {}) {
+  const errores = [];
+  const advertencias = [];
+  const insumos = datos.insumos ?? [];
+  if (insumos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
+  const { oferta, contrato } = datos;
+  if (String(oferta.undnegocio ?? '').length > 3) {
+    errores.push({ campo: 'oferta.undnegocio', mensaje: 'La lista de precios de Contratos guarda la UEN en 3 caracteres.' });
+    return { errores, advertencias, filas: [] };
+  }
+  const aiu = contrato?.porcentajeAIU ?? 0;
+  const vistos = new Set();
+  const filas = [];
+  insumos.forEach((insumo, i) => {
+    const codigo = insumo.codigo.toUpperCase();
+    if (vistos.has(codigo)) {
+      advertencias.push({ campo: `insumos[${i}].codigo`, mensaje: `El código ${codigo} ya está en la lista: se escribe una sola vez (el primero).` });
+      return;
+    }
+    vistos.add(codigo);
+    const costo = cuatroDecimales(insumo.valorUnitario);
+    filas.push({
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      ncontrato: '',
+      cliente: CLIENTE_PLANTILLA,
+      nom_punto: oferta.undnegocio,
+      codigo,
+      valor: cuatroDecimales(costo * (1 + aiu / 100)),
+      valor_anterior: 0,
+      aiu: aiuComoFraccion(aiu),
+      fadd: AHORA,
+      user_add: USUARIO_PUENTE,
+      vr_costo: costo,
+    });
+  });
+  return { errores, advertencias, filas };
+}
+
 /** Las 47 columnas del INSERT de cargos de `cmdGrabar.Click`, en su orden. */
 export const COLUMNAS_CARGO_VFP = [
   'empresa', 'undnegocio', 'ncontrato', 'num_oferta', 'consec', 'concepto', 'cod_seccion', 'tipo_cargo', 'item', 'cargo', 'jornada', 'horassem',

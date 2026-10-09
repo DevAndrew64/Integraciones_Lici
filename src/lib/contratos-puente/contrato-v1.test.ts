@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cargosParaPuente, type CargoPantallaDto } from './cargos';
-import { armarPayloadContratos, leerDestino } from './payload';
+import { armarPayloadContratos, insumosParaPuente, leerDestino } from './payload';
 
 const RUTA = resolve(process.cwd(), 'puente-contratos/test/fixtures/payload-licicolba.json');
 
@@ -27,6 +27,10 @@ function payload() {
     totales: { manoObra: 12140000, otrosCostosEnManoObra: 320000, insumos: 0, maquinaria: 0, serviciosNoContinuos: 0, valorAgregado: 0, administrativos: 5000, total: 12145000 },
     destino: leerDestino({ empresa: '01', undnegocio: 'BAQ', tipoAdm: 'A', origenProceso: 'LIC', codServicio: 'ASE', descripcionServicio: 'Aseo y cafetería' }),
     cargos: cargosParaPuente(CARGOS),
+    insumos: insumosParaPuente([
+      { codigo: '18111', nombre: 'JABON LIQUIDO', unidad: 'GL', cantidad: 2, frecuenciaMeses: 1, valorUnitarioSinIva: 25000, valorUnitarioConIva: 29750, valorMensual: 50000, valorAgregado: false },
+      { codigo: '01050', nombre: 'BOLSA', unidad: 'UN', cantidad: 10, frecuenciaMeses: 1, valorUnitarioSinIva: 1234.5, valorUnitarioConIva: 1469.06, valorMensual: 12345, valorAgregado: false },
+    ]),
   });
 }
 

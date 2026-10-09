@@ -8,17 +8,17 @@ Next.js ──POST /contratos (JSON + token)──▶ puente ──mysql2──�
 
 ## Módulos (de lo más simple a lo más complejo)
 
-Con el esquema real de la base (ver «Lo que dice la base de Contratos») la oferta vive en ocho tablas, todas con la misma clave: **(empresa, UEN, n.º de oferta)**. Por eso los módulos de escritura siguen esas tablas:
+La oferta se identifica en Contratos por **(empresa, UEN, n.º de oferta)**. Desde el 2026-10-09 el puente escribe solo en tablas que existen en la base viva, sin crear ni cambiar ninguna:
 
 | # | Módulo | Tablas de Contratos | Estado |
 |---|---|---|---|
 | 1 | **Puente en modo prueba:** servicio, token, contrato JSON v1, validación, huella | — | ✅ |
 | 2 | **Next.js → puente:** cliente HTTP, ruta que arma el JSON, botón «Enviar a Contratos» | — | ✅ |
 | 3 | **Conexión a MySQL y contrato de esquema:** `mysql2` en modo estricto, comprobación de tablas y columnas, `/health` | `information_schema` | ✅ probado también contra un MySQL 5.5 real (Docker) |
-| 4 | **Oferta y tarifas:** número de oferta, cliente, A.I.U. y los 6 totales de «Operación del Contrato» (ver «Módulo 4») | `fc_contratos_tarifa_inicial` (lee `fc_clientes`, `fc_conceptos`, `fc_control`) | ✅ probado contra un MySQL 5.5 real con un usuario de permisos mínimos; por confirmar con Contratos |
-| 5 | **Cargos (Hoja 3/4):** una fila por línea de cargo, con código consecutivo por oferta, ítem, horario y valores (ver «Módulo 5») | `fc_contratos_cargos_iniciales` (lee `fc_horarios`) | ✅ probado contra un MySQL 5.5 real; LiciColba ya los envía; por confirmar con Contratos |
-| 6 | Equipos, insumos y costos administrativos | `fc_contratos_equipos_iniciales`, `fc_elemxcont`, `fc_preciosventas_oferta`, `fc_contratos_costos_admtivos_iniciales` | ⏳ |
-| 7 | Servicios no continuos y valores agregados | `fc_contratos_no_continuos_iniciales`, `fc_contratos_vlrs_agregs_iniciales` | ⏳ |
+| 4 | **Oferta adjudicada:** número de oferta, cliente y los 6 valores (destino vigente desde 2026-10-09) | `fc_ofertas_adjudicadas` (lee `fc_clientes`, `fc_control`) | ✅ en la base viva de Contratos `fc_contratos_tarifa_inicial` no se puede usar: ver «Destino actual» |
+| 5 | **Cargos:** hoy no se escriben (no hay tabla viva para ellos); se informan como «no escrito» | — | ⏸ el código de `fc_contratos_cargos_iniciales` se conserva en `oferta.js` |
+| 6 | **Lista de precios de insumos:** una fila por código de elemento del almacén (costo, A.I.U., precio de venta), en la misma transacción que la oferta | `fc_preciosventas_oferta` | ✅ equipos no: sus códigos son de activos fijos y no hay tabla viva para ellos |
+| 7 | **No continuos y valores agregados:** solo sus totales (`vlr_nocontinuos`, `vlr_otros`); el detalle no tiene tabla viva | `fc_ofertas_adjudicadas` | ✅ totales |
 
 Los datos generales del contrato (fechas, reajuste, suministros…) viven en `fc_contratos`, que se crea **después** de la oferta; dónde guardarlos antes de que exista el contrato lo define Contratos (ver el Excel de mapeo).
 
@@ -103,9 +103,10 @@ Luego, en LiciColba, abra los costos **desde la ficha de una solicitud con NIT**
 
 No hace falta Node ni npm: las pruebas, la base y el puente corren en contenedores (`docker-compose.prueba.yml`). Requisitos: Docker con Compose 2.20 o más nuevo (`docker compose version`) y esta carpeta. La primera vez baja las imágenes (`mysql:5.5` y `node:22-alpine`) y las dependencias. Todo, desde la carpeta `puente-contratos`:
 
-1. **Todas las pruebas** (unitarias y contra el MySQL 5.5 real). Al final debe decir `pass 150` y `fail 0`:
+1. **Todas las pruebas** (unitarias y contra el MySQL 5.5 real). Al final debe decir `fail 0`. Si la base de prueba ya existía de antes del 2026-10-09, bórrela primero para que se cree `fc_ofertas_adjudicadas` (la estructura solo se carga en una base nueva):
 
    ```bash
+   docker compose -f docker-compose.prueba.yml --profile "*" down -v
    docker compose -f docker-compose.prueba.yml run --rm pruebas
    ```
 

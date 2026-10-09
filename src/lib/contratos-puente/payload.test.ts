@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
-import { armarPayloadContratos, describirError, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
+import { armarPayloadContratos, describirError, insumosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
 
 const solicitud = (o: Partial<SolicitudParaPuente> = {}): SolicitudParaPuente => ({
   id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: 'Calle 1 # 2-3', ...o,
@@ -101,6 +101,26 @@ describe('armarPayloadContratos', () => {
       solicitud: solicitud(), procesoCodigo: null, resultado: { valorMesIncluidoIva: '5000000', vigenciaMeses: Number.NaN, porcentajeIU: undefined },
     });
     expect(p.contrato).toEqual({ objeto: 'Aseo integral', porcentajeAIU: null, valorMensual: null, plazoMeses: null });
+  });
+});
+
+describe('insumosParaPuente (módulo 6)', () => {
+  const fila = (cambios: Record<string, unknown>) => ({ codigo: '18111', nombre: 'JABÓN', unidad: 'GL', cantidad: 1, frecuenciaMeses: 1, valorUnitarioSinIva: 25000, valorUnitarioConIva: 29750, valorMensual: 25000, valorAgregado: false, ...cambios });
+  it('solo los insumos con código de elemento y que se venden (no los de valor agregado); el costo va sin IVA', () => {
+    expect(insumosParaPuente([
+      fila({}),
+      fila({ codigo: ' 01050 ', valorUnitarioSinIva: 1234.5 }),
+      fila({ codigo: '' }),
+      fila({ codigo: 'CON ESPACIO' }),
+      fila({ codigo: '22222', valorAgregado: true }),
+      fila({ codigo: '33333', valorUnitarioSinIva: Number.NaN }),
+    ])).toEqual([{ codigo: '18111', valorUnitario: 25000 }, { codigo: '01050', valorUnitario: 1234.5 }]);
+    expect(insumosParaPuente(null)).toEqual([]);
+  });
+
+  it('sin insumos el payload no lleva la lista (la huella del puente no cambia)', () => {
+    const p = armarPayloadContratos({ solicitud: { id: 1, codigoProceso: 'X', entidad: 'E', objeto: null, nitContacto: '900123456', direccionContacto: null }, procesoCodigo: 'X', resultado: null, insumos: [] });
+    expect('insumos' in p).toBe(false);
   });
 });
 

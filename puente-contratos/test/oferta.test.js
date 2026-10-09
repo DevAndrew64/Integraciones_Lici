@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
-  marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeOfertaAdjudicada, planDeTarifa, USUARIO_PUENTE,
+  marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from '../src/oferta.js';
 import { validarContrato } from '../src/validar.js';
 
@@ -144,6 +144,49 @@ describe('planDeOfertaAdjudicada', () => {
       if (/^int\(/.test(definicion.tipo ?? '') && typeof valor === 'number') assert.ok(valor <= MAX_INT10, `${columna} desborda`);
     }
     assert.ok(!('id' in fila), 'el id lo pone la base');
+  });
+});
+
+describe('planDePreciosOferta (módulo 6)', () => {
+  const conInsumos = (cambiar = () => {}) => datos((e) => {
+    e.insumos = [
+      { codigo: '18111', nombre: 'Jabón', valorUnitario: 10000 },
+      { codigo: '01050', nombre: 'Bolsa', valorUnitario: 1234.56789 },
+    ];
+    cambiar(e);
+  });
+
+  it('una fila por código: costo, A.I.U. como fracción y precio de venta = costo × (1 + A.I.U.), a 4 decimales', () => {
+    const { errores, advertencias, filas } = planDePreciosOferta(conInsumos(), { numOferta: 937 });
+    assert.deepEqual([errores, advertencias], [[], []]);
+    assert.deepEqual(filas.map(describirFila), [
+      { undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', cliente: 'tmp1', nom_punto: 'BAQ', codigo: '18111', valor: 11232, valor_anterior: 0, aiu: '0.1232', fadd: 'NOW()', user_add: 'LICICOLBA', vr_costo: 10000 },
+      { undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', cliente: 'tmp1', nom_punto: 'BAQ', codigo: '01050', valor: 1386.6667, valor_anterior: 0, aiu: '0.1232', fadd: 'NOW()', user_add: 'LICICOLBA', vr_costo: 1234.5679 },
+    ]);
+  });
+
+  it('un código repetido se escribe una vez (el primero) y se avisa', () => {
+    const { advertencias, filas } = planDePreciosOferta(conInsumos((e) => e.insumos.push({ codigo: '18111', valorUnitario: 1 })));
+    assert.equal(filas.length, 2);
+    assert.deepEqual(advertencias.map((a) => a.campo), ['insumos[2].codigo']);
+  });
+
+  it('sin insumos no hay filas; una UEN de más de 3 caracteres no cabe en la lista de precios', () => {
+    assert.deepEqual(planDePreciosOferta(datos()).filas, []);
+    const { errores } = planDePreciosOferta(conInsumos((e) => (e.oferta.undnegocio = 'BAQ1')));
+    assert.deepEqual(errores.map((e) => e.campo), ['oferta.undnegocio']);
+  });
+
+  it('todas las columnas existen en el contrato de esquema y lo que se escribe cabe en ellas', () => {
+    const tabla = cargarEsquemaEsperado().tablas.fc_preciosventas_oferta.columnas;
+    const [fila] = planDePreciosOferta(conInsumos((e) => (e.insumos[0].codigo = 'X'.repeat(10))), { numOferta: 9999999 }).filas;
+    for (const [columna, valor] of Object.entries(fila)) {
+      const definicion = tabla[columna];
+      assert.ok(definicion, `la columna ${columna} no está en esquema-esperado.json`);
+      const largo = /^(?:var)?char\((\d+)\)$/.exec(definicion.tipo ?? '');
+      if (largo && typeof valor === 'string') assert.ok(valor.length <= Number(largo[1]), `${columna}: ${valor.length} > ${largo[1]}`);
+    }
+    assert.ok(!('id' in fila), 'el id lo pone la base (auto_increment)');
   });
 });
 

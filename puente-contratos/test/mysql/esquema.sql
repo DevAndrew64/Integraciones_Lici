@@ -3,6 +3,31 @@
 -- la tabla real guarda además usuario y clave de conexión y el puente nunca las consulta.
 SET NAMES latin1;
 
+-- Donde escribe el puente hoy (base viva de Contratos, leída el 2026-10-09). Los largos de rsocial, user_add, pc_add, user_mod
+-- y pc_mod no se vieron completos en la base viva: aquí se suponen; el puente lee los reales al arrancar.
+CREATE TABLE `fc_ofertas_adjudicadas` (
+  `id` int(18) NOT NULL AUTO_INCREMENT,
+  `empresa` char(6) DEFAULT NULL,
+  `undnegocio` char(9) DEFAULT NULL,
+  `num_oferta` int(10) DEFAULT '0',
+  `nit` varchar(20) DEFAULT NULL,
+  `rsocial` varchar(100) DEFAULT NULL,
+  `vlr_adjudicado` int(18) DEFAULT '0',
+  `vlr_manoobra` int(18) DEFAULT '0',
+  `vlr_insumos` int(18) DEFAULT '0',
+  `vlr_maquinaria` int(18) DEFAULT '0',
+  `vlr_impuestos` int(18) DEFAULT '0',
+  `vlr_otros` int(10) DEFAULT '0',
+  `vlr_nocontinuos` int(18) DEFAULT '0',
+  `user_add` varchar(12) DEFAULT NULL,
+  `fadd` datetime DEFAULT '0000-00-00 00:00:00',
+  `pc_add` varchar(60) DEFAULT NULL,
+  `user_mod` varchar(12) DEFAULT NULL,
+  `fmod` datetime DEFAULT '0000-00-00 00:00:00',
+  `pc_mod` varchar(60) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COMMENT='Ofertas Adjudicadas';
+
 CREATE TABLE `fc_contratos_tarifa_inicial` (
   `id` int(18) NOT NULL AUTO_INCREMENT,
   `empresa` char(6) DEFAULT '',
