@@ -2,7 +2,8 @@
 
 > **Desde el 2026-10-10 LiciColba escribe directo en el MySQL de Contratos, sin Docker ni este servicio.** El servidor de
 > LiciColba carga este mismo código (`src/motor.js`) desde `src/lib/contratos-puente/directo.ts` y se conecta por defecto a
-> la base de la intranet (Bq-srvdatosgc, base `almacen`, usuario `puente`, modo escritura). Para cambiar algún valor, en el
+> la base de la intranet (Bq-srvdatosgc, base `almacen`, usuario `puente`) en modo **dry-run**: valida y no escribe. Solo el servidor de la
+> intranet que publica LiciColba pone `CONTRATOS_MODO=escritura`. Para cambiar algún valor, en el
 > `.env.local` de LiciColba: `CONTRATOS_MYSQL_HOST`, `_PORT`, `_USER`, `_PASSWORD`, `_DATABASE` y `CONTRATOS_MODO`
 > (`dry-run` valida sin escribir). El servicio Express de abajo sigue funcionando si se define `PUENTE_CONTRATOS_URL`.
 

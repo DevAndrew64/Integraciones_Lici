@@ -9,23 +9,23 @@ import type { PayloadContratosV1 } from './cliente';
 const payload = { version: 1 } as unknown as PayloadContratosV1;
 
 describe('leerConfigContratos', () => {
-  it('sin variables apunta a la base de Contratos de la intranet en modo escritura', () => {
+  it('sin variables apunta a la base de Contratos de la intranet en modo dry-run (no escribe)', () => {
     expect(leerConfigContratos({})).toEqual({
-      modo: 'escritura',
+      modo: 'dry-run',
       configMySQL: { host: CONTRATOS_POR_DEFECTO.host, port: 3306, user: 'puente', password: '', database: 'almacen' },
     });
   });
 
   it('cada valor se puede cambiar en el entorno', () => {
     const config = leerConfigContratos({
-      CONTRATOS_MODO: 'dry-run',
+      CONTRATOS_MODO: 'escritura',
       CONTRATOS_MYSQL_HOST: '10.0.0.5',
       CONTRATOS_MYSQL_PORT: '3307',
       CONTRATOS_MYSQL_USER: 'otro',
       CONTRATOS_MYSQL_PASSWORD: 'clave',
       CONTRATOS_MYSQL_DATABASE: 'almacen_prueba',
     });
-    expect(config).toEqual({ modo: 'dry-run', configMySQL: { host: '10.0.0.5', port: 3307, user: 'otro', password: 'clave', database: 'almacen_prueba' } });
+    expect(config).toEqual({ modo: 'escritura', configMySQL: { host: '10.0.0.5', port: 3307, user: 'otro', password: 'clave', database: 'almacen_prueba' } });
   });
 
   it('rechaza un modo o un puerto inválidos', () => {
