@@ -29,6 +29,7 @@
     "html2pdf.js": "^0.14.0",
     "lucide-react": "^1.18.0",
     "mammoth": "^1.12.0",
+    "mysql2": "^3.24.5",
     "next": "16.2.9",
     "node-cron": "^4.2.1",
     "pdf-lib": "^1.17.1",

@@ -1,32 +1,9 @@
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { ErrorNegocio } from './errores.js';
-import { nitConDV } from './nit.js';
-import { describirFila, noEscritoEnLaOferta, planDeOfertaAdjudicada, planDePreciosOferta } from './oferta.js';
-import { huella as calcularHuella, validarContrato } from './validar.js';
+import { escritorPrueba, procesarEnvio } from './procesar.js';
 
-/**
- * Escritor del modo «prueba»: no toca ninguna base de datos; devuelve lo que escribiría. El escritor MySQL tiene la misma
- * forma (`escribir(datos, {huella}) → resumen`) y no cambia nada más de este archivo.
- * El NIT se escribiría como Contratos lo guarda: «base-DV» (el dígito de verificación lo calcula el puente).
- * Lo que impediría escribir (p. ej. un A.I.U. en 0) sale como advertencia: en este modo nada se rechaza por eso.
- */
-export const escritorPrueba = {
-  async escribir(datos, { huella = '' } = {}) {
-    const nitCompleto = nitConDV(datos.cliente.nit);
-    const escribiria = { ...datos, cliente: { ...datos.cliente, nitCompleto } };
-    const advertencias = [];
-    if (datos.oferta && datos.tarifa) {
-      const { errores, fila } = planDeOfertaAdjudicada(datos, { cliente: { nit: nitCompleto, rsocial: datos.cliente.razonSocial }, huella });
-      if (fila) escribiria.ofertaAdjudicada = describirFila(fila);
-      advertencias.push(...errores);
-      const precios = planDePreciosOferta(datos);
-      if (precios.filas.length > 0) escribiria.preciosOferta = precios.filas.map(describirFila);
-      advertencias.push(...precios.errores, ...precios.advertencias);
-    }
-    return { escribiria, noEscrito: noEscritoEnLaOferta(datos), advertencias };
-  },
-};
+export { escritorPrueba };
 
 const SIN_BD = async () => ({ estado: 'sin_configurar' });
 
@@ -73,15 +50,8 @@ export function crearApp({ token, modo = 'dry-run', escritor, estadoBD = SIN_BD 
 
   app.post('/contratos', async (req, res, next) => {
     try {
-      if (!escritorActivo) {
-        return res.status(501).json({ ok: false, error: 'MODO_NO_DISPONIBLE', mensaje: 'La escritura en MySQL no está habilitada en este servicio.' });
-      }
-      // Para escribir, lo marcado `escribe` en el contrato (oferta, tarifa, A.I.U.) es obligatorio.
-      const validacion = validarContrato(req.body, { paraEscribir: modo === 'escritura' });
-      if (!validacion.ok) return res.status(422).json({ ok: false, error: 'DATOS_INVALIDOS', errores: validacion.errores });
-      const huella = calcularHuella(validacion.datos);
-      const { advertencias = [], ...resultado } = await escritorActivo.escribir(validacion.datos, { huella });
-      return res.json({ ok: true, modo, huella, advertencias: [...validacion.advertencias, ...advertencias], ...resultado });
+      const { estado, cuerpo } = await procesarEnvio(req.body, { modo, escritor: escritorActivo });
+      return res.status(estado).json(cuerpo);
     } catch (e) {
       return next(e);
     }

@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: JSON.parse(readFileSync("package.json", "utf8")).version,
     NEXT_PUBLIC_APP_COMMIT: idCommit(),
   },
-  serverExternalPackages: ['pdfjs-dist', 'pdfkit', 'puppeteer', 'puppeteer-core'],
+  serverExternalPackages: ['pdfjs-dist', 'pdfkit', 'puppeteer', 'puppeteer-core', 'mysql2'],
   // Excluye del rastreo de archivos de Next.js (Output File Tracing) los paquetes de
   // puppeteer para esta ruta. Rutas verificadas contra la estructura real del proyecto
   // (node_modules/puppeteer/.local-chromium NO existe en esta versión — se descartó).

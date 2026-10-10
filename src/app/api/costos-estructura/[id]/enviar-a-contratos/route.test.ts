@@ -16,7 +16,7 @@ vi.mock('@/lib/authz', () => ({
   requireEditarCostos: (s: { rol: string } | null) => (!s ? NextResponse.json({ ok: false }, { status: 401 }) : s.rol === 'Mercadeo' ? NextResponse.json({ ok: false }, { status: 403 }) : null),
 }));
 vi.mock('@/lib/audit', () => ({ auditFromRequest: (...a: unknown[]) => { mocks.auditoria(...a); return Promise.resolve(); } }));
-vi.mock('@/lib/contratos-puente/cliente', () => ({ enviarAlPuente: (...a: unknown[]) => mocks.enviar(...a) }));
+vi.mock('@/lib/contratos-puente/directo', () => ({ enviarAContratos: (...a: unknown[]) => mocks.enviar(...a) }));
 
 type Solicitud = { id: number; codigoProceso: string | null; resultadoFinal: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null };
 let registro: { id: number; procesoCodigo: string | null; datos: Record<string, unknown> } | null = null;

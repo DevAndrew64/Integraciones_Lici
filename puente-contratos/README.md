@@ -1,5 +1,11 @@
 # Puente LiciColba → Contratos
 
+> **Desde el 2026-10-10 LiciColba escribe directo en el MySQL de Contratos, sin Docker ni este servicio.** El servidor de
+> LiciColba carga este mismo código (`src/motor.js`) desde `src/lib/contratos-puente/directo.ts` y se conecta por defecto a
+> la base de la intranet (Bq-srvdatosgc, base `almacen`, usuario `puente`, modo escritura). Para cambiar algún valor, en el
+> `.env.local` de LiciColba: `CONTRATOS_MYSQL_HOST`, `_PORT`, `_USER`, `_PASSWORD`, `_DATABASE` y `CONTRATOS_MODO`
+> (`dry-run` valida sin escribir). El servicio Express de abajo sigue funcionando si se define `PUENTE_CONTRATOS_URL`.
+
 Servicio pequeño (Node + Express, **sin Prisma**) que vive en este repositorio. LiciColba (Next.js) le envía un JSON; el puente lo valida y, cuando el módulo de escritura esté habilitado, lo escribe en MySQL 5.5 con `mysql2`, de donde lo lee Contratos (Visual FoxPro). Así Next.js y Prisma no necesitan hablar con MySQL 5.5 y, si Contratos cambia de base de datos, solo cambia este servicio.
 
 ```

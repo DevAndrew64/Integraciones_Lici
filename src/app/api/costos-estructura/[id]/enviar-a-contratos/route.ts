@@ -8,11 +8,12 @@ import type { ClaveModulo, EstadoModuloResultado } from '@/lib/costos-estructura
 import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 import { cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
-import { enviarAlPuente } from '@/lib/contratos-puente/cliente';
+import { enviarAContratos } from '@/lib/contratos-puente/directo';
 import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, insumosParaPuente, leerDestino } from '@/lib/contratos-puente/payload';
 
 /**
- * Puente a Contratos (módulos 2 y 4) — envía a Contratos (vía `puente-contratos/`) los datos de la oferta con el JSON v1:
+ * Puente a Contratos (módulos 2 y 4) — escribe en el MySQL de Contratos de la intranet (directo, con el código de
+ * `puente-contratos/src`; ver `src/lib/contratos-puente/directo.ts`) los datos de la oferta con el JSON v1:
  * razón social, NIT, dirección, objeto, % A.I.U. (el % de I.U. del costeo), valor mensual, plazo, la clave de la oferta
  * (empresa, UEN, tipo de tarifa, origen y concepto, que elige quien envía) y los seis valores de la tarifa. En modo prueba
  * el puente valida y NO escribe; en modo escritura crea la oferta en Contratos y responde su número.
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       cargos,
       insumos: insumosParaPuente((body?.costosDto as CostosPantallaDto).insumos?.filas),
     });
-    const r = await enviarAlPuente(payload);
+    const r = await enviarAContratos(payload);
 
     // Auditoría sin datos del cliente: solo ids, el resultado y la huella del contenido enviado.
     void auditFromRequest(req, session, {
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         advertencias: r.advertencias,
         oferta: r.oferta,
         noEscrito: r.noEscrito,
-        mensaje: `${creada ?? `Datos validados por el puente de Contratos${nota}.`}${avisos}${aparte}`,
+        mensaje: `${creada ?? `Datos validados para Contratos${nota}.`}${avisos}${aparte}`,
       });
     }
     switch (r.tipo) {

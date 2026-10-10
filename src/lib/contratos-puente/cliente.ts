@@ -106,7 +106,15 @@ export async function enviarAlPuente(payload: PayloadContratosV1, entorno: Entor
   }
 
   const cuerpo = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-  if (res.ok && cuerpo?.ok === true) {
+  return interpretarRespuesta(res.status, cuerpo);
+}
+
+/**
+ * Traduce la respuesta del puente (estado HTTP + cuerpo JSON) al resultado que usa la ruta. La usan el cliente HTTP y el
+ * envío directo a MySQL (`directo.ts`), que produce el mismo estado y cuerpo sin pasar por la red.
+ */
+export function interpretarRespuesta(estado: number, cuerpo: Record<string, unknown> | null): ResultadoPuente {
+  if (estado >= 200 && estado < 300 && cuerpo?.ok === true) {
     const escrito = cuerpo.escrito as Record<string, unknown> | undefined;
     return {
       ok: true,
@@ -117,13 +125,13 @@ export async function enviarAlPuente(payload: PayloadContratosV1, entorno: Entor
       noEscrito: aNoEscrito(cuerpo.noEscrito),
     };
   }
-  if (res.status === 422 && cuerpo?.error === 'DATOS_INVALIDOS') return { ok: false, tipo: 'DATOS_INVALIDOS', errores: aErrores(cuerpo.errores) };
-  if (res.status === 409 && cuerpo?.error === 'YA_ENVIADA') return { ok: false, tipo: 'YA_ENVIADA', oferta: aOferta(cuerpo.oferta), sinCambios: cuerpo.sinCambios === true };
-  if (res.status === 401) return { ok: false, tipo: 'RECHAZADO', mensaje: 'El puente de Contratos rechazó las credenciales de LiciColba.' };
+  if (estado === 422 && cuerpo?.error === 'DATOS_INVALIDOS') return { ok: false, tipo: 'DATOS_INVALIDOS', errores: aErrores(cuerpo.errores) };
+  if (estado === 409 && cuerpo?.error === 'YA_ENVIADA') return { ok: false, tipo: 'YA_ENVIADA', oferta: aOferta(cuerpo.oferta), sinCambios: cuerpo.sinCambios === true };
+  if (estado === 401) return { ok: false, tipo: 'RECHAZADO', mensaje: 'El puente de Contratos rechazó las credenciales de LiciColba.' };
   // Otros rechazos del puente que el usuario puede entender (servicio ocupado, contador de Contratos desfasado, base sin conexión):
   // sus mensajes no llevan datos del cliente ni de la base.
-  if ((res.status === 409 || res.status === 503) && typeof cuerpo?.error === 'string' && typeof cuerpo?.mensaje === 'string') {
+  if ((estado === 409 || estado === 503) && typeof cuerpo?.error === 'string' && typeof cuerpo?.mensaje === 'string') {
     return { ok: false, tipo: 'CONFLICTO', codigo: cuerpo.error, mensaje: cuerpo.mensaje };
   }
-  return { ok: false, tipo: 'ERROR_PUENTE', mensaje: `El puente de Contratos respondió con un error (${res.status}).` };
+  return { ok: false, tipo: 'ERROR_PUENTE', mensaje: `El puente de Contratos respondió con un error (${estado}).` };
 }
