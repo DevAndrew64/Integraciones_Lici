@@ -8,7 +8,7 @@ import { enviarAlPuente, interpretarRespuesta, type PayloadContratosV1, type Res
  * de la intranet con el mismo código del puente (`puente-contratos/src`). Por eso funciona en cualquier equipo de la
  * intranet que corra LiciColba, sin Docker.
  *
- * Valores por defecto: la base de Contratos de la intranet (Bq-srvdatosgc, base `almacen`, usuario `puente`) en modo
+ * Valores por defecto: la base de Contratos de la intranet (10.152.0.13 = Bq-srvdatosgc, base `almacen`, usuario `puente`) en modo
  * dry-run: valida y no escribe. Solo el servidor de la intranet que publica LiciColba pone `CONTRATOS_MODO=escritura`; así
  * quien corra la rama en su equipo (p. ej. para revisarla) no crea ofertas ni gasta números en Contratos. En `.env.local`:
  *   CONTRATOS_MYSQL_HOST, CONTRATOS_MYSQL_PORT, CONTRATOS_MYSQL_USER, CONTRATOS_MYSQL_PASSWORD (vacía si el servidor solo
@@ -16,7 +16,7 @@ import { enviarAlPuente, interpretarRespuesta, type PayloadContratosV1, type Res
  * Si se define `PUENTE_CONTRATOS_URL`, se usa en cambio el servicio puente por HTTP (como antes).
  */
 export const CONTRATOS_POR_DEFECTO = {
-  host: 'Bq-srvdatosgc',
+  host: '10.152.0.13',
   port: 3306,
   user: 'puente',
   database: 'almacen',
