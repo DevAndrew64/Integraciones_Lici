@@ -22,8 +22,8 @@ La oferta se identifica en Contratos por **(empresa, UEN, n.º de oferta)**. Des
 | 1 | **Puente en modo prueba:** servicio, token, contrato JSON v1, validación, huella | — | ✅ |
 | 2 | **Next.js → puente:** cliente HTTP, ruta que arma el JSON, botón «Enviar a Contratos» | — | ✅ |
 | 3 | **Conexión a MySQL y contrato de esquema:** `mysql2` en modo estricto, comprobación de tablas y columnas, `/health` | `information_schema` | ✅ probado también contra un MySQL 5.5 real (Docker) |
-| 4 | **Oferta adjudicada:** número de oferta, cliente y los 6 valores (destino vigente desde 2026-10-09) | `fc_ofertas_adjudicadas` (lee `fc_clientes`, `fc_control`) | ✅ en la base viva de Contratos `fc_contratos_tarifa_inicial` no se puede usar: ver «Destino actual» |
-| 5 | **Cargos:** hoy no se escriben (no hay tabla viva para ellos); se informan como «no escrito» | — | ⏸ el código de `fc_contratos_cargos_iniciales` se conserva en `oferta.js` |
+| 4 | **Oferta y tarifa** («Guardar oferta» de Contratos) y **oferta adjudicada:** número de oferta, cliente, concepto, A.I.U., tipo de tarifa, origen y los 6 valores | `fc_contratos_tarifa_inicial` + `fc_ofertas_adjudicadas` (lee `fc_clientes`, `fc_conceptos`, `fc_control`) | ✅ la tarifa se adapta a la base real: si le falta una columna no esencial, se omite y se informa |
+| 5 | **Cargos:** una fila por línea de cargo (código consecutivo, ítem, horario y valores), en la misma transacción | `fc_contratos_cargos_iniciales` (lee `fc_horarios`) | ✅ también se adapta a las columnas reales |
 | 6 | **Lista de precios de insumos:** una fila por código de elemento del almacén (costo, A.I.U., precio de venta), en la misma transacción que la oferta | `fc_preciosventas_oferta` | ✅ equipos no: sus códigos son de activos fijos y no hay tabla viva para ellos |
 | 7 | **No continuos y valores agregados:** solo sus totales (`vlr_nocontinuos`, `vlr_otros`); el detalle no tiene tabla viva | `fc_ofertas_adjudicadas` | ✅ totales |
 

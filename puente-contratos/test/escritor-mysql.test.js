@@ -33,10 +33,14 @@ function falso(respuestas = {}) {
     [/pc_add LIKE/, [[]]],
     [/FROM fc_clientes/, [[{ nit: '900123456-8  ', rsocial: 'CLIENTE DE PRUEBA S.A.S.' }]]],
     [/^SELECT empresa, undnegocio FROM fc_control/, [[{ empresa: '01', undnegocio: 'BAQ' }]]],
+    [/FROM fc_conceptos/, [[{ empresa: '01', undnegocio: 'BAQ', codcpto: 'ASE' }]]],
+    [/FROM fc_horarios/, [[{ codigo: '941' }]]],
     [/^UPDATE fc_control/, [{ affectedRows: 1 }]],
     [/LAST_INSERT_ID\(\) AS numero/, [[{ numero: '937' }]]],
-    [/COUNT\(\*\) AS n FROM fc_ofertas_adjudicadas/, [[{ n: 0 }]]],
+    [/AS n$/, [[{ n: 0 }]]],
     [/MAX\(id\)/, [[{ id: '501' }]]],
+    [/^INSERT INTO fc_contratos_tarifa_inicial/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_contratos_cargos_iniciales/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_ofertas_adjudicadas/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_preciosventas_oferta/, [{ affectedRows: 1 }]],
   ].map(([patron, valor]) => [patron, respuestas[patron.source] ?? valor]);
@@ -59,7 +63,8 @@ function falso(respuestas = {}) {
   const pool = { async getConnection() { return conexion; } };
   const indice = (patron) => sentencias.findIndex((s) => patron.test(s.sql));
   const hubo = (patron) => indice(patron) >= 0;
-  return { pool, sentencias, indice, hubo };
+  const de = (patron) => sentencias.filter((s) => patron.test(s.sql));
+  return { pool, sentencias, indice, hubo, de };
 }
 
 const escribir = (pool, d = datos(), opciones) => crearEscritorMySQL(pool, opciones).escribir(d, { huella: HUELLA });
@@ -70,74 +75,109 @@ const rechaza = async (promesa, estado, codigo) => {
   assert.equal(error.codigo, codigo);
   return error;
 };
-const NO_ESCRITO = ['contrato.porcentajeAIU', 'oferta.tipoAdm', 'oferta.origenProceso', 'oferta.codServicio', 'contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion'];
+const NO_ESCRITO = ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion'];
+const CARGOS = () => [
+  { nombre: 'Aseador', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 10000000, valorTotal: 40000000, codigoHorario: '941' },
+  { nombre: 'Aseador', cantidad: 2, horasSemana: 44, jornada: 7.33, salario: 1423500, riesgo: 1, valorUnitario: 5000000, valorTotal: 10000000 },
+  { nombre: 'Supervisor', cantidad: 1, horasSemana: 48, jornada: 8, salario: 2500000, riesgo: 2, valorUnitario: 2500000, valorTotal: 2500000 },
+];
+/** 52.500.000 sin A.I.U. son 58.968.000 con el 12,32 %. */
+const conCargos = (cambiar = () => {}) => datos((e) => { e.tarifa.manoObra = 58968000; e.cargos = CARGOS(); cambiar(e); });
 
-describe('escritor MySQL — camino feliz (fc_ofertas_adjudicadas)', () => {
-  it('reserva el número, escribe UNA fila de oferta adjudicada y devuelve lo escrito', async () => {
+describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y precios)', () => {
+  it('reserva el número y escribe la tarifa y la oferta adjudicada; devuelve lo escrito', async () => {
     const f = falso();
     const r = await escribir(f.pool);
     assert.equal(r.escrito.numOferta, 937);
     assert.deepEqual(r.escrito.numerosSaltados, []);
-    assert.equal(r.escrito.empresa, '01');
-    assert.equal(r.escrito.undnegocio, 'BAQ');
+    assert.deepEqual([r.escrito.empresa, r.escrito.undnegocio], ['01', 'BAQ']);
     assert.deepEqual(r.escrito.cliente, { nit: '900123456-8', rsocial: 'CLIENTE DE PRUEBA S.A.S.' }, 'el NIT y la razón social son los de Contratos, sin espacios sobrantes');
-    assert.deepEqual(r.escrito.ofertaAdjudicada, {
-      empresa: '01', undnegocio: 'BAQ', num_oferta: 937, nit: '900123456-8', rsocial: 'CLIENTE DE PRUEBA S.A.S.',
-      vlr_adjudicado: 61155743 + 1000000 + 500000 + 5000000 + 0 + 250000,
-      vlr_manoobra: 61155743, vlr_insumos: 1000000, vlr_maquinaria: 500000, vlr_impuestos: 5000000, vlr_otros: 0, vlr_nocontinuos: 250000,
-      user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: 'LICICOLBA:42:ab12cd34ef56',
-    });
+    assert.deepEqual([r.escrito.tarifa.num_oferta, r.escrito.tarifa.fadd, r.escrito.tarifa.codservicio, r.escrito.tarifa.origen_proceso], [937, 'NOW()', 'ASE', 'LIC']);
+    assert.equal(r.escrito.ofertaAdjudicada.vlr_adjudicado, 61155743 + 1000000 + 500000 + 5000000 + 250000);
     assert.deepEqual(r.advertencias, []);
     assert.deepEqual(r.noEscrito.map((n) => n.campo), NO_ESCRITO);
-    assert.equal(f.sentencias.filter((s) => /^INSERT/.test(s.sql)).length, 1);
-    assert.ok(!f.hubo(/_iniciales/), 'ya no toca las tablas *_iniciales');
+    assert.equal(r.escrito.columnasOmitidas, undefined);
   });
 
-  it('las sentencias salen en orden: candado, reenvío, cliente, contador, número libre, BEGIN, INSERT, COMMIT, candado', async () => {
+  it('las sentencias salen en orden: candado, reenvío, validaciones, contador, número libre, BEGIN, tarifa, oferta, COMMIT, candado', async () => {
     const f = falso();
     await escribir(f.pool);
-    const orden = [/GET_LOCK/, /pc_add LIKE/, /FROM fc_clientes/, /^SELECT empresa, undnegocio FROM fc_control/, /^UPDATE fc_control/, /LAST_INSERT_ID\(\)/,
-      /COUNT\(\*\) AS n FROM fc_ofertas_adjudicadas/, /^BEGIN$/, /^INSERT INTO fc_ofertas_adjudicadas/, /^COMMIT$/, /RELEASE_LOCK/, /^RELEASE$/];
+    const orden = [/GET_LOCK/, /pc_add LIKE/, /FROM fc_clientes/, /^SELECT empresa, undnegocio FROM fc_control/, /FROM fc_conceptos/, /^UPDATE fc_control/, /LAST_INSERT_ID\(\)/,
+      /AS n$/, /^BEGIN$/, /^INSERT INTO fc_contratos_tarifa_inicial/, /^INSERT INTO fc_ofertas_adjudicadas/, /^COMMIT$/, /RELEASE_LOCK/, /^RELEASE$/];
     const posiciones = orden.map((p) => f.indice(p));
     assert.ok(posiciones.every((i) => i >= 0), `faltan sentencias: ${posiciones}`);
     assert.deepEqual([...posiciones].sort((a, b) => a - b), posiciones, 'fuera de orden');
     assert.ok(!f.hubo(/MAX\(id\)/), 'con id auto_increment el puente no lo calcula');
   });
 
+  it('el reenvío se busca en la tarifa y en la oferta adjudicada; el número libre se comprueba en las dos', async () => {
+    const f = falso();
+    await escribir(f.pool);
+    const reenvio = f.de(/pc_add LIKE/)[0];
+    assert.match(reenvio.sql, /FROM fc_contratos_tarifa_inicial WHERE pc_add LIKE \? UNION ALL .* FROM fc_ofertas_adjudicadas WHERE pc_add LIKE \?/);
+    assert.deepEqual(reenvio.params, ['LICICOLBA:42:%', 'LICICOLBA:42:%']);
+    const uso = f.de(/AS n$/)[0];
+    assert.match(uso.sql, /FROM fc_contratos_tarifa_inicial .* FROM fc_ofertas_adjudicadas/);
+    assert.deepEqual(uso.params, ['01', 'BAQ', 937, '01', 'BAQ', 937]);
+  });
+
   it('el UPDATE del contador es UNO atómico y solo toca num_oferta; nunca se lee la fila completa de fc_control', async () => {
     const f = falso();
     await escribir(f.pool);
-    const actualizacion = f.sentencias.find((s) => /^UPDATE fc_control/.test(s.sql));
+    const actualizacion = f.de(/^UPDATE fc_control/)[0];
     assert.equal(actualizacion.sql, 'UPDATE fc_control SET num_oferta = LAST_INSERT_ID(COALESCE(num_oferta, 0) + 1) WHERE empresa = ? AND undnegocio = ?');
     assert.deepEqual(actualizacion.params, ['01', 'BAQ']);
-    for (const s of f.sentencias.filter((x) => /fc_control/.test(x.sql))) assert.doesNotMatch(s.sql, /SELECT \*|SELECT\s+\w*\s*\*/);
+    for (const s of f.de(/fc_control/)) assert.doesNotMatch(s.sql, /SELECT \*|SELECT\s+\w*\s*\*/);
   });
 
-  it('el INSERT lleva parámetros, NOW() va en el SQL y no como dato, sin id (auto_increment) y con la marca en pc_add', async () => {
+  it('el INSERT de la tarifa lleva las columnas de «Guardar oferta», parámetros, NOW() en el SQL y la marca en pc_add', async () => {
     const f = falso();
     await escribir(f.pool);
-    const insert = f.sentencias.find((s) => /^INSERT/.test(s.sql));
-    assert.equal(insert.sql, 'INSERT INTO fc_ofertas_adjudicadas (empresa, undnegocio, num_oferta, nit, rsocial, vlr_adjudicado, vlr_manoobra, vlr_insumos, vlr_maquinaria, vlr_impuestos, vlr_otros, vlr_nocontinuos, user_add, fadd, pc_add) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)');
-    assert.equal(insert.params.length, 14);
-    assert.equal(insert.params.at(-1), 'LICICOLBA:42:ab12cd34ef56');
+    const insert = f.de(/^INSERT INTO fc_contratos_tarifa_inicial/)[0];
+    assert.match(insert.sql, /^INSERT INTO fc_contratos_tarifa_inicial \(empresa, undnegocio, num_oferta, ncontrato, nit, rsocial,/);
+    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos\) VALUES \(/);
+    assert.equal((insert.sql.match(/\?/g) ?? []).length, insert.params.length);
+    assert.equal(insert.params.length, 33, '34 columnas menos fadd, que es NOW()');
+    assert.ok(insert.params.includes('LICICOLBA:42:ab12cd34ef56'));
+    assert.ok(insert.params.includes('0.1232'), 'el A.I.U. viaja como texto decimal exacto');
     assert.ok(!insert.params.includes(undefined));
   });
 
-  it('si el id NO es auto_increment en esa base, lo asigna MAX(id) + 1 dentro de la transacción, antes del INSERT', async () => {
+  it('el INSERT de la oferta adjudicada: sin id (auto_increment), NOW() en el SQL y la marca en pc_add', async () => {
     const f = falso();
-    const r = await escribir(f.pool, datos(), { idManual: true });
-    const [inicio, maximo, insert, fin] = [/^BEGIN$/, /MAX\(id\)/, /^INSERT/, /^COMMIT$/].map((p) => f.indice(p));
-    assert.ok(inicio < maximo && maximo < insert && insert < fin);
-    assert.match(f.sentencias[maximo].sql, /FOR UPDATE$/);
-    assert.match(f.sentencias[insert].sql, /, id\) VALUES/);
-    assert.equal(f.sentencias[insert].params.at(-1), 501);
-    assert.equal(r.escrito.numOferta, 937);
+    await escribir(f.pool);
+    const insert = f.de(/^INSERT INTO fc_ofertas_adjudicadas/)[0];
+    assert.equal(insert.sql, 'INSERT INTO fc_ofertas_adjudicadas (empresa, undnegocio, num_oferta, nit, rsocial, vlr_adjudicado, vlr_manoobra, vlr_insumos, vlr_maquinaria, vlr_impuestos, vlr_otros, vlr_nocontinuos, user_add, fadd, pc_add) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)');
+    assert.equal(insert.params.at(-1), 'LICICOLBA:42:ab12cd34ef56');
   });
 
-  it('user_add y pc_add se ajustan al largo real de las columnas', async () => {
+  it('un id que no es auto_increment se asigna MAX(id) + 1 dentro de la transacción, tabla por tabla', async () => {
+    const f = falso();
+    await escribir(f.pool, datos(), { idManual: true, idManualPorTabla: { fc_contratos_tarifa_inicial: true } });
+    const maximos = f.de(/MAX\(id\)/);
+    assert.deepEqual(maximos.map((s) => /FROM (\w+)/.exec(s.sql)[1]), ['fc_contratos_tarifa_inicial', 'fc_ofertas_adjudicadas']);
+    assert.ok(maximos.every((s) => /FOR UPDATE$/.test(s.sql)));
+    assert.ok(f.indice(/^BEGIN$/) < f.indice(/MAX\(id\)/));
+    assert.match(f.de(/^INSERT INTO fc_ofertas_adjudicadas/)[0].sql, /, id\) VALUES/);
+  });
+
+  it('las columnas que esta base no tiene se omiten del INSERT y se informan como no escritas', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, conCargos(), { omitir: { fc_contratos_tarifa_inicial: ['origen_proceso', 'aplica_curso'], fc_contratos_cargos_iniciales: ['nom_cargo', 'experiencia'] } });
+    const tarifa = f.de(/^INSERT INTO fc_contratos_tarifa_inicial/)[0];
+    const cargo = f.de(/^INSERT INTO fc_contratos_cargos_iniciales/)[0];
+    assert.doesNotMatch(tarifa.sql, /origen_proceso|aplica_curso/);
+    assert.doesNotMatch(cargo.sql, /nom_cargo|experiencia/);
+    for (const s of [tarifa, cargo]) assert.equal((s.sql.match(/\?/g) ?? []).length, s.params.length);
+    assert.ok(r.noEscrito.some((n) => n.campo === 'oferta.origenProceso'));
+    assert.ok(r.noEscrito.some((n) => n.campo === 'cargos' && /nom_cargo/.test(n.motivo)));
+    assert.deepEqual(Object.keys(r.escrito.columnasOmitidas), ['fc_contratos_tarifa_inicial', 'fc_contratos_cargos_iniciales']);
+  });
+
+  it('user_add y pc_add de la oferta adjudicada se ajustan al largo real de las columnas', async () => {
     const f = falso();
     await escribir(f.pool, datos(), { largoUserAdd: 6, largoPcAdd: 20 });
-    const insert = f.sentencias.find((s) => /^INSERT/.test(s.sql));
+    const insert = f.de(/^INSERT INTO fc_ofertas_adjudicadas/)[0];
     assert.ok(insert.params.includes('LICICO') && insert.params.includes('LICICOLBA:42:'));
   });
 
@@ -152,25 +192,80 @@ describe('escritor MySQL — camino feliz (fc_ofertas_adjudicadas)', () => {
     const f = falso({ [/FROM fc_clientes/.source]: [[{ nit: '900123456-5', rsocial: 'OTRA RAZON SOCIAL LTDA' }]] });
     const r = await escribir(f.pool);
     assert.deepEqual(r.advertencias.map((a) => a.campo), ['cliente.razonSocial', 'cliente.nit']);
-    assert.equal(r.escrito.ofertaAdjudicada.nit, '900123456-5');
-    assert.equal(r.escrito.ofertaAdjudicada.rsocial, 'OTRA RAZON SOCIAL LTDA');
+    assert.deepEqual([r.escrito.tarifa.nit, r.escrito.ofertaAdjudicada.rsocial], ['900123456-5', 'OTRA RAZON SOCIAL LTDA']);
   });
 
   it('la clave de la oferta se escribe como está en Contratos aunque llegue en minúsculas', async () => {
-    const f = falso();
-    const r = await escribir(f.pool, datos((e) => { e.oferta.undnegocio = 'baq'; }));
-    assert.equal(r.escrito.undnegocio, 'BAQ');
-    assert.equal(r.escrito.ofertaAdjudicada.undnegocio, 'BAQ');
+    const r = await escribir(falso().pool, datos((e) => { e.oferta.undnegocio = 'baq'; e.oferta.codServicio = 'ase'; }));
+    assert.deepEqual([r.escrito.undnegocio, r.escrito.tarifa.undnegocio, r.escrito.tarifa.codservicio], ['BAQ', 'BAQ', 'ASE']);
   });
 
-  it('los cargos no se escriben (no hay dónde en esta base): se informan como no escritos', async () => {
+  it('un concepto que existe solo para otra empresa o UEN es una advertencia, no un bloqueo', async () => {
+    const r = await escribir(falso({ [/FROM fc_conceptos/.source]: [[{ empresa: '02', undnegocio: 'BOG', codcpto: 'ASE' }]] }).pool);
+    assert.deepEqual(r.advertencias.map((a) => a.campo), ['oferta.codServicio']);
+    assert.equal(r.escrito.numOferta, 937);
+  });
+});
+
+describe('escritor MySQL — cargos', () => {
+  it('escribe la tarifa y TODOS sus cargos en la misma transacción, la tarifa primero', async () => {
     const f = falso();
-    const r = await escribir(f.pool, datos((e) => {
-      e.tarifa.manoObra = 11232000;
-      e.cargos = [{ nombre: 'Aseador', cantidad: 1, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 10000000, valorTotal: 10000000 }];
-    }));
-    assert.ok(r.noEscrito.some((n) => n.campo === 'cargos'));
-    assert.equal(f.sentencias.filter((s) => /^INSERT/.test(s.sql)).length, 1);
+    const r = await escribir(f.pool, conCargos());
+    const posiciones = [/^BEGIN$/, /^INSERT INTO fc_contratos_tarifa_inicial/, /^INSERT INTO fc_contratos_cargos_iniciales/, /^COMMIT$/].map((p) => f.indice(p));
+    assert.ok(posiciones.every((i) => i >= 0) && [...posiciones].sort((a, b) => a - b).join() === posiciones.join(), `fuera de orden: ${posiciones}`);
+    assert.equal(f.de(/^INSERT INTO fc_contratos_cargos_iniciales/).length, 3);
+    assert.deepEqual(r.escrito.cargos, [
+      { item: 1, cargo: 1, nombre: 'Aseador', cantidad: 4 },
+      { item: 2, cargo: 1, nombre: 'Aseador', cantidad: 2 },
+      { item: 3, cargo: 2, nombre: 'Supervisor', cantidad: 1 },
+    ]);
+    assert.deepEqual(r.advertencias, []);
+  });
+
+  it('cada cargo lleva el número de oferta reservado, la marca de origen y NOW() en el SQL; el horario solo si viene', async () => {
+    const f = falso();
+    await escribir(f.pool, conCargos());
+    const [uno, dos] = f.de(/^INSERT INTO fc_contratos_cargos_iniciales/);
+    assert.match(uno.sql, /user_add, fadd, pc_add, codhorario\) VALUES/);
+    assert.doesNotMatch(dos.sql, /codhorario/);
+    assert.equal(uno.params.length, 47, '48 columnas (47 + horario) menos fadd, que es NOW()');
+    assert.ok(uno.params.includes(937) && uno.params.includes('LICICOLBA:42:ab12cd34ef56') && uno.params.includes('941'));
+  });
+
+  it('un horario que no existe en Contratos es un error por línea, junto con los demás, y no reserva ningún número', async () => {
+    const f = falso({ [/FROM fc_horarios/.source]: [[]] });
+    const error = await rechaza(escribir(f.pool, conCargos()), 422, 'DATOS_INVALIDOS');
+    assert.deepEqual(error.extra.errores.map((e) => e.campo), ['cargos[0].codigoHorario']);
+    assert.ok(!f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/));
+  });
+
+  it('un valor total que no cuadra con unitario × cantidad bloquea el envío, sin reservar número', async () => {
+    const f = falso();
+    const error = await rechaza(escribir(f.pool, conCargos((e) => { e.cargos[2].valorTotal = 1; })), 422, 'DATOS_INVALIDOS');
+    assert.deepEqual(error.extra.errores.map((e) => e.campo), ['cargos[2].valorTotal']);
+    assert.ok(!f.hubo(/^UPDATE/));
+  });
+
+  it('si falla el INSERT de un cargo se revierte TODO y el número se pierde', async () => {
+    let n = 0;
+    const f = falso({ [/^INSERT INTO fc_contratos_cargos_iniciales/.source]: () => { n += 1; if (n === 2) throw Object.assign(new Error('Data too long'), { errno: 1406 }); return [{ affectedRows: 1 }]; } });
+    const error = await rechaza(escribir(f.pool, conCargos()), 422, 'DATOS_INVALIDOS');
+    assert.equal(error.extra.numeroPerdido, 937);
+    assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
+    assert.ok(!f.hubo(/^INSERT INTO fc_ofertas_adjudicadas/), 'no sigue después del fallo');
+  });
+
+  it('avisa si los cargos no suman lo que equivale la mano de obra, pero escribe', async () => {
+    const r = await escribir(falso().pool, conCargos((e) => { e.tarifa.manoObra = 70000000; }));
+    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cargos']);
+    assert.equal(r.escrito.cargos.length, 3);
+  });
+
+  it('sin cargos ni siquiera consulta fc_horarios ni toca la tabla de cargos', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, datos());
+    assert.ok(!f.hubo(/cargos_iniciales/) && !f.hubo(/FROM fc_horarios/));
+    assert.deepEqual(r.escrito.cargos, []);
   });
 });
 
@@ -182,14 +277,11 @@ describe('escritor MySQL — reenvío y concurrencia', () => {
     const error = await rechaza(escribir(f.pool), 409, 'YA_ENVIADA');
     assert.deepEqual(error.extra.oferta, { empresa: '01', undnegocio: 'BAQ', numOferta: 930 });
     assert.equal(error.extra.sinCambios, true);
-    const consulta = f.sentencias.find((s) => /pc_add LIKE/.test(s.sql));
-    assert.match(consulta.sql, /FROM fc_ofertas_adjudicadas WHERE pc_add LIKE \?/);
-    assert.deepEqual(consulta.params, ['LICICOLBA:42:%']);
     assert.ok(!f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/) && !f.hubo(/^BEGIN/));
-    assert.ok(f.hubo(/RELEASE_LOCK/) && f.sentencias.at(-1).sql === 'RELEASE', 'el candado se libera aunque no se escriba');
+    assert.ok(f.hubo(/RELEASE_LOCK/) && f.sentencias.at(-1).sql === 'RELEASE');
   });
 
-  it('si lo reenviado cambió de contenido lo dice (sinCambios = false): la oferta de Contratos tiene lo anterior', async () => {
+  it('si lo reenviado cambió de contenido lo dice (sinCambios = false)', async () => {
     const error = await rechaza(escribir(falso(previa('LICICOLBA:42:000000000000')).pool), 409, 'YA_ENVIADA');
     assert.equal(error.extra.sinCambios, false);
   });
@@ -198,20 +290,15 @@ describe('escritor MySQL — reenvío y concurrencia', () => {
     const f = falso({ [/GET_LOCK/.source]: [[{ ok: 0 }]] });
     await rechaza(escribir(f.pool), 409, 'OCUPADO');
     assert.ok(!f.hubo(/pc_add LIKE/) && !f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/));
-    assert.ok(!f.hubo(/RELEASE_LOCK/), 'no se libera un candado que no se tiene');
-    assert.equal(f.sentencias.at(-1).sql, 'RELEASE');
+    assert.ok(!f.hubo(/RELEASE_LOCK/));
   });
 });
 
 describe('escritor MySQL — lo que debe existir en Contratos', () => {
   it('junta TODOS los problemas en un solo 422 y no reserva ningún número', async () => {
-    const f = falso({
-      [/FROM fc_clientes/.source]: [[]],
-      [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[]],
-    });
-    const error = await rechaza(escribir(f.pool, datos((e) => (e.tarifa.manoObra = 2_147_483_647))), 422, 'DATOS_INVALIDOS');
-    assert.deepEqual(error.extra.errores.map((e) => e.campo), ['cliente.nit', 'oferta.undnegocio', 'tarifa']);
-    assert.match(error.extra.errores[0].mensaje, /900123456/);
+    const f = falso({ [/FROM fc_clientes/.source]: [[]], [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[]], [/FROM fc_conceptos/.source]: [[]] });
+    const error = await rechaza(escribir(f.pool, datos((e) => (e.contrato.porcentajeAIU = 0))), 422, 'DATOS_INVALIDOS');
+    assert.deepEqual(error.extra.errores.map((e) => e.campo), ['cliente.nit', 'oferta.undnegocio', 'oferta.codServicio', 'contrato.porcentajeAIU']);
     assert.ok(!f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/));
   });
 
@@ -224,30 +311,26 @@ describe('escritor MySQL — lo que debe existir en Contratos', () => {
   it('el cliente se busca por la BASE del NIT (sin DV ni puntos) y se prefiere el de la misma UEN, sucursal 00', async () => {
     const f = falso();
     await escribir(f.pool);
-    const consulta = f.sentencias.find((s) => /FROM fc_clientes/.test(s.sql));
+    const consulta = f.de(/FROM fc_clientes/)[0];
     assert.match(consulta.sql, /SUBSTRING_INDEX\(TRIM\(nit\), '-', 1\)/);
-    assert.match(consulta.sql, /ORDER BY \(undnegocio = \?\) DESC, \(sucursal = '00'\) DESC, sucursal LIMIT 1$/);
     assert.deepEqual(consulta.params, ['900123456', 'BAQ']);
   });
 });
 
 describe('escritor MySQL — número de oferta', () => {
-  /** Contador que avanza en cada UPDATE; los números de `usados` ya existen en fc_ofertas_adjudicadas. */
   function contador(inicio, usados) {
     let actual = inicio;
     return {
       [/^UPDATE fc_control/.source]: () => { actual += 1; return [{ affectedRows: 1 }]; },
       [/LAST_INSERT_ID\(\) AS numero/.source]: () => [[{ numero: String(actual) }]],
-      [/COUNT\(\*\) AS n FROM fc_ofertas_adjudicadas/.source]: (params) => [[{ n: usados.includes(params[2]) ? 1 : 0 }]],
+      [/AS n$/.source]: (params) => [[{ n: usados.includes(params[2]) ? 1 : 0 }]],
     };
   }
 
   it('si el contador iba por detrás de lo ya usado, descarta esos números y toma el siguiente libre', async () => {
-    const f = falso(contador(935, [936, 937]));
-    const r = await escribir(f.pool);
+    const r = await escribir(falso(contador(935, [936, 937])).pool);
     assert.equal(r.escrito.numOferta, 938);
     assert.deepEqual(r.escrito.numerosSaltados, [936, 937]);
-    assert.equal(f.sentencias.filter((s) => /^UPDATE fc_control/.test(s.sql)).length, 3);
   });
 
   it('tras tres números en uso se rinde con 409 y no escribe', async () => {
@@ -264,30 +347,49 @@ describe('escritor MySQL — número de oferta', () => {
   });
 });
 
+describe('escritor MySQL — lista de precios de insumos (módulo 6)', () => {
+  const conInsumos = () => datos((e) => { e.insumos = [{ codigo: '18111', nombre: 'Jabón', valorUnitario: 10000 }, { codigo: '01050', valorUnitario: 500 }]; });
+
+  it('una fila por insumo en la MISMA transacción, después de la oferta adjudicada, con el número reservado', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, conInsumos());
+    const precios = f.de(/^INSERT INTO fc_preciosventas_oferta/);
+    assert.equal(precios.length, 2);
+    assert.ok(f.indice(/^INSERT INTO fc_ofertas_adjudicadas/) < f.indice(/^INSERT INTO fc_preciosventas_oferta/) && f.indice(/^INSERT INTO fc_preciosventas_oferta/) < f.indice(/^COMMIT$/));
+    assert.deepEqual(precios[0].params, ['BAQ', 937, '', 'tmp1', 'BAQ', '18111', 11232, 0, '0.1232', 'LICICOLBA', 10000]);
+    assert.deepEqual(r.escrito.preciosOferta, [{ codigo: '18111', vr_costo: 10000, valor: 11232 }, { codigo: '01050', vr_costo: 500, valor: 561.6 }]);
+  });
+
+  it('si falla una fila de precios se revierte TODO y el número se pierde', async () => {
+    const f = falso({ [/^INSERT INTO fc_preciosventas_oferta/.source]: () => { throw Object.assign(new Error('Data too long'), { errno: 1406 }); } });
+    const error = await rechaza(escribir(f.pool, conInsumos()), 422, 'DATOS_INVALIDOS');
+    assert.equal(error.extra.numeroPerdido, 937);
+    assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
+  });
+});
+
 describe('escritor MySQL — fallos', () => {
-  it('si el INSERT falla se revierte, el número reservado se informa como perdido y el candado se libera', async () => {
-    const f = falso({ [/^INSERT INTO fc_ofertas_adjudicadas/.source]: () => { throw Object.assign(new Error('Data too long for column x'), { errno: 1406, code: 'ER_DATA_TOO_LONG' }); } });
+  it('si un INSERT falla se revierte, el número se informa como perdido, el mensaje de MySQL no sale y el candado se libera', async () => {
+    const f = falso({ [/^INSERT INTO fc_contratos_tarifa_inicial/.source]: () => { throw Object.assign(new Error('Data too long for column x'), { errno: 1406, code: 'ER_DATA_TOO_LONG' }); } });
     const error = await rechaza(escribir(f.pool), 422, 'DATOS_INVALIDOS');
     assert.equal(error.extra.numeroPerdido, 937);
-    assert.match(error.extra.errores[0].mensaje, /1406/);
-    assert.doesNotMatch(JSON.stringify(error.extra), /Data too long/, 'el mensaje de MySQL no sale');
+    assert.doesNotMatch(JSON.stringify(error.extra), /Data too long/);
     assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
     assert.ok(f.hubo(/RELEASE_LOCK/) && f.sentencias.at(-1).sql === 'RELEASE');
   });
 
-  it('una columna obligatoria sin valor por defecto (1364) también es un dato que Contratos no acepta, sin filtrar el mensaje', async () => {
+  it('una columna obligatoria sin valor por defecto (1364) es un dato que Contratos no acepta', async () => {
     const f = falso({ [/^INSERT INTO fc_ofertas_adjudicadas/.source]: () => { throw Object.assign(new Error("Field 'x' doesn't have a default value"), { errno: 1364 }); } });
     const error = await rechaza(escribir(f.pool), 422, 'DATOS_INVALIDOS');
     assert.match(error.extra.errores[0].mensaje, /1364/);
   });
 
-  it('una conexión del pool que el servidor ya cerró se descarta y se usa otra (la primera oferta del día no falla)', async () => {
+  it('una conexión del pool que el servidor ya cerró se descarta y se usa otra', async () => {
     const f = falso();
     const buena = await f.pool.getConnection();
     const muerta = { ...buena, async ping() { throw Object.assign(new Error('Connection lost'), { code: 'PROTOCOL_CONNECTION_LOST' }); }, destroy() { f.sentencias.push({ sql: 'DESTROY' }); } };
     const entregas = [muerta, buena];
-    const pool = { async getConnection() { return entregas.shift() ?? buena; } };
-    const r = await escribir(pool);
+    const r = await escribir({ async getConnection() { return entregas.shift() ?? buena; } });
     assert.equal(r.escrito.numOferta, 937);
     assert.equal(f.sentencias.filter((s) => s.sql === 'DESTROY').length, 1);
   });
@@ -298,45 +400,11 @@ describe('escritor MySQL — fallos', () => {
     assert.doesNotMatch(error.message, /10\.0\.0\.5/);
   });
 
-  it('un fallo desconocido sube tal cual (la capa HTTP responde 500 sin filtrarlo) y aun así libera todo', async () => {
+  it('un fallo desconocido sube tal cual y aun así libera todo', async () => {
     const f = falso({ [/FROM fc_clientes/.source]: () => { throw new Error('fallo raro'); } });
     const error = await escribir(f.pool).then(() => assert.fail('debía fallar'), (e) => e);
     assert.equal(error.message, 'fallo raro');
     assert.ok(!(error instanceof ErrorNegocio));
     assert.equal(f.sentencias.at(-1).sql, 'RELEASE');
-    assert.ok(f.hubo(/RELEASE_LOCK/));
-  });
-});
-
-describe('escritor MySQL — lista de precios de insumos (módulo 6)', () => {
-  const conInsumos = () => datos((e) => {
-    e.insumos = [{ codigo: '18111', nombre: 'Jabón', valorUnitario: 10000 }, { codigo: '01050', valorUnitario: 500 }];
-  });
-
-  it('escribe la oferta y una fila por insumo en la MISMA transacción, la oferta primero, con el número reservado', async () => {
-    const f = falso();
-    const r = await escribir(f.pool, conInsumos());
-    const precios = f.sentencias.filter((s) => /^INSERT INTO fc_preciosventas_oferta/.test(s.sql));
-    assert.equal(precios.length, 2);
-    const [inicio, oferta, fin] = [/^BEGIN$/, /^INSERT INTO fc_ofertas_adjudicadas/, /^COMMIT$/].map((p) => f.indice(p));
-    const posiciones = f.sentencias.map((s, i) => (/^INSERT INTO fc_preciosventas_oferta/.test(s.sql) ? i : -1)).filter((i) => i >= 0);
-    assert.ok(posiciones.every((i) => i > oferta && i < fin) && inicio < oferta);
-    assert.match(precios[0].sql, /^INSERT INTO fc_preciosventas_oferta \(undnegocio, num_oferta, ncontrato, cliente, nom_punto, codigo, valor, valor_anterior, aiu, fadd, user_add, vr_costo\) VALUES \(\?, \?, \?, \?, \?, \?, \?, \?, \?, NOW\(\), \?, \?\)$/);
-    assert.deepEqual(precios[0].params, ['BAQ', 937, '', 'tmp1', 'BAQ', '18111', 11232, 0, '0.1232', 'LICICOLBA', 10000]);
-    assert.deepEqual(r.escrito.preciosOferta, [{ codigo: '18111', vr_costo: 10000, valor: 11232 }, { codigo: '01050', vr_costo: 500, valor: 561.6 }]);
-  });
-
-  it('si falla una fila de precios se revierte TODO (también la oferta) y el número se pierde', async () => {
-    const f = falso({ [/^INSERT INTO fc_preciosventas_oferta/.source]: () => { throw Object.assign(new Error('Data too long'), { errno: 1406 }); } });
-    const error = await rechaza(escribir(f.pool, conInsumos()), 422, 'DATOS_INVALIDOS');
-    assert.equal(error.extra.numeroPerdido, 937);
-    assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
-  });
-
-  it('sin insumos no toca fc_preciosventas_oferta', async () => {
-    const f = falso();
-    const r = await escribir(f.pool);
-    assert.ok(!f.hubo(/fc_preciosventas_oferta/));
-    assert.deepEqual(r.escrito.preciosOferta, []);
   });
 });

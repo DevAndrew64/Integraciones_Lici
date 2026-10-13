@@ -97,7 +97,10 @@ describe('compararEsquema — tablas de escritura', () => {
 
   it('opcionesDeEscritura: id manual si no es auto_increment, y los largos reales de user_add y pc_add', () => {
     const tabla = (id) => ({ fc_ofertas_adjudicadas: { motor: 'InnoDB', columnas: { id, user_add: { tipo: 'varchar(12)', nulable: true }, pc_add: { tipo: 'char(40)', nulable: true } } } });
-    assert.deepEqual(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, autoIncremento: true })), { idManual: false, largoUserAdd: 12, largoPcAdd: 40 });
+    assert.deepEqual(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, autoIncremento: true })), {
+      idManual: false, largoUserAdd: 12, largoPcAdd: 40,
+      idManualPorTabla: { fc_contratos_tarifa_inicial: false, fc_contratos_cargos_iniciales: false }, omitir: {},
+    });
     assert.equal(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, obligatoria: true })).idManual, true);
   });
 
@@ -114,6 +117,34 @@ describe('compararEsquema — tablas de escritura', () => {
     } };
     const real = await leerEsquemaReal(pool, ['t']);
     assert.deepEqual(Object.entries(real.t.columnas).filter(([, c]) => c.obligatoria).map(([n]) => n), ['f']);
+  });
+});
+
+describe('tarifa y cargos se adaptan a la base real (tablas activadas con menos columnas)', () => {
+  const esperado = cargarEsquemaEsperado();
+  const tarifa = esperado.tablas.fc_contratos_tarifa_inicial;
+  const real = (quitar = [], cambiarTipo = {}) => {
+    const columnas = Object.fromEntries(Object.entries(tarifa.columnas).filter(([c]) => !quitar.includes(c)).map(([c, v]) => [c, { ...v, tipo: cambiarTipo[c] ?? v.tipo }]));
+    columnas.id = { ...columnas.id, autoIncremento: true };
+    return { fc_contratos_tarifa_inicial: { motor: tarifa.motor, columnas } };
+  };
+  const soloTarifa = { ...esperado, tablas: { fc_contratos_tarifa_inicial: tarifa } };
+
+  it('falta una columna no esencial o cambia un tipo: no es problema, se omite al escribir', () => {
+    const r = real(['origen_proceso', 'aplica_curso', 'moneda'], { descripcion: 'varchar(100)' });
+    assert.deepEqual(compararEsquema(soloTarifa, r), []);
+    assert.deepEqual(opcionesDeEscritura(r).omitir, { fc_contratos_tarifa_inicial: ['aplica_curso', 'origen_proceso'] }, 'solo las que el puente escribe');
+  });
+
+  it('falta una columna esencial (la clave, los valores o la marca): no se escribe nada', () => {
+    const problemas = compararEsquema(soloTarifa, real(['num_oferta', 'pc_add']));
+    assert.deepEqual(problemas.map((p) => p.columna).sort(), ['num_oferta', 'pc_add']);
+  });
+
+  it('una columna obligatoria que el puente no escribe sí detiene (el INSERT fallaría)', () => {
+    const r = real();
+    r.fc_contratos_tarifa_inicial.columnas.personas = { tipo: 'int(10)', nulable: false, obligatoria: true };
+    assert.deepEqual(compararEsquema(soloTarifa, r).map((p) => p.columna), ['personas']);
   });
 });
 
@@ -159,9 +190,9 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
 
   it('cubre la tabla donde el puente escribe hoy, las de fases siguientes y las de consulta', () => {
     const escritura = Object.entries(real.tablas).filter(([, t]) => t.uso === 'escritura').map(([n]) => n).sort();
-    assert.deepEqual(escritura, ['fc_ofertas_adjudicadas', 'fc_preciosventas_oferta']);
+    assert.deepEqual(escritura, ['fc_contratos_cargos_iniciales', 'fc_contratos_tarifa_inicial', 'fc_ofertas_adjudicadas', 'fc_preciosventas_oferta']);
     assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
-    for (const t of ['fc_contratos_tarifa_inicial', 'fc_contratos_cargos_iniciales', 'fc_contratos_equipos_iniciales', 'fc_contratos_costos_admtivos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales', 'fc_elemxcont']) {
+    for (const t of ['fc_contratos_equipos_iniciales', 'fc_contratos_costos_admtivos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales', 'fc_elemxcont']) {
       assert.ok(!real.tablas[t], `${t}: no se usa (no existe o no se puede usar en la base viva)`);
     }
   });

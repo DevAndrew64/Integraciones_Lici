@@ -1,6 +1,7 @@
 /**
  * Escritor del puente en el MySQL de Contratos (adaptador de salida). Recibe el contrato v1 ya validado y escribe la oferta
- * adjudicada en `fc_ofertas_adjudicadas`, la tabla que existe en la base viva (sin crear ni cambiar nada), en este orden:
+ * como «Guardar oferta» de Contratos (tarifa y cargos) más la oferta adjudicada y su lista de precios, sin crear ni cambiar
+ * nada de la estructura, en este orden:
  *
  *   1. un candado por solicitud (GET_LOCK): dos envíos simultáneos de la misma solicitud no crean dos ofertas;
  *   2. el cliente debe existir en Contratos (se busca por NIT; razón social y NIT se toman de allí) y el contador de
@@ -8,16 +9,22 @@
  *   3. ¿ya se envió? (la marca `LICICOLBA:<solicitud>:` en `pc_add`): se responde 409 con la oferta existente;
  *   4. reserva del número de oferta con UN solo UPDATE atómico sobre `fc_control` (MyISAM: no se puede revertir; un
  *      número reservado y no usado se pierde, igual que en Visual FoxPro) y comprobación de que nadie lo usó;
- *   5. INSERT de la oferta y de su lista de precios de insumos (`fc_preciosventas_oferta`, módulo 6) en UNA transacción.
- *      Si el `id` de la oferta no es auto_increment en esa base, se asigna MAX(id) + 1 en la misma transacción.
+ *   5. En UNA transacción: la tarifa (`fc_contratos_tarifa_inicial`), sus cargos (`fc_contratos_cargos_iniciales`), la oferta
+ *      adjudicada (`fc_ofertas_adjudicadas`) y su lista de precios de insumos (`fc_preciosventas_oferta`). Las columnas de
+ *      la tarifa y los cargos que esa base no tenga se omiten; si un `id` no es auto_increment, se asigna MAX(id) + 1.
  *
  * Todas las sentencias llevan parámetros; los nombres de tabla y columna son constantes del código, nunca datos. Nada de
  * lo que se lee de `fc_control` es la fila completa: solo se cuenta y se actualiza `num_oferta` (la fila trae credenciales).
  */
 import { ErrorNegocio } from './errores.js';
 import { digitoVerificacion } from './nit.js';
-import { AHORA, comparable, describirFila, marcaQueCabe, noEscritoEnLaOferta, patronDeSolicitud, planDeOfertaAdjudicada, planDePreciosOferta } from './oferta.js';
+import {
+  AHORA, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
+  planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa,
+} from './oferta.js';
 
+const TABLA_TARIFA = 'fc_contratos_tarifa_inicial';
+const TABLA_CARGOS = 'fc_contratos_cargos_iniciales';
 const TABLA_OFERTAS = 'fc_ofertas_adjudicadas';
 const TABLA_PRECIOS = 'fc_preciosventas_oferta';
 const INTENTOS_NUMERO = 3;
@@ -59,8 +66,14 @@ async function obtenerConexion(pool) {
   return pool.getConnection();
 }
 
-function insertar(conexion, tabla, fila) {
-  const columnas = Object.keys(fila);
+/** INSERT con las columnas de la fila que existen en esta base (`omitir`); si el id no es auto_increment, MAX(id) + 1. */
+async function insertar(conexion, tabla, fila, { omitir = [], idManual = false } = {}) {
+  if (idManual) {
+    const [[siguiente]] = await conexion.query(`SELECT COALESCE(MAX(id), 0) + 1 AS id FROM ${tabla} FOR UPDATE`);
+    fila.id = Number(siguiente.id);
+  }
+  const fuera = new Set(omitir.map((c) => c.toLowerCase()));
+  const columnas = Object.keys(fila).filter((c) => !fuera.has(c.toLowerCase()));
   const marcas = columnas.map((c) => (fila[c] === AHORA ? AHORA.sql : '?'));
   const valores = columnas.filter((c) => fila[c] !== AHORA).map((c) => fila[c]);
   return conexion.query(`INSERT INTO ${tabla} (${columnas.join(', ')}) VALUES (${marcas.join(', ')})`, valores);
@@ -83,6 +96,18 @@ async function leerContadores(conexion, empresa, undnegocio) {
   return filas.map((f) => ({ empresa: texto(f.empresa), undnegocio: texto(f.undnegocio) }));
 }
 
+async function buscarConcepto(conexion, codServicio) {
+  const [filas] = await conexion.query('SELECT empresa, undnegocio, codcpto FROM fc_conceptos WHERE codcpto = ?', [codServicio]);
+  return filas.map((f) => ({ empresa: texto(f.empresa), undnegocio: texto(f.undnegocio), codcpto: texto(f.codcpto) }));
+}
+
+/** Los códigos de horario que existen en Contratos (el horario de cada cargo se crea allá antes de la oferta). */
+async function buscarHorarios(conexion, codigos) {
+  if (codigos.length === 0) return new Set();
+  const [filas] = await conexion.query('SELECT codigo FROM fc_horarios WHERE codigo IN (?)', [codigos]);
+  return new Set(filas.map((f) => texto(f.codigo).toUpperCase()));
+}
+
 /** Reserva el siguiente número de oferta de (empresa, UEN). El UPDATE es atómico: dos reservas simultáneas nunca reciben el mismo número. */
 async function reservarNumero(conexion, empresa, undnegocio) {
   const saltados = [];
@@ -96,7 +121,10 @@ async function reservarNumero(conexion, empresa, undnegocio) {
     }
     const [[fila]] = await conexion.query('SELECT LAST_INSERT_ID() AS numero');
     const numero = Number(fila.numero);
-    const [[usos]] = await conexion.query(`SELECT COUNT(*) AS n FROM ${TABLA_OFERTAS} WHERE empresa = ? AND undnegocio = ? AND num_oferta = ?`, [empresa, undnegocio, numero]);
+    const [[usos]] = await conexion.query(
+      `SELECT (SELECT COUNT(*) FROM ${TABLA_TARIFA} WHERE empresa = ? AND undnegocio = ? AND num_oferta = ?) + (SELECT COUNT(*) FROM ${TABLA_OFERTAS} WHERE empresa = ? AND undnegocio = ? AND num_oferta = ?) AS n`,
+      [empresa, undnegocio, numero, empresa, undnegocio, numero],
+    );
     if (Number(usos.n) === 0) return { numero, saltados };
     saltados.push(numero); // el contador iba por detrás de lo ya usado: se descarta y se toma el siguiente
   }
@@ -121,11 +149,14 @@ function avisosDeCliente(datos, cliente) {
 
 /**
  * @param {import('mysql2/promise').Pool} pool
- * @param {{idManual?: boolean, largoUserAdd?: number | null, largoPcAdd?: number | null}} [opciones] según la base real
- *   (`opcionesDeEscritura` de esquema.js): si el id lo pone el puente y cuánto cabe en user_add / pc_add
+ * @param {{idManual?: boolean, largoUserAdd?: number | null, largoPcAdd?: number | null, idManualPorTabla?: Record<string, boolean>, omitir?: Record<string, string[]>}} [opciones]
+ *   según la base real (`opcionesDeEscritura` de esquema.js): quién pone cada id, cuánto cabe en user_add / pc_add de la oferta
+ *   adjudicada y qué columnas de la tarifa y los cargos no existen en esta base
  * @returns {{escribir(datos: object, contexto: {huella: string}): Promise<object>}}
  */
-export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null, largoPcAdd = null } = {}) {
+export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null, largoPcAdd = null, idManualPorTabla = {}, omitir = {} } = {}) {
+  const comoTarifa = { omitir: omitir[TABLA_TARIFA] ?? [], idManual: Boolean(idManualPorTabla[TABLA_TARIFA]) };
+  const comoCargo = { omitir: omitir[TABLA_CARGOS] ?? [], idManual: Boolean(idManualPorTabla[TABLA_CARGOS]) };
   return {
     async escribir(datos, { huella }) {
       const solicitudId = datos.origen.solicitudId;
@@ -139,45 +170,71 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         if (Number(bloqueo.ok) !== 1) throw new ErrorNegocio(409, 'OCUPADO', 'Hay otro envío de esta solicitud en curso. Intente de nuevo en unos segundos.');
         conBloqueo = true;
 
-        // ¿Ya se envió? Se responde con la oferta que existe; no se crea otra ni se gasta otro número.
-        const [previas] = await conexion.query(`SELECT empresa, undnegocio, num_oferta, pc_add FROM ${TABLA_OFERTAS} WHERE pc_add LIKE ? ORDER BY id LIMIT 1`, [patronDeSolicitud(solicitudId)]);
+        // ¿Ya se envió? (la marca está en la tarifa y en la oferta adjudicada). Se responde con la oferta que existe; no se
+        // crea otra ni se gasta otro número.
+        const patron = patronDeSolicitud(solicitudId);
+        const [previas] = await conexion.query(
+          `SELECT empresa, undnegocio, num_oferta, pc_add FROM ${TABLA_TARIFA} WHERE pc_add LIKE ?
+           UNION ALL SELECT empresa, undnegocio, num_oferta, pc_add FROM ${TABLA_OFERTAS} WHERE pc_add LIKE ? LIMIT 1`,
+          [patron, patron],
+        );
         if (previas.length > 0) {
           const p = previas[0];
           throw new ErrorNegocio(409, 'YA_ENVIADA', 'Esta solicitud ya se envió a Contratos. Los cambios posteriores se hacen en Contratos.', {
             oferta: { empresa: texto(p.empresa), undnegocio: texto(p.undnegocio), numOferta: Number(p.num_oferta) },
-            sinCambios: texto(p.pc_add) === marcaQueCabe(solicitudId, huella, largoPcAdd),
+            sinCambios: [marcaDeOrigen(solicitudId, huella), marcaQueCabe(solicitudId, huella, largoPcAdd)].includes(texto(p.pc_add)),
           });
         }
 
         // 2. Lo que debe existir en Contratos. Se juntan TODOS los problemas antes de reservar nada. La clave de la oferta
-        //    (empresa, UEN) se escribe tal como está en Contratos, aunque llegue en minúsculas.
+        //    (empresa, UEN, concepto) se escribe tal como está en Contratos, aunque llegue en minúsculas.
         const errores = [];
+        const advertencias = [];
         const cliente = await buscarCliente(conexion, datos.cliente.nit, datos.oferta.undnegocio);
         if (!cliente) errores.push({ campo: 'cliente.nit', mensaje: `El cliente con NIT ${datos.cliente.nit} no existe en Contratos. Créelo en Contratos y vuelva a enviar.` });
         const contadores = await leerContadores(conexion, datos.oferta.empresa, datos.oferta.undnegocio);
         if (contadores.length > 1) throw new ErrorNegocio(409, 'CONTADOR_AMBIGUO', 'El contador de ofertas de esta empresa y UEN no es único en Contratos. Avise a Contratos.');
         if (contadores.length === 0) errores.push({ campo: 'oferta.undnegocio', mensaje: `Contratos no tiene contador de ofertas para la empresa ${datos.oferta.empresa} y la UEN ${datos.oferta.undnegocio}.` });
         const { empresa, undnegocio } = contadores[0] ?? datos.oferta;
-        const datosDeContratos = { ...datos, oferta: { ...datos.oferta, empresa, undnegocio } };
+        const conceptos = await buscarConcepto(conexion, datos.oferta.codServicio);
+        let codServicio = datos.oferta.codServicio;
+        if (conceptos.length === 0) errores.push({ campo: 'oferta.codServicio', mensaje: `El concepto «${datos.oferta.codServicio}» no existe en Contratos.` });
+        else {
+          const delPar = conceptos.find((c) => c.empresa.toUpperCase() === empresa.toUpperCase() && c.undnegocio.toUpperCase() === undnegocio.toUpperCase());
+          codServicio = (delPar ?? conceptos[0]).codcpto;
+          if (!delPar) advertencias.push({ campo: 'oferta.codServicio', mensaje: `El concepto «${codServicio}» existe en Contratos, pero no para la empresa ${empresa} y la UEN ${undnegocio}.` });
+        }
+        const datosDeContratos = { ...datos, oferta: { ...datos.oferta, empresa, undnegocio, codServicio } };
+        const clienteParaPlan = cliente ?? { nit: '', rsocial: '' };
         const contexto = { huella, largoUserAdd, largoPcAdd };
-        const plan = planDeOfertaAdjudicada(datosDeContratos, { cliente: cliente ?? { nit: '', rsocial: '' }, ...contexto });
-        errores.push(...plan.errores);
+
+        errores.push(...planDeTarifa(datosDeContratos, { cliente: clienteParaPlan, huella }).errores);
+        const cargos = datos.cargos ?? [];
+        const horarios = await buscarHorarios(conexion, [...new Set(cargos.map((c) => c.codigoHorario).filter(Boolean))]);
+        cargos.forEach((c, i) => {
+          if (c.codigoHorario && !horarios.has(c.codigoHorario.toUpperCase())) {
+            errores.push({ campo: `cargos[${i}].codigoHorario`, mensaje: `El horario «${c.codigoHorario}» no existe en Contratos. Créelo en Contratos y vuelva a enviar.` });
+          }
+        });
+        const planCargos = planDeCargos(datosDeContratos, { huella });
+        errores.push(...planCargos.errores);
+        errores.push(...planDeOfertaAdjudicada(datosDeContratos, { cliente: clienteParaPlan, ...contexto }).errores);
         const precios = planDePreciosOferta(datosDeContratos);
         errores.push(...precios.errores);
         if (errores.length > 0) throw new ErrorNegocio(422, 'DATOS_INVALIDOS', 'Contratos no puede recibir esta oferta.', { errores });
-        const advertencias = [...avisosDeCliente(datos, cliente), ...precios.advertencias];
+        advertencias.push(...planCargos.advertencias, ...precios.advertencias, ...avisosDeCliente(datos, cliente));
 
-        // 4. Número de oferta y 5. escritura.
+        // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
+        const { fila: filaTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella });
+        const { filas: filasDeCargos } = planDeCargos(datosDeContratos, { numOferta, huella });
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
         await conexion.beginTransaction();
         try {
-          if (idManual) {
-            const [[siguiente]] = await conexion.query(`SELECT COALESCE(MAX(id), 0) + 1 AS id FROM ${TABLA_OFERTAS} FOR UPDATE`);
-            fila.id = Number(siguiente.id);
-          }
-          await insertar(conexion, TABLA_OFERTAS, fila);
+          await insertar(conexion, TABLA_TARIFA, filaTarifa, comoTarifa);
+          for (const filaDeCargo of filasDeCargos) await insertar(conexion, TABLA_CARGOS, filaDeCargo, comoCargo);
+          await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
           for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);
           await conexion.commit();
         } catch (error) {
@@ -188,15 +245,18 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
 
         return {
           advertencias,
-          noEscrito: noEscritoEnLaOferta(datos),
+          noEscrito: [...noEscritoEnLaOferta(datos), ...noEscritoPorColumnasAusentes(datos, omitir)],
           escrito: {
             empresa,
             undnegocio,
             numOferta,
             numerosSaltados: saltados,
             cliente,
+            tarifa: describirFila(filaTarifa),
+            cargos: filasDeCargos.map((f) => ({ item: f.item, cargo: f.cargo, nombre: f.nom_cargo, cantidad: f.cantidad })),
             ofertaAdjudicada: describirFila(fila),
             preciosOferta: filasDePrecios.map((f) => ({ codigo: f.codigo, vr_costo: f.vr_costo, valor: f.valor })),
+            ...(Object.keys(omitir).length > 0 ? { columnasOmitidas: omitir } : {}),
           },
         };
       } catch (error) {

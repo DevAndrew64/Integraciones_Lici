@@ -4,6 +4,7 @@
  * el puente NO escribe hasta que alguien lo revise. Así un cambio del otro lado nunca produce datos cortados o corridos.
  */
 import { readFileSync } from 'node:fs';
+import { TABLAS_ADAPTABLES } from './oferta.js';
 
 export function cargarEsquemaEsperado(ruta = new URL('./esquema-esperado.json', import.meta.url)) {
   return JSON.parse(readFileSync(ruta, 'utf8'));
@@ -42,6 +43,8 @@ const minusculas = (objeto) => Object.fromEntries(Object.entries(objeto).map(([k
  * valor por defecto ni auto_increment) que el puente no llena: el INSERT fallaría. El `id` lo pone la base
  * (auto_increment) o el puente (MAX(id) + 1 en la misma transacción).
  * Un `tipo` null en el contrato = tipo no verificado (columna conocida solo por nombre).
+ * En las TABLAS_ADAPTABLES (tarifa y cargos) solo es problema que falte una columna esencial: las demás que falten se
+ * omiten al escribir, y un tipo o nulabilidad distintos no detienen nada (el modo estricto rechaza lo que no quepa).
  * @returns {{tabla: string, columna?: string, problema: string}[]}
  */
 export function compararEsquema(esperado, real) {
@@ -57,14 +60,19 @@ export function compararEsquema(esperado, real) {
       problemas.push({ tabla, problema: `Motor distinto: se esperaba ${t.motor} y es ${r.motor}.` });
     }
     const columnas = minusculas(r.columnas);
+    const adaptable = TABLAS_ADAPTABLES[tabla];
     for (const [columna, c] of Object.entries(t.columnas)) {
       const rc = columnas[columna.toLowerCase()];
+      if (adaptable) {
+        if (!rc && adaptable.esenciales.includes(columna)) problemas.push({ tabla, columna, problema: 'La columna no existe (es esencial para escribir).' });
+        continue;
+      }
       if (!rc) problemas.push({ tabla, columna, problema: 'La columna no existe.' });
       else if (c.tipo !== null && norm(rc.tipo) !== norm(c.tipo)) problemas.push({ tabla, columna, problema: `Tipo distinto: se esperaba ${c.tipo} y es ${rc.tipo}.` });
       else if (rc.nulable !== c.nulable) problemas.push({ tabla, columna, problema: `Nulabilidad distinta: se esperaba ${c.nulable ? 'acepta NULL' : 'NOT NULL'}.` });
     }
     if (t.uso === 'escritura') {
-      const llenadas = new Set(Object.keys(t.columnas).map((c) => c.toLowerCase()));
+      const llenadas = new Set([...(adaptable ? adaptable.escritas : Object.keys(t.columnas)), 'id'].map((c) => c.toLowerCase()));
       for (const [columna, rc] of Object.entries(r.columnas)) {
         if (rc.obligatoria && !llenadas.has(columna.toLowerCase())) {
           problemas.push({ tabla, columna, problema: 'Columna obligatoria (NOT NULL, sin valor por defecto) que el puente no llena.' });
@@ -108,14 +116,30 @@ export function largoDeColumna(real, tabla, columna) {
   return m ? Number(m[1]) : null;
 }
 
-/** Cómo escribir en `fc_ofertas_adjudicadas` según la base real: quién pone el id y cuánto cabe en user_add/pc_add. */
+const columnaReal = (real, tabla, columna) => Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === columna)?.[1];
+const idManualDe = (real, tabla) => {
+  const id = columnaReal(real, tabla, 'id');
+  return Boolean(id) && !id.autoIncremento;
+};
+
+/**
+ * Cómo escribir según la base real: quién pone el id de cada tabla, cuánto cabe en user_add/pc_add de la oferta adjudicada y
+ * qué columnas de la tarifa y los cargos no existen en esta base (se omiten).
+ */
 export function opcionesDeEscritura(real) {
   const tabla = 'fc_ofertas_adjudicadas';
-  const id = Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === 'id')?.[1];
+  const omitir = {};
+  for (const [nombre, t] of Object.entries(TABLAS_ADAPTABLES)) {
+    if (!real?.[nombre]) continue;
+    const faltan = t.escritas.filter((c) => !columnaReal(real, nombre, c.toLowerCase()));
+    if (faltan.length > 0) omitir[nombre] = faltan;
+  }
   return {
-    idManual: Boolean(id) && !id.autoIncremento,
+    idManual: idManualDe(real, tabla),
     largoUserAdd: largoDeColumna(real, tabla, 'user_add'),
     largoPcAdd: largoDeColumna(real, tabla, 'pc_add'),
+    idManualPorTabla: Object.fromEntries(Object.keys(TABLAS_ADAPTABLES).map((n) => [n, idManualDe(real, n)])),
+    omitir,
   };
 }
 

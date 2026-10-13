@@ -1,6 +1,6 @@
 import { ErrorNegocio } from './errores.js';
 import { nitConDV } from './nit.js';
-import { describirFila, noEscritoEnLaOferta, planDeOfertaAdjudicada, planDePreciosOferta } from './oferta.js';
+import { describirFila, noEscritoEnLaOferta, planDeCargos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa } from './oferta.js';
 import { huella as calcularHuella, validarContrato } from './validar.js';
 
 /**
@@ -15,6 +15,12 @@ export const escritorPrueba = {
     const escribiria = { ...datos, cliente: { ...datos.cliente, nitCompleto } };
     const advertencias = [];
     if (datos.oferta && datos.tarifa) {
+      const tarifa = planDeTarifa(datos, { cliente: { nit: nitCompleto, rsocial: datos.cliente.razonSocial }, huella });
+      if (tarifa.fila) escribiria.tarifaInicial = describirFila(tarifa.fila);
+      advertencias.push(...tarifa.errores);
+      const cargos = planDeCargos(datos, { huella });
+      if (cargos.filas.length > 0) escribiria.cargosIniciales = cargos.filas.map(describirFila);
+      advertencias.push(...cargos.errores, ...cargos.advertencias);
       const { errores, fila } = planDeOfertaAdjudicada(datos, { cliente: { nit: nitCompleto, rsocial: datos.cliente.razonSocial }, huella });
       if (fila) escribiria.ofertaAdjudicada = describirFila(fila);
       advertencias.push(...errores);

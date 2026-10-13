@@ -8,8 +8,8 @@ const esquema = cargarEsquemaEsperado();
 
 describe('esquemaHastaModulo', () => {
   it('deja solo las tablas de los módulos ya implementados; las que no declaran módulo no se usan', () => {
-    assert.deepEqual(Object.keys(esquemaHastaModulo(esquema, 4).tablas).sort(), ['fc_clientes', 'fc_conceptos', 'fc_control', 'fc_ofertas_adjudicadas']);
-    assert.deepEqual(Object.keys(esquemaHastaModulo(esquema, 5).tablas).sort(), ['fc_clientes', 'fc_conceptos', 'fc_control', 'fc_horarios', 'fc_ofertas_adjudicadas']);
+    assert.deepEqual(Object.keys(esquemaHastaModulo(esquema, 4).tablas).sort(), ['fc_clientes', 'fc_conceptos', 'fc_contratos_tarifa_inicial', 'fc_control', 'fc_ofertas_adjudicadas']);
+    assert.deepEqual(Object.keys(esquemaHastaModulo(esquema, 5).tablas).sort(), ['fc_clientes', 'fc_conceptos', 'fc_contratos_cargos_iniciales', 'fc_contratos_tarifa_inicial', 'fc_control', 'fc_horarios', 'fc_ofertas_adjudicadas']);
     const todas = Object.keys(esquemaHastaModulo(esquema, 99).tablas);
     assert.ok(!todas.includes('fc_empresas') && !todas.includes('gl_undnegocios'));
     assert.equal(todas.length, Object.keys(esquema.tablas).length - 2);
@@ -31,6 +31,7 @@ describe('esquemaHastaModulo', () => {
 describe('sentenciasDePermisos', () => {
   it('módulo 4: la oferta adjudicada (leer e insertar), clientes y conceptos (solo las columnas que se consultan) y el contador', () => {
     assert.deepEqual(sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: 4 }), [
+      "GRANT SELECT, INSERT ON `almacen`.`fc_contratos_tarifa_inicial` TO 'puente'@'%';",
       "GRANT SELECT, INSERT ON `almacen`.`fc_ofertas_adjudicadas` TO 'puente'@'%';",
       "GRANT SELECT (undnegocio, nit, sucursal, rsocial) ON `almacen`.`fc_clientes` TO 'puente'@'%';",
       "GRANT SELECT (empresa, undnegocio, codcpto) ON `almacen`.`fc_conceptos` TO 'puente'@'%';",
@@ -38,12 +39,12 @@ describe('sentenciasDePermisos', () => {
     ]);
   });
 
-  it('módulo implementado (6): oferta adjudicada, lista de precios, clientes, conceptos, contador y horarios; nada de *_iniciales', () => {
+  it('módulo implementado (6): tarifa, cargos, oferta adjudicada, lista de precios, clientes, conceptos, contador y horarios', () => {
     assert.equal(MODULO_IMPLEMENTADO, 6);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 6);
+    assert.equal(sentencias.length, 8);
+    assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_contratos_cargos_iniciales` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_preciosventas_oferta` TO 'puente'@'%';"));
-    assert.ok(!sentencias.some((x) => /_iniciales/.test(x)));
     assert.ok(sentencias.includes("GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';"));
   });
 

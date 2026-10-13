@@ -216,7 +216,7 @@ describe('MySQL 5.5 real', { skip: saltar }, () => {
     }
   });
 
-  it('una tabla que el puente ya no usa (fc_contratos_tarifa_inicial) puede cambiar sin tumbar el servicio', async () => {
+  it('en la tarifa (tabla adaptable) un tipo distinto no tumba el servicio: el modo estricto rechaza lo que no quepa', async () => {
     await pool.query("ALTER TABLE fc_contratos_tarifa_inicial MODIFY codservicio char(4) DEFAULT ''");
     try {
       const r = await arrancarServicio(4024, { PUENTE_MODO: 'escritura' });
@@ -518,7 +518,8 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     await denegado(`UPDATE ${PRECIOS} SET valor = 0`);
     await denegado('UPDATE fc_horarios SET snactivo = 0');
     await denegado('SELECT horario FROM fc_horarios'); // del horario solo se consulta el código
-    await denegado('SELECT * FROM fc_contratos_tarifa_inicial'); // ya no se usa: sin permisos
+    await denegado('DELETE FROM fc_contratos_tarifa_inicial');
+    await denegado('UPDATE fc_contratos_cargos_iniciales SET cantidad = 0');
     // Lo que sí necesita:
     assert.equal(Number((await minimo.query('SELECT num_oferta FROM fc_control WHERE empresa = "01" AND undnegocio = "BAQ"'))[0][0].num_oferta) > 0, true);
   });
@@ -545,7 +546,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       assert.equal(j.modo, 'escritura');
       assert.equal(j.escrito.numOferta, antes + 1);
       assert.deepEqual(j.advertencias, []);
-      assert.deepEqual(j.noEscrito.map((n) => n.campo), ['contrato.porcentajeAIU', 'oferta.tipoAdm', 'oferta.origenProceso', 'oferta.codServicio', 'contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
+      assert.deepEqual(j.noEscrito.map((n) => n.campo), ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
       assert.equal(j.escrito.preciosOferta.length, 2);
 
       const repetida = await post(armar(9001));

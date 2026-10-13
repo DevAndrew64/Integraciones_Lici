@@ -1,8 +1,7 @@
 /**
- * Núcleo del módulo 4 — oferta y tarifas. Funciones PURAS (sin base de datos ni reloj). Hoy el escritor usa
- * `planDeOfertaAdjudicada` (`fc_ofertas_adjudicadas`, la tabla que existe en la base viva). `planDeTarifa` y `planDeCargos`
- * son las filas de `fc_contratos_tarifa_inicial` y `fc_contratos_cargos_iniciales`, que hoy no se pueden usar en esa base;
- * se conservan para cuando Contratos las tenga disponibles.
+ * Núcleo de los módulos 4 a 6 — oferta, tarifa, cargos y precios. Funciones PURAS (sin base de datos ni reloj): las filas de
+ * `fc_contratos_tarifa_inicial` y `fc_contratos_cargos_iniciales` (lo que escribe «Guardar oferta» de Contratos), de
+ * `fc_ofertas_adjudicadas` y de `fc_preciosventas_oferta`. El escritor MySQL solo las ejecuta.
  *
  * Fuente: `cmdGrabar.Click` de `frmcntrto_inicial` (versión de octubre de 2026). Su INSERT de tarifa escribe 30 columnas y el
  * de cargos 47; aquí se escriben esas mismas, en su mismo orden, para que lo guardado sea indistinguible de lo digitado a mano.
@@ -243,6 +242,41 @@ export const COLUMNAS_CARGO_VFP = [
 /** Se escribe además cuando LiciColba lo trae: el horario del cargo (su código debe existir en `fc_horarios`). */
 export const COLUMNA_CARGO_HORARIO = 'codhorario';
 
+/**
+ * Tablas de la oferta que se ADAPTAN a la base real (las activaron después y pueden traer menos columnas que producción):
+ * las columnas que el puente escribe y las esenciales. Si falta una esencial no se escribe nada; si falta otra, se omite y
+ * se informa. Nunca se crea ni se cambia una columna.
+ */
+export const TABLAS_ADAPTABLES = {
+  fc_contratos_tarifa_inicial: {
+    escritas: [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS],
+    esenciales: ['empresa', 'undnegocio', 'num_oferta', 'nit', 'rsocial', 'codservicio', 'tarifa', 'tar_manoobra', 'tar_impuestos', 'aiu', 'pc_add'],
+  },
+  fc_contratos_cargos_iniciales: {
+    escritas: [...COLUMNAS_CARGO_VFP, COLUMNA_CARGO_HORARIO],
+    esenciales: ['empresa', 'undnegocio', 'num_oferta', 'item', 'cargo', 'cantidad', 'vlr_unitario', 'vlr_total', 'pc_add'],
+  },
+};
+
+/** Qué dato de LiciColba se pierde si la base no tiene la columna (para avisarlo en «no escrito»). */
+const CAMPO_DE_COLUMNA = {
+  aiu: 'contrato.porcentajeAIU', tipo_adm: 'oferta.tipoAdm', origen_proceso: 'oferta.origenProceso', codservicio: 'oferta.codServicio',
+  descripcion: 'oferta.descripcionServicio',
+};
+
+/** Sin la columna en la base: una entrada «no escrito» por dato de LiciColba que no quedó guardado. */
+export function noEscritoPorColumnasAusentes(datos, omitidas = {}) {
+  const lista = [];
+  for (const columna of omitidas.fc_contratos_tarifa_inicial ?? []) {
+    const campo = CAMPO_DE_COLUMNA[columna];
+    const valor = campo?.split('.').reduce((o, k) => o?.[k], datos);
+    if (campo && valor !== null && valor !== undefined && valor !== '') lista.push({ campo, motivo: `La tabla de tarifas de esta base de Contratos no tiene la columna ${columna}.` });
+  }
+  const cargos = omitidas.fc_contratos_cargos_iniciales ?? [];
+  if (cargos.length > 0 && datos.cargos?.length > 0) lista.push({ campo: 'cargos', motivo: `La tabla de cargos de esta base de Contratos no tiene: ${cargos.join(', ')}.` });
+  return lista;
+}
+
 const pesos = (n) => Math.round(n).toLocaleString('es-CO');
 
 /**
@@ -334,10 +368,6 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
 export const describirFila = (fila) => Object.fromEntries(Object.entries(fila).map(([columna, valor]) => [columna, valor === AHORA ? AHORA.sql : valor]));
 
 const MOTIVOS_NO_ESCRITOS = [
-  ['contrato.porcentajeAIU', 'La oferta adjudicada de Contratos no tiene columna de A.I.U.'],
-  ['oferta.tipoAdm', 'La oferta adjudicada de Contratos no tiene columna de tipo de tarifa.'],
-  ['oferta.origenProceso', 'La oferta adjudicada de Contratos no tiene columna de origen del proceso.'],
-  ['oferta.codServicio', 'La oferta adjudicada de Contratos no tiene columna de concepto de facturación.'],
   ['contrato.objeto', 'Va en «Descripción» y «Objeto» del contrato, que Contratos crea después de la oferta.'],
   ['contrato.valorMensual', 'El total del contrato lo calcula Contratos con las tarifas y el plazo; la tarifa sale de los seis valores.'],
   ['contrato.plazoMeses', 'Va en las fechas del contrato, que Contratos crea después de la oferta.'],
@@ -351,7 +381,7 @@ export function noEscritoEnLaOferta(datos) {
   if (datos.cargos?.length > 0) {
     lista.push({
       campo: 'cargos',
-      motivo: 'La base de Contratos no tiene hoy dónde guardar los cargos de la oferta: se digitan en Contratos.',
+      motivo: 'Se escriben el cargo, las personas, las horas, el salario, el riesgo, el horario y los valores. La sección de nómina, los estudios y la experiencia, los grupos de dotación, EPP, exámenes y cursos, el tipo de contrato, los bonos y los recargos se completan en Contratos.',
     });
   }
   return lista;

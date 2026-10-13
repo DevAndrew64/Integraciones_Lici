@@ -91,10 +91,12 @@ describe('POST /contratos (modo prueba)', () => {
     });
     assert.deepEqual(
       j.noEscrito.map((n) => n.campo),
-      [...['contrato.porcentajeAIU', 'oferta.tipoAdm', 'oferta.origenProceso', 'oferta.codServicio', 'contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion'], 'cargos'],
+      [...['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion'], 'cargos'],
       'lo que no tiene destino en la base de Contratos se informa, no se pierde en silencio',
     );
     assert.deepEqual(j.advertencias, []);
+    assert.deepEqual([j.escribiria.tarifaInicial.num_oferta, j.escribiria.tarifaInicial.aiu, j.escribiria.tarifaInicial.origen_proceso], [null, '0.1232', 'LIC']);
+    assert.deepEqual(j.escribiria.cargosIniciales.map((c) => [c.cargo, c.item, c.nom_cargo, c.codhorario ?? null]), [[1, 1, 'Aseador', '941'], [2, 2, 'Supervisor', null]]);
   });
 
   it('muestra la lista de precios de insumos que escribiría (módulo 6) y valida cada fila', async () => {
@@ -112,7 +114,7 @@ describe('POST /contratos (modo prueba)', () => {
     assert.deepEqual((await m.json()).errores.map((e) => e.campo), ['insumos[0].codigo', 'insumos[0].valorUnitario']);
   });
 
-  it('sin cargos el envío vale y se avisa; los cargos no se escriben (no hay dónde) y se informan', async () => {
+  it('sin cargos el envío vale y se avisa; la tarifa sale sin cargos', async () => {
     const sin = valido();
     delete sin.cargos;
     const j = await (await post(sin)).json();

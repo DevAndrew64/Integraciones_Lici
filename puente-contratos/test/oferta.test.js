@@ -204,7 +204,7 @@ describe('marca de origen', () => {
 
 describe('noEscritoEnLaOferta y describirFila', () => {
   it('informa lo que LiciColba envió y este módulo no escribe', () => {
-    assert.deepEqual(noEscritoEnLaOferta(datos()).map((n) => n.campo), ['contrato.porcentajeAIU', 'oferta.tipoAdm', 'oferta.origenProceso', 'oferta.codServicio', 'contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
+    assert.deepEqual(noEscritoEnLaOferta(datos()).map((n) => n.campo), ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
     const sin = datos((e) => { e.contrato.objeto = ''; e.cliente.direccion = ''; });
     assert.ok(!noEscritoEnLaOferta(sin).some((n) => ['contrato.objeto', 'cliente.direccion'].includes(n.campo)));
   });
