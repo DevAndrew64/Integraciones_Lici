@@ -110,8 +110,8 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
   it('los cargos de la pantalla viajan al puente en su forma (valor por trabajador = total ÷ personas, riesgo en número) cuando suman la Mano de Obra', async () => {
     await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: CARGOS() });
     expect(mocks.enviar.mock.calls[0][0].cargos).toEqual([
-      { nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 2285000, valorTotal: 9140000, codigoHorario: '941' },
-      { nombre: 'Turnante — bloque integrado de 42h', cantidad: 1, horasSemana: 42, jornada: 0, salario: 1423500, riesgo: 2, valorUnitario: 3000000, valorTotal: 3000000, codigoHorario: null },
+      { nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 2285000, valorTotal: 9140000, codigoHorario: '941', grupoDotacionMasculina: null, grupoDotacionFemenina: null, grupoEpp: null, grupoExamen: null, grupoCurso: null },
+      { nombre: 'Turnante — bloque integrado de 42h', cantidad: 1, horasSemana: 42, jornada: 0, salario: 1423500, riesgo: 2, valorUnitario: 3000000, valorTotal: 3000000, codigoHorario: null, grupoDotacionMasculina: null, grupoDotacionFemenina: null, grupoEpp: null, grupoExamen: null, grupoCurso: null },
     ]);
   });
 

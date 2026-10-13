@@ -41,7 +41,12 @@
       "riesgo": 1,
       "valorUnitario": 2285000,
       "valorTotal": 9140000,
-      "codigoHorario": "941"
+      "codigoHorario": "941",
+      "grupoDotacionMasculina": "M025",
+      "grupoDotacionFemenina": "F009",
+      "grupoEpp": null,
+      "grupoExamen": "EM007",
+      "grupoCurso": null
     },
     {
       "nombre": "Turnante — bloque integrado de 42h",
@@ -52,7 +57,12 @@
       "riesgo": 2,
       "valorUnitario": 3000000,
       "valorTotal": 3000000,
-      "codigoHorario": null
+      "codigoHorario": null,
+      "grupoDotacionMasculina": null,
+      "grupoDotacionFemenina": null,
+      "grupoEpp": null,
+      "grupoExamen": null,
+      "grupoCurso": null
     }
   ],
   "insumos": [

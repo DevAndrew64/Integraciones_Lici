@@ -7,7 +7,7 @@ import { CLAVES_MODULO_NO_APLICA, obtenerModulo, resolverPendientesModulos } fro
 import type { ClaveModulo, EstadoModuloResultado } from '@/lib/costos-estructura/guardado-modular';
 import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
-import { cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
+import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
 import { enviarAContratos } from '@/lib/contratos-puente/directo';
 import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, insumosParaPuente, leerDestino } from '@/lib/contratos-puente/payload';
 
@@ -53,10 +53,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     // Módulo 5: las líneas de cargo de la pantalla deben sumar la Mano de Obra del panel; si no, no se envía nada.
     let cargos: ReturnType<typeof cargosParaPuente> | null = null;
+    let avisosGrupos: string[] = [];
     if (body?.cargos !== undefined && body.cargos !== null) {
       const vc = validarCargosPantalla(body.cargos, (body.costosDto as CostosPantallaDto).totales.manoObra);
       if (!vc.ok) return NextResponse.json({ ok: false, error: 'CARGOS_INVALIDOS', mensaje: `Los cargos de la pantalla no son válidos: ${vc.errores.join(' ')} Recargue e intente de nuevo.` }, { status: 400 });
       cargos = cargosParaPuente(vc.cargos);
+      avisosGrupos = avisosGruposCargos(vc.cargos);
     }
 
     // `select` explícito: no depende de columnas ajenas a este envío (incidente «column does not exist»).
@@ -109,7 +111,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         advertencias: r.advertencias,
         oferta: r.oferta,
         noEscrito: r.noEscrito,
-        mensaje: `${creada ?? `Datos validados para Contratos${nota}.`}${avisos}${aparte}`,
+        mensaje: `${creada ?? `Datos validados para Contratos${nota}.`}${avisos}${aparte}${avisosGrupos.length > 0 ? ` Grupos que se eligen en Contratos (Contratos guarda uno por cargo): ${avisosGrupos.join('; ')}.` : ''}`,
       });
     }
     switch (r.tipo) {

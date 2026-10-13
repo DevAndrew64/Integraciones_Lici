@@ -5,6 +5,18 @@
  * ningún costo: solo se valida lo recibido y se pasa a la forma que pide el puente.
  */
 
+/**
+ * Códigos de grupo que usa la línea en Dotación/EPP, Exámenes y Cursos, tal como vienen del catálogo del almacén (los mismos
+ * de Contratos: M### y F### dotación, EP### EPP, EM### exámenes, GC### cursos). La pantalla manda todos los que encuentra.
+ */
+export interface GruposCargoDto {
+  dotacionMasculina: string[];
+  dotacionFemenina: string[];
+  epp: string[];
+  examenes: string[];
+  cursos: string[];
+}
+
 /** Una línea de cargo tal como la dejó la pantalla de costos. */
 export interface CargoPantallaDto {
   id: number;
@@ -21,6 +33,8 @@ export interface CargoPantallaDto {
   /** Costo mensual de TODA la línea, con A.I.U. NO incluido y antes de IVA. */
   valorTotal: number;
   esTurnante: boolean;
+  /** Ausente en pantallas anteriores a este dato: equivale a «sin grupos». */
+  grupos?: GruposCargoDto;
 }
 
 /** Forma que recibe el puente (`cargos[]` del contrato v1). */
@@ -34,6 +48,61 @@ export interface CargoPayload {
   valorUnitario: number | null;
   valorTotal: number | null;
   codigoHorario: string | null;
+  /** Grupo de cada tipo cuando la línea usa EXACTAMENTE uno (Contratos guarda un grupo por cargo); si no, null. */
+  grupoDotacionMasculina: string | null;
+  grupoDotacionFemenina: string | null;
+  grupoEpp: string | null;
+  grupoExamen: string | null;
+  grupoCurso: string | null;
+}
+
+/** Formato de cada código de grupo en Contratos (columnas dotm char(4), dotf char(4), epp, examen y cod_grupo_curso char(5)). */
+const FORMATO_GRUPO: Record<keyof GruposCargoDto, RegExp> = {
+  dotacionMasculina: /^M\d{3}$/,
+  dotacionFemenina: /^F\d{3}$/,
+  epp: /^EP\d{3}$/,
+  examenes: /^EM\d{3}$/,
+  cursos: /^(?:GC|CU)\d{3}$/,
+};
+/** Como en Contratos, M000 / F000 significan «sin dotación». */
+const SIN_GRUPO = new Set(['M000', 'F000']);
+
+/** Los códigos válidos y distintos de un tipo (mayúsculas, sin espacios). Lo que no tiene el formato no es de ese tipo. */
+export function gruposValidos(codigos: readonly string[] | undefined, tipo: keyof GruposCargoDto): string[] {
+  const vistos = new Set<string>();
+  for (const c of codigos ?? []) {
+    const codigo = String(c ?? '').trim().toUpperCase();
+    if (FORMATO_GRUPO[tipo].test(codigo) && !SIN_GRUPO.has(codigo)) vistos.add(codigo);
+  }
+  return [...vistos].sort();
+}
+
+const grupoUnico = (codigos: readonly string[] | undefined, tipo: keyof GruposCargoDto) => {
+  const validos = gruposValidos(codigos, tipo);
+  return validos.length === 1 ? validos[0] : null;
+};
+
+const NOMBRE_TIPO: Record<keyof GruposCargoDto, string> = {
+  dotacionMasculina: 'dotación masculina',
+  dotacionFemenina: 'dotación femenina',
+  epp: 'EPP',
+  examenes: 'exámenes',
+  cursos: 'cursos',
+};
+
+/**
+ * Líneas que usan MÁS de un grupo de un mismo tipo: Contratos guarda uno solo por cargo, así que ese grupo no se envía y
+ * se completa en Contratos. Nunca se elige uno al azar.
+ */
+export function avisosGruposCargos(cargos: CargoPantallaDto[]): string[] {
+  const avisos: string[] = [];
+  for (const c of cargos.filter((x) => x.cantidad > 0)) {
+    for (const tipo of Object.keys(FORMATO_GRUPO) as (keyof GruposCargoDto)[]) {
+      const validos = gruposValidos(c.grupos?.[tipo], tipo);
+      if (validos.length > 1) avisos.push(`«${c.nombre.trim()}» usa varios grupos de ${NOMBRE_TIPO[tipo]} (${validos.join(', ')})`);
+    }
+  }
+  return avisos;
 }
 
 const MAX_LINEAS = 300;
@@ -66,6 +135,11 @@ export function validarCargosPantalla(valor: unknown, totalManoObra: number): Re
     if (typeof c.arlKey !== 'string') errores.push(`cargos[${i}].arlKey debe ser texto.`);
     if (typeof c.codigoHorario !== 'string') errores.push(`cargos[${i}].codigoHorario debe ser texto.`);
     if (typeof c.esTurnante !== 'boolean') errores.push(`cargos[${i}].esTurnante debe ser verdadero o falso.`);
+    if (c.grupos !== undefined) {
+      const g = c.grupos;
+      const bien = esObjeto(g) && (Object.keys(FORMATO_GRUPO) as (keyof GruposCargoDto)[]).every((t) => Array.isArray(g[t]) && (g[t] as unknown[]).every((x) => typeof x === 'string'));
+      if (!bien) errores.push(`cargos[${i}].grupos debe traer listas de códigos (dotacionMasculina, dotacionFemenina, epp, examenes, cursos).`);
+    }
   });
   if (errores.length > 0) return { ok: false, errores };
 
@@ -100,6 +174,11 @@ export function cargosParaPuente(cargos: CargoPantallaDto[]): CargoPayload[] {
         valorUnitario: c.valorTotal / (cantidad >= 1 ? cantidad : 1),
         valorTotal: c.valorTotal,
         codigoHorario: texto(c.codigoHorario),
+        grupoDotacionMasculina: grupoUnico(c.grupos?.dotacionMasculina, 'dotacionMasculina'),
+        grupoDotacionFemenina: grupoUnico(c.grupos?.dotacionFemenina, 'dotacionFemenina'),
+        grupoEpp: grupoUnico(c.grupos?.epp, 'epp'),
+        grupoExamen: grupoUnico(c.grupos?.examenes, 'examenes'),
+        grupoCurso: grupoUnico(c.grupos?.cursos, 'cursos'),
       };
     });
 }

@@ -232,6 +232,17 @@ describe('escritor MySQL — cargos', () => {
     assert.ok(uno.params.includes(937) && uno.params.includes('LICICOLBA:42:ab12cd34ef56') && uno.params.includes('941'));
   });
 
+  it('los grupos de la línea llegan a la fila de cargos (dotm, dotf, epp, examen, cod_grupo_curso)', async () => {
+    const f = falso();
+    await escribir(f.pool, conCargos((e) => Object.assign(e.cargos[0], { grupoDotacionMasculina: 'M025', grupoEpp: 'EP095', grupoExamen: 'EM007' })));
+    const [uno] = f.de(/^INSERT INTO fc_contratos_cargos_iniciales/);
+    const valor = (columna) => {
+      const columnas = /\((.*)\) VALUES/.exec(uno.sql)[1].split(', ').filter((c) => c !== 'fadd');
+      return uno.params[columnas.indexOf(columna)];
+    };
+    assert.deepEqual(['dotm', 'dotf', 'epp', 'examen', 'cod_grupo_curso'].map(valor), ['M025', '', 'EP095', 'EM007', '']);
+  });
+
   it('un horario que no existe en Contratos es un error por línea, junto con los demás, y no reserva ningún número', async () => {
     const f = falso({ [/FROM fc_horarios/.source]: [[]] });
     const error = await rechaza(escribir(f.pool, conCargos()), 422, 'DATOS_INVALIDOS');

@@ -281,7 +281,8 @@ const pesos = (n) => Math.round(n).toLocaleString('es-CO');
 
 /**
  * Filas de `fc_contratos_cargos_iniciales`: una por línea de cargo, con el mismo orden y los mismos valores que el INSERT de
- * Visual FoxPro. Lo que LiciColba no trae (sección de nómina, estudios, experiencia, grupos de dotación/EPP/exámenes/cursos,
+ * Visual FoxPro. Los grupos de dotación (M/F), EPP, examen y curso van cuando LiciColba los identifica (uno por tipo). Lo que
+ * LiciColba no trae (sección de nómina, estudios, experiencia,
  * tipo de contrato, municipio, bonos y recargos) queda en el valor con que el formulario lo inserta —el mismo de la base—
  * y se completa en Contratos.
  *
@@ -304,7 +305,9 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
 
   const codigos = new Map();
   const filas = cargos.map((c, i) => {
-    const clave = `${comparable(c.nombre)}|${c.salario}`;
+    // Llave del consecutivo, como «Guardar oferta»: mismo nombre, grupos (dotación, EPP, examen, curso) y salario ⇒ mismo código.
+    const grupos = [c.grupoDotacionFemenina, c.grupoDotacionMasculina, c.grupoEpp, c.grupoExamen, c.grupoCurso].map((g) => g ?? '');
+    const clave = [comparable(c.nombre), ...grupos, c.salario].join('|');
     if (!codigos.has(clave)) codigos.set(clave, codigos.size + 1);
     if (Math.abs(c.valorTotal - c.valorUnitario * c.cantidad) > 1) {
       errores.push({ campo: `cargos[${i}].valorTotal`, mensaje: 'No coincide con valorUnitario × cantidad.' });
@@ -327,12 +330,12 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
       vlr_total: c.valorTotal,
       codmun: '',
       salario: c.salario,
-      dotm: '',
-      dotf: '',
+      dotm: c.grupoDotacionMasculina ?? '',
+      dotf: c.grupoDotacionFemenina ?? '',
       riesgo: c.riesgo,
       tipocont: '',
-      epp: '',
-      examen: '',
+      epp: c.grupoEpp ?? '',
+      examen: c.grupoExamen ?? '',
       snextras: 0, snrecargos: 0, snfestivos: 0, snextrasf: 0,
       cnextras: 0, cnrecargos: 0, cnfestivos: 0, cnextrasf: 0,
       rnocturno: 0, ediurnas: 0, rfestivas: 0, enocturnas: 0, hfestivas: 0, efestivas: 0, enocturnasf: 0,
@@ -341,7 +344,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
       titulo_educacion: '',
       curso_formacion: '',
       experiencia: 0,
-      cod_grupo_curso: '',
+      cod_grupo_curso: c.grupoCurso ?? '',
       user_add: USUARIO_PUENTE,
       fadd: AHORA,
       pc_add: marcaDeOrigen(origen.solicitudId, huella),
@@ -381,7 +384,7 @@ export function noEscritoEnLaOferta(datos) {
   if (datos.cargos?.length > 0) {
     lista.push({
       campo: 'cargos',
-      motivo: 'Se escriben el cargo, las personas, las horas, el salario, el riesgo, el horario y los valores. La sección de nómina, los estudios y la experiencia, los grupos de dotación, EPP, exámenes y cursos, el tipo de contrato, los bonos y los recargos se completan en Contratos.',
+      motivo: 'Se escriben el cargo, las personas, las horas, el salario, el riesgo, el horario y los valores. Los grupos de dotación, EPP, examen y curso van cuando la línea usa uno de cada tipo. La sección de nómina, los estudios y la experiencia, el tipo de contrato, los bonos y los recargos se completan en Contratos.',
     });
   }
   return lista;

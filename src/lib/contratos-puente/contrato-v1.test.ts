@@ -14,7 +14,10 @@ import { armarPayloadContratos, insumosParaPuente, leerDestino } from './payload
 const RUTA = resolve(process.cwd(), 'puente-contratos/test/fixtures/payload-licicolba.json');
 
 const CARGOS: CargoPantallaDto[] = [
-  { id: 1, nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, arlKey: 'I', codigoHorario: '941', valorTotal: 9140000, esTurnante: false },
+  {
+    id: 1, nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, arlKey: 'I', codigoHorario: '941', valorTotal: 9140000, esTurnante: false,
+    grupos: { dotacionMasculina: ['M025', 'M025'], dotacionFemenina: ['F009'], epp: ['EP095', 'EP101'], examenes: ['EM007'], cursos: [] },
+  },
   { id: 2, nombre: 'Turnante — bloque integrado de 42h', cantidad: 1, horasSemana: 42, jornada: null, salario: 1423500, arlKey: 'II', codigoHorario: '', valorTotal: 3000000, esTurnante: true },
 ];
 

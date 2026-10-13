@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cargosParaPuente, validarCargosPantalla, type CargoPantallaDto } from './cargos';
+import { avisosGruposCargos, cargosParaPuente, gruposValidos, validarCargosPantalla, type CargoPantallaDto } from './cargos';
 
 const cargo = (o: Partial<CargoPantallaDto> = {}): CargoPantallaDto => ({
   id: 1, nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, arlKey: 'I', codigoHorario: '941', valorTotal: 10000000, esTurnante: false, ...o,
@@ -48,7 +48,7 @@ describe('validarCargosPantalla', () => {
 describe('cargosParaPuente', () => {
   it('convierte a la forma del puente: valor por trabajador = total ÷ personas, riesgo en número, textos sin espacios', () => {
     expect(cargosParaPuente([cargo({ nombre: '  ASEADOR ', codigoHorario: ' 941 ' })])).toEqual([
-      { nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 2500000, valorTotal: 10000000, codigoHorario: '941' },
+      { nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 2500000, valorTotal: 10000000, codigoHorario: '941', grupoDotacionMasculina: null, grupoDotacionFemenina: null, grupoEpp: null, grupoExamen: null, grupoCurso: null },
     ]);
   });
 
@@ -81,5 +81,40 @@ describe('cargosParaPuente', () => {
     const [c] = cargosParaPuente([cargo({ cantidad: 0.4, valorTotal: 1000 })]);
     expect(c.cantidad).toBe(1);
     expect(c.valorUnitario).toBe(1000);
+  });
+});
+
+describe('grupos del catálogo por cargo (dotación, EPP, exámenes, cursos)', () => {
+  const linea = (grupos: CargoPantallaDto['grupos'], cambios: Partial<CargoPantallaDto> = {}): CargoPantallaDto => ({
+    id: 1, nombre: 'ASEADOR', cantidad: 2, horasSemana: 48, jornada: 8, salario: 1423500, arlKey: 'I', codigoHorario: '', valorTotal: 2000000, esTurnante: false, grupos, ...cambios,
+  });
+  const vacios = { dotacionMasculina: [], dotacionFemenina: [], epp: [], examenes: [], cursos: [] };
+
+  it('solo cuentan los códigos con el formato de su tipo, sin repetir; M000 y F000 son «sin dotación»', () => {
+    expect(gruposValidos([' m025 ', 'M025', 'M000', 'F009', 'X092', ''], 'dotacionMasculina')).toEqual(['M025']);
+    expect(gruposValidos(['EP095', 'EP1', 'EM007'], 'epp')).toEqual(['EP095']);
+    expect(gruposValidos(['GC010', 'CU001', 'G010'], 'cursos')).toEqual(['CU001', 'GC010']);
+    expect(gruposValidos(undefined, 'examenes')).toEqual([]);
+  });
+
+  it('se envía el grupo cuando la línea usa EXACTAMENTE uno de ese tipo; con varios o ninguno va null (nunca se elige uno)', () => {
+    const [p] = cargosParaPuente([linea({ ...vacios, dotacionMasculina: ['M025', 'M025'], dotacionFemenina: ['F009'], epp: ['EP095', 'EP101'], examenes: ['EM007'] })]);
+    expect([p.grupoDotacionMasculina, p.grupoDotacionFemenina, p.grupoEpp, p.grupoExamen, p.grupoCurso]).toEqual(['M025', 'F009', null, 'EM007', null]);
+    const [sin] = cargosParaPuente([linea(undefined)]);
+    expect([sin.grupoDotacionMasculina, sin.grupoEpp, sin.grupoCurso]).toEqual([null, null, null]);
+  });
+
+  it('avisa qué cargo usa varios grupos de un mismo tipo (se elige en Contratos); las líneas sin trabajadores no cuentan', () => {
+    expect(avisosGruposCargos([
+      linea({ ...vacios, epp: ['EP095', 'EP101'] }),
+      linea({ ...vacios, cursos: ['GC010', 'GC011'] }, { cantidad: 0 }),
+      linea({ ...vacios, dotacionMasculina: ['M025'] }),
+    ])).toEqual(['«ASEADOR» usa varios grupos de EPP (EP095, EP101)']);
+  });
+
+  it('la pantalla que manda grupos mal formados se rechaza; sin grupos (pantallas anteriores) se acepta', () => {
+    const r = validarCargosPantalla([linea({ ...vacios, epp: 'EP095' as unknown as string[] })], 2000000);
+    expect(r.ok).toBe(false);
+    expect(validarCargosPantalla([linea(undefined)], 2000000).ok).toBe(true);
   });
 });

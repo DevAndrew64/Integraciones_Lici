@@ -73,6 +73,12 @@ const LISTAS = {
       valorUnitario: { tipo: 'monto', max: 9_999_999_999, requerido: true }, // costo mensual por trabajador
       valorTotal: { tipo: 'monto', max: 9_999_999_999_999, requerido: true }, // costo mensual de la línea
       codigoHorario: { tipo: 'codigo', max: 5, silencioso: true }, // debe existir en fc_horarios
+      // Grupos del catálogo del almacén (los mismos de Contratos), solo si la línea usa uno de cada tipo.
+      grupoDotacionMasculina: { tipo: 'grupo', prefijo: 'M', max: 4, silencioso: true }, // dotm char(4)
+      grupoDotacionFemenina: { tipo: 'grupo', prefijo: 'F', max: 4, silencioso: true }, // dotf char(4)
+      grupoEpp: { tipo: 'grupo', prefijo: 'EP', max: 5, silencioso: true }, // epp char(5)
+      grupoExamen: { tipo: 'grupo', prefijo: 'EM', max: 5, silencioso: true }, // examen char(5)
+      grupoCurso: { tipo: 'grupo', prefijo: ['GC', 'CU'], max: 5, silencioso: true }, // cod_grupo_curso char(5)
     },
   },
   // Módulo 6 — la lista de precios de los insumos de la oferta (`fc_preciosventas_oferta`): una fila por código de elemento
@@ -123,6 +129,14 @@ const VALIDADORES = {
     if (typeof valor !== 'string') return { error: 'Debe ser texto.' };
     const t = valor.trim();
     if (!/^[A-Za-z0-9]+$/.test(t)) return { error: 'Solo letras y números, sin espacios.' };
+    return t.length > max ? { error: `Máximo ${max} caracteres (tiene ${t.length}).` } : { valor: t };
+  },
+  /** Código de grupo del catálogo: su prefijo y dígitos («M025», «EP095»), en mayúsculas, sin pasarse de la columna. */
+  grupo(valor, { prefijo, max }) {
+    if (typeof valor !== 'string') return { error: 'Debe ser texto.' };
+    const t = valor.trim().toUpperCase();
+    const prefijos = [prefijo].flat();
+    if (!prefijos.some((p) => new RegExp(`^${p}[0-9]+$`).test(t))) return { error: `Debe ser un código de grupo ${prefijos.join(' o ')} seguido de dígitos.` };
     return t.length > max ? { error: `Máximo ${max} caracteres (tiene ${t.length}).` } : { valor: t };
   },
   opcion(valor, { opciones }) {

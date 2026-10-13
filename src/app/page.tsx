@@ -87,7 +87,7 @@ import {
 import matrizIcaData from '@/data/costos-estructura/matriz-ica-por-empresa-municipio.json';
 import { CATALOGO_VACUNAS, type VacunaCatalogo } from '@/data/costos-estructura/catalogo-vacunas';
 import type { ExportacionManoObraDto, FichaManoObraExportDto, DetalleUnitarioExportDto } from '@/lib/costos-mano-obra/exportacion/tipos-exportacion';
-import type { CargoPantallaDto } from '@/lib/contratos-puente/cargos';
+import type { CargoPantallaDto, GruposCargoDto } from '@/lib/contratos-puente/cargos';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { calcularMinutosSemanaDistribucion, calcularTotalSemanalCargo, evaluarProgramacionSemanal, puedeGuardarProgramacion as puedeGuardarProgramacionLib } from '@/lib/costos-mano-obra/horarios/distribucion-semanal';
 import { materializarFechasProgramadas } from '@/lib/costos-mano-obra/horarios/materializar-fechas-programadas';
@@ -14546,12 +14546,26 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
    * total del panel y el puente contra la tarifa.
    */
   function construirCargosContratosDto():CargoPantallaDto[]{
+    // Códigos de grupo del catálogo que usa la línea (los mismos de Contratos); cargos.ts decide cuál se envía.
+    const deLaLinea=<T extends{lineaManoObraId?:number|null}>(rows:T[],lineaId:number)=>
+      rows.filter(r=>resolverLineaManoObraId(r,lineasManoObraResumen).lineaManoObraIdResuelto===lineaId);
+    const gruposDe=(lineaId:number):GruposCargoDto=>{
+      const dot=gruposActivosDeLinea(lineaId);
+      const codigos=(categoria:'DOTACION_MASCULINA'|'DOTACION_FEMENINA'|'EPP')=>
+        dot.filter(g=>resolverCategoriaDotGroup(g)===categoria).flatMap(g=>g.rows.map(r=>r.codigoGrupo??''));
+      return{
+        dotacionMasculina:codigos('DOTACION_MASCULINA'),dotacionFemenina:codigos('DOTACION_FEMENINA'),epp:codigos('EPP'),
+        examenes:deLaLinea(examRows,lineaId).map(r=>r.codGrupoExamen??''),
+        cursos:deLaLinea(cursosRows,lineaId).map(r=>r.codigoGrupo??''),
+      };
+    };
     const deLinea=(l:LineaMOExtra,cantidad:number,valorTotal:number,esTurnante:boolean):CargoPantallaDto=>({
       id:l.id,nombre:l.nombreCargo,cantidad,
       horasSemana:Number(l.horasSemanal)>0?Number(l.horasSemanal):null,
       jornada:Number(l.nHoras)>0?Number(l.nHoras):null,
       salario:Number(l.salarioBase)>0?Number(l.salarioBase):null,
       arlKey:l.arlKey,codigoHorario:l.codigoHorario,valorTotal,esTurnante,
+      grupos:gruposDe(l.id),
     });
     const principales=lineasExtra.filter(l=>!l.esValorAgregado).map(l=>{
       const r=resultadosLineasExtraConOtrosCostos.find(x=>x.id===l.id)?.resultado;

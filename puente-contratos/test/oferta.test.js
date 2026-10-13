@@ -239,6 +239,21 @@ describe('planDeCargos', () => {
       cambiar(e);
     });
 
+  it('los grupos del catálogo van a dotm, dotf, epp, examen y cod_grupo_curso; sin grupo quedan vacíos como en el formulario', () => {
+    const { filas } = planDeCargos(conCargos((e) => {
+      Object.assign(e.cargos[0], { grupoDotacionMasculina: 'm025', grupoDotacionFemenina: 'F009', grupoEpp: 'EP095', grupoExamen: 'EM007', grupoCurso: 'GC010' });
+    }), { numOferta: 937, huella: HUELLA });
+    assert.deepEqual([filas[0].dotm, filas[0].dotf, filas[0].epp, filas[0].examen, filas[0].cod_grupo_curso], ['M025', 'F009', 'EP095', 'EM007', 'GC010']);
+    assert.deepEqual([filas[1].dotm, filas[1].dotf, filas[1].epp, filas[1].examen, filas[1].cod_grupo_curso], ['', '', '', '', '']);
+  });
+
+  it('el consecutivo del cargo incluye los grupos, como «Guardar oferta»: mismo nombre y salario con otra dotación ⇒ otro código', () => {
+    const { filas } = planDeCargos(conCargos((e) => { e.cargos[1].grupoDotacionMasculina = 'M025'; }), { numOferta: 937, huella: HUELLA });
+    assert.deepEqual(filas.map((f) => f.cargo), [1, 2, 3, 4]);
+    const iguales = planDeCargos(conCargos((e) => { e.cargos[0].grupoEpp = 'EP001'; e.cargos[1].grupoEpp = 'EP001'; }), { numOferta: 937, huella: HUELLA }).filas;
+    assert.deepEqual(iguales.map((f) => f.cargo), [1, 1, 2, 3]);
+  });
+
   it('escribe EXACTAMENTE las 47 columnas del INSERT de cargos de cmdGrabar.Click, en su orden; el horario se agrega solo si viene', () => {
     const { filas, errores } = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA });
     assert.deepEqual(errores, []);

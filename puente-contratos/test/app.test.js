@@ -372,6 +372,20 @@ describe('validarContrato', () => {
     );
   });
 
+  it('cargos: los grupos del catálogo se validan por su prefijo y el largo de la columna, y se guardan en mayúsculas', () => {
+    const c = valido();
+    c.cargos[0] = { ...c.cargos[0], grupoDotacionMasculina: 'f009', grupoEpp: 'EP12345', grupoExamen: 'EM 07', grupoCurso: 'XX010' };
+    const r = validarContrato(c);
+    assert.equal(r.ok, false);
+    assert.deepEqual(r.errores.map((e) => e.campo).sort(), ['cargos[0].grupoCurso', 'cargos[0].grupoDotacionMasculina', 'cargos[0].grupoEpp', 'cargos[0].grupoExamen']);
+    const bien = valido();
+    bien.cargos[0] = { ...bien.cargos[0], grupoDotacionMasculina: 'm025', grupoDotacionFemenina: 'F009', grupoEpp: 'EP095', grupoExamen: 'EM007', grupoCurso: 'CU001' };
+    const ok = validarContrato(bien);
+    assert.equal(ok.ok, true, JSON.stringify(ok.errores));
+    assert.deepEqual([ok.datos.cargos[0].grupoDotacionMasculina, ok.datos.cargos[0].grupoCurso, ok.datos.cargos[1].grupoEpp], ['M025', 'CU001', null]);
+    assert.deepEqual(ok.advertencias, [], 'un grupo ausente no es una advertencia');
+  });
+
   it('cargos: lista de objetos con límites de las columnas reales; errores con su posición; el valor se redondea a 5 decimales', () => {
     const c = valido();
     c.cargos = [
