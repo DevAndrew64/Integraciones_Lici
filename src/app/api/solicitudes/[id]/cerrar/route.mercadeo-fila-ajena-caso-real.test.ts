@@ -108,6 +108,7 @@ describe('CASO REAL — Mercadeo cierra Privado Presentado sobre fila ajena (fro
       filaExtra: {
         estadoRevision: 'CERRADO_ADJUDICADO',
         resultadoFinal: 'Adjudicado',
+        nitEntidad: '900123456-8',
         observacionResultado: 'El único proponente habilitado cumplió todos los requisitos técnicos y financieros.',
       },
     };

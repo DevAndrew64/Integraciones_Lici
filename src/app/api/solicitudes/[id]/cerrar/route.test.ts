@@ -88,7 +88,7 @@ function ctx() { return { params: Promise.resolve({ id: '217' }) }; }
 function cierreAdjudicado(idAsignacion: string) {
   return {
     idAsignacion, resultadoEstado: 'Cerrada',
-    filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.', cerradoPor: 'valor-cliente-ignorado' },
+    filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.', cerradoPor: 'valor-cliente-ignorado' },
   };
 }
 
@@ -118,6 +118,30 @@ describe('POST /api/solicitudes/[id]/cerrar', () => {
     } finally {
       fakeImpl.solicitud.updateMany = original;
     }
+  });
+
+  it('adjudicar guarda el NIT verificado de la entidad en la Solicitud (no en la fila) y lo audita', async () => {
+    solicitud.nitContacto = '900087223'; // NIT de antes, sin DV: se reemplaza
+    const { POST } = await import('./route');
+    const res = await POST(req(cierreAdjudicado('ASG-1')), ctx());
+    expect(res.status).toBe(200);
+    expect(solicitud.nitContacto).toBe('900123456-8');
+    const fila = (solicitud.asignaciones as Record<string, unknown>[]).find((a) => a.idAsignacion === 'ASG-1')!;
+    expect(fila).not.toHaveProperty('nitEntidad');
+    expect(auditLogs[0].detalle).toMatchObject({ nitEntidad: '900123456-8', nitAnterior: '900087223' });
+  });
+
+  it('adjudicar sin NIT, sin dígito de verificación o con un DV que no corresponde → 400, no cierra', async () => {
+    const { POST } = await import('./route');
+    for (const nitEntidad of [undefined, '900123456', '900123456-1']) {
+      const cuerpo = cierreAdjudicado('ASG-1');
+      const filaExtra: Record<string, unknown> = { ...cuerpo.filaExtra, nitEntidad };
+      const res = await POST(req({ ...cuerpo, filaExtra }), ctx());
+      expect(res.status, String(nitEntidad)).toBe(400);
+      expect((await res.json()).error).toMatch(/dígito de verificación|NIT/);
+    }
+    expect(solicitud.estadoSolicitud).toBe('En evaluación');
+    expect(solicitud.nitContacto).toBeUndefined();
   });
 
   it('el primer responsable (oscar) puede cerrar', async () => {

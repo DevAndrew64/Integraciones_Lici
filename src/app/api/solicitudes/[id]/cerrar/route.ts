@@ -61,6 +61,7 @@ import { intentarCerrarSqrSiCorresponde, type DbCierreSqr } from '@/lib/solicitu
 import { construirRespuestaCierreSqrTerminal } from '@/lib/solicitudes/respuesta-cierre-sqr';
 import { obtenerObservacionCierreTerminal, ESTADOS_REVISION_NO_PRESENTADO } from '@/lib/solicitudes/observacion-cierre-terminal';
 import { ESTADOS_SOLICITUD_TERMINALES } from '@/lib/solicitudes/estados-solicitud';
+import { validarNitConDv } from '@/lib/solicitudes/nit-entidad';
 
 const RESULTADOS_VALIDOS = new Set(['Cerrada', 'Cancelada']);
 
@@ -115,7 +116,8 @@ const RESULTADO_ESTADO_POR_ESTADO_REVISION: Record<string, 'Cerrada' | 'Cancelad
   CANCELADO: 'Cancelada',
 };
 
-type ResultadoValidacionFila = { ok: true; fila: Record<string, unknown> } | { ok: false; error: string };
+/** `nitEntidad` (solo al adjudicar) va a `Solicitud.nitContacto`, nunca a la fila de la asignación. */
+type ResultadoValidacionFila = { ok: true; fila: Record<string, unknown>; nitEntidad?: string } | { ok: false; error: string };
 
 function esTexto(v: unknown): v is string {
   return typeof v === 'string';
@@ -218,13 +220,17 @@ function validarObservacionResultado(f: Record<string, unknown>): { ok: true; va
   return { ok: true, valor };
 }
 
+/** Adjudicar exige el NIT de la entidad contratante con su dígito de verificación (lo necesita Contratos; ver
+ * `src/lib/solicitudes/nit-entidad.ts`). */
 function validarCerradoAdjudicado(f: Record<string, unknown>): ResultadoValidacionFila {
-  const clavaNoPermitida = verificarClavesPermitidas(f, ['resultadoFinal', 'observacionResultado']);
+  const clavaNoPermitida = verificarClavesPermitidas(f, ['resultadoFinal', 'observacionResultado', 'nitEntidad']);
   if (clavaNoPermitida) return { ok: false, error: `Campo no permitido en el cierre: "${clavaNoPermitida}".` };
   if (f.resultadoFinal !== 'Adjudicado') return { ok: false, error: 'resultadoFinal debe ser "Adjudicado" para estadoRevision "CERRADO_ADJUDICADO".' };
   const obs = validarObservacionResultado(f);
   if (!obs.ok) return obs;
-  return { ok: true, fila: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: obs.valor } };
+  const nit = validarNitConDv(f.nitEntidad);
+  if (!nit.ok) return nit;
+  return { ok: true, fila: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: obs.valor }, nitEntidad: nit.nit };
 }
 
 /** Flujo "resultado" (GestionAsignacionInline) y flujo "gerencial" (ModuloProcesosEnEjecucion.cerrarGerencial) — mutuamente excluyentes. */
@@ -305,7 +311,7 @@ function validarFilaExtra(
   resultadoTargetBody: unknown,
   usuario: { usuario: string },
   ahoraLegible: string,
-): { ok: true; fila: Record<string, unknown>; resultadoEstado: 'Cerrada' | 'Cancelada' } | { ok: false; error: string } {
+): { ok: true; fila: Record<string, unknown>; resultadoEstado: 'Cerrada' | 'Cancelada'; nitEntidad?: string } | { ok: false; error: string } {
   const resultadoEstadoEsperado = RESULTADO_ESTADO_POR_ESTADO_REVISION[estadoRevision];
   if (!resultadoEstadoEsperado) {
     return { ok: false, error: `estadoRevision "${estadoRevision}" no es un estado de cierre reconocido.` };
@@ -338,7 +344,7 @@ function validarFilaExtra(
     fila.fechaValidacion = ahoraLegible;
   }
 
-  return { ok: true, fila, resultadoEstado: resultadoEstadoEsperado };
+  return { ok: true, fila, resultadoEstado: resultadoEstadoEsperado, nitEntidad: validacion.nitEntidad };
 }
 
 function ahoraLegible(): string {
@@ -489,6 +495,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   // Validación de la fila (allowlist + coherencia) ANTES de entrar a la
   // transacción — evita hacer el lock de fila si el payload ya es inválido.
   let filaValidada: Record<string, unknown> | null = null;
+  let nitEntidad: string | undefined;
   let resultadoTarget: string;
   let estadoRevisionSolicitado = '';
   if (idAsignacionFila && filaExtraRaw) {
@@ -509,6 +516,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       return NextResponse.json({ ok: false, error: validacion.error }, { status: 400 });
     }
     filaValidada = validacion.fila;
+    nitEntidad = validacion.nitEntidad;
     resultadoTarget = validacion.resultadoEstado;
   } else {
     // Cierre sin actualizar ninguna fila (ej. cierre administrativo directo)
@@ -609,6 +617,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         // ya haya, típicamente `true` escrito por `PRESENTAR`) — así se
         // garantiza que `true` nunca se degrada a `false`.
         ...(esNoPresentado ? { estadoFinalSqr: false } : {}),
+        // NIT verificado de la entidad contratante (solo al adjudicar): reemplaza el que hubiera.
+        ...(nitEntidad ? { nitContacto: nitEntidad } : {}),
         updatedAt: new Date(),
       };
 
@@ -658,6 +668,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
             estadoNuevo: resultadoTarget,
             fechaCierreGestion: new Date().toISOString(), // registro del cierre interno — NUNCA se escribe en Solicitud.fechaCierre
             sqrCierreExterno: sqrCierreExternoTrazabilidad,
+            ...(nitEntidad ? { nitEntidad, nitAnterior: freshSolicitud.nitContacto ?? null } : {}),
           },
         },
       });

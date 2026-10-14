@@ -3,15 +3,15 @@ import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { requireSession, isAdmin, canAccessSolicitud, esMercadeo } from '@/lib/authz';
 import { auditFromRequest } from '@/lib/audit';
-import { completarNitEntidad, normalizarNitEntidad } from '@/lib/solicitudes/nit-entidad';
+import { nitVerificado, validarNitConDv } from '@/lib/solicitudes/nit-entidad';
 
 /**
- * POST /api/solicitudes/[id]/nit-entidad — NIT de la entidad contratante.
+ * POST /api/solicitudes/[id]/nit-entidad `{ nit }` — registra el NIT de la entidad contratante de un proceso YA adjudicado
+ * que no lo tiene verificado (adjudicado antes de que el cierre lo pidiera, o con un NIT de antes, sin dígito de
+ * verificación). Lo normal es registrarlo al marcar Adjudicado (`POST /api/solicitudes/[id]/cerrar`).
  *
- * - Sin cuerpo (o `{}`): si la solicitud no tiene NIT, lo busca en los datos abiertos de SECOP (I o II, según la fuente) y
- *   lo guarda. Nunca pisa un NIT existente.
- * - `{ nit }`: lo digita el usuario cuando la fuente no lo trae (proceso privado o manual). Solo si la solicitud aún no
- *   tiene NIT; se guarda la base (sin puntos ni dígito de verificación).
+ * El NIT llega con su DV, que se comprueba (módulo 11 de la DIAN), y se guarda como «base-DV». Un NIT ya verificado no se
+ * cambia desde aquí. No se busca en ninguna fuente externa: el NIT lo digita quien conoce el proceso.
  *
  * Mismo acceso que la ficha (`GET /api/solicitudes/[id]`): administrador o quien participa en la solicitud. Mercadeo
  * solo consulta: no digita.
@@ -26,29 +26,29 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!Number.isInteger(id) || id < 1) return NextResponse.json({ ok: false, error: 'Solicitud inválida.' }, { status: 400 });
     const solicitud = await prisma.solicitud.findUnique({
       where: { id },
-      select: { id: true, nitContacto: true, emailRegistro: true, usuarioRegistro: true, asignaciones: true, aprobador: true, revisor: true },
+      select: { id: true, nitContacto: true, resultadoFinal: true, emailRegistro: true, usuarioRegistro: true, asignaciones: true, aprobador: true, revisor: true },
     });
     if (!solicitud) return NextResponse.json({ ok: false, error: 'No encontrada.' }, { status: 404 });
     if (!isAdmin(session!.rol) && !canAccessSolicitud(session!, solicitud)) return NextResponse.json({ ok: false, error: 'Sin acceso.' }, { status: 403 });
+    if (esMercadeo(session!.rol)) return NextResponse.json({ ok: false, error: 'Mercadeo no puede digitar el NIT.' }, { status: 403 });
+    if (solicitud.resultadoFinal !== 'Adjudicado') {
+      return NextResponse.json({ ok: false, error: 'El NIT de la entidad se registra al marcar el proceso como Adjudicado.' }, { status: 409 });
+    }
+
+    const anterior = solicitud.nitContacto?.trim() || null;
+    if (nitVerificado(anterior)) return NextResponse.json({ ok: false, error: 'La solicitud ya tiene el NIT verificado.', nit: anterior }, { status: 409 });
 
     const body = (await req.json().catch(() => null)) as { nit?: unknown } | null;
-    if (body?.nit !== undefined && body.nit !== null && body.nit !== '') {
-      if (esMercadeo(session!.rol)) return NextResponse.json({ ok: false, error: 'Mercadeo no puede digitar el NIT.' }, { status: 403 });
-      const nit = normalizarNitEntidad(body.nit);
-      if (!nit) return NextResponse.json({ ok: false, error: 'El NIT debe tener entre 5 y 15 dígitos (puede llevar puntos y el dígito de verificación con guion).' }, { status: 400 });
-      const r = await prisma.solicitud.updateMany({ where: { id, OR: [{ nitContacto: null }, { nitContacto: '' }] }, data: { nitContacto: nit } });
-      if (r.count === 0) return NextResponse.json({ ok: false, error: 'La solicitud ya tiene NIT.', nit: solicitud.nitContacto }, { status: 409 });
-      void auditFromRequest(req, session, { accion: 'NIT_ENTIDAD_DIGITADO', recurso: 'solicitud', recursoId: String(id), detalle: { nit } });
-      return NextResponse.json({ ok: true, nit, origen: 'digitado' });
-    }
+    const v = validarNitConDv(body?.nit);
+    if (!v.ok) return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
 
-    const r = await completarNitEntidad(prisma as unknown as Parameters<typeof completarNitEntidad>[0], id);
-    if (r.origen === 'secop') {
-      void auditFromRequest(req, session, { accion: 'NIT_ENTIDAD_SECOP', recurso: 'solicitud', recursoId: String(id), detalle: { nit: r.nit, fuente: r.detalle?.fuente, criterio: r.detalle?.criterio } });
-    }
-    return NextResponse.json({ ok: true, nit: r.nit, origen: r.origen, ...(r.detalle ? { fuente: r.detalle.fuente, criterio: r.detalle.criterio } : {}) });
+    // Compare-and-set sobre el valor leído: si otro usuario lo registró entre medio, no se pisa.
+    const r = await prisma.solicitud.updateMany({ where: { id, nitContacto: solicitud.nitContacto }, data: { nitContacto: v.nit } });
+    if (r.count === 0) return NextResponse.json({ ok: false, error: 'Otro usuario cambió el NIT. Recargue la ficha.' }, { status: 409 });
+    void auditFromRequest(req, session, { accion: 'NIT_ENTIDAD_DIGITADO', recurso: 'solicitud', recursoId: String(id), detalle: { nit: v.nit, anterior } });
+    return NextResponse.json({ ok: true, nit: v.nit });
   } catch (e) {
     console.error('[POST /api/solicitudes/[id]/nit-entidad]', e);
-    return NextResponse.json({ ok: false, error: 'No se pudo obtener el NIT.' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'No se pudo guardar el NIT.' }, { status: 500 });
   }
 }

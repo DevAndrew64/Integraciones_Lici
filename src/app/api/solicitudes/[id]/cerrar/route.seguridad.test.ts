@@ -92,7 +92,7 @@ describe('POST /api/solicitudes/[id]/cerrar — seguridad del payload (filaExtra
     const { POST } = await import('./route');
     const res = await POST(req({
       idAsignacion: 'ASG-1', resultadoEstado: 'Cerrada',
-      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.' },
+      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.' },
     }), ctx());
     expect(res.status).toBe(200);
   });
@@ -179,7 +179,7 @@ describe('POST /api/solicitudes/[id]/cerrar — seguridad del payload (filaExtra
     const { POST } = await import('./route');
     const res = await POST(req({
       idAsignacion: 'ASG-1', resultadoEstado: 'Cerrada',
-      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.', gestionadoPor: 'nicole.ortiz', cerradoPor: 'nicole.ortiz' },
+      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.', gestionadoPor: 'nicole.ortiz', cerradoPor: 'nicole.ortiz' },
     }), ctx());
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -305,7 +305,7 @@ describe('POST /api/solicitudes/[id]/cerrar — seguridad del payload (filaExtra
     const antes = Date.now();
     await POST(req({
       idAsignacion: 'ASG-1', resultadoEstado: 'Cerrada',
-      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.' },
+      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.' },
     }), ctx());
     const despues = Date.now();
     const cierre = auditLogs.find((a) => a.accion === 'solicitud_cerrar');
@@ -320,7 +320,7 @@ describe('POST /api/solicitudes/[id]/cerrar — seguridad del payload (filaExtra
     const { POST } = await import('./route');
     const res = await POST(req({
       idAsignacion: 'ASG-2', resultadoEstado: 'Cerrada',
-      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.' },
+      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.' },
     }), ctx());
     expect(res.status).toBe(200);
     const data = await res.json();

@@ -180,7 +180,7 @@ describe('POST /api/solicitudes/[id]/cerrar — Mercadeo usando la fila PRESENTA
     return {
       resultadoEstado: 'Cerrada',
       idAsignacion,
-      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: observacion },
+      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: observacion },
     };
   }
   function payloadNoAdjudicado(idAsignacion: string, observacion = 'Ningún oferente cumplió los requisitos habilitantes.') {
@@ -245,7 +245,7 @@ describe('POST /api/solicitudes/[id]/cerrar — Mercadeo usando la fila PRESENTA
     resetFixture(PRIVADO, [filaPresentadaOscar]);
     sesionActual = { id: MERCADEO.id, email: MERCADEO.email, rol: MERCADEO.rol, usuario: MERCADEO.usuario };
     const { POST } = await import('./route');
-    const res = await POST(req({ resultadoEstado: 'Cerrada', idAsignacion: '', filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'x' } }), ctx());
+    const res = await POST(req({ resultadoEstado: 'Cerrada', idAsignacion: '', filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'x' } }), ctx());
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toMatch(/idAsignacion y filaExtra deben enviarse juntos/);

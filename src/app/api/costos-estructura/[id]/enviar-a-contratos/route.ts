@@ -9,6 +9,7 @@ import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-e
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
 import { enviarAContratos } from '@/lib/contratos-puente/directo';
+import { nitVerificado } from '@/lib/solicitudes/nit-entidad';
 import { armarPayloadContratos, describirCampo, describirError, etiquetaCampo, insumosParaPuente, leerDestino } from '@/lib/contratos-puente/payload';
 
 /**
@@ -69,6 +70,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!solicitud) return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ENCONTRADA', mensaje: 'La solicitud no existe.' }, { status: 404 });
     if (solicitud.resultadoFinal !== 'Adjudicado') {
       return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ADJUDICADA', mensaje: 'Solo se puede enviar a Contratos un proceso Adjudicado. Cierre la solicitud como Adjudicada y vuelva a intentarlo.' }, { status: 409 });
+    }
+    // El NIT decide a qué cliente de Contratos va la oferta: solo se envía el registrado al adjudicar, con DV correcto.
+    if (!nitVerificado(solicitud.nitContacto)) {
+      return NextResponse.json({ ok: false, error: 'NIT_SIN_VERIFICAR', mensaje: 'Registre el NIT de la entidad contratante con su dígito de verificación (tarjeta «Entidad contratante» › Registrar NIT) antes de enviar a Contratos.' }, { status: 409 });
     }
     if (solicitud.codigoProceso && registro.procesoCodigo && solicitud.codigoProceso !== registro.procesoCodigo) {
       return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_CORRESPONDE', mensaje: 'La solicitud no corresponde a este costeo (el código de proceso no coincide).' }, { status: 409 });

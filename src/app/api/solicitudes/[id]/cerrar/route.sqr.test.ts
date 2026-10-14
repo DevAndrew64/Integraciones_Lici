@@ -76,7 +76,7 @@ function cancelar() {
   return { idAsignacion: 'ASG-1', resultadoEstado: 'Cancelada', filaExtra: { estadoRevision: 'CANCELADO', causaNoPresentacion: 'Cancelación por la entidad' } };
 }
 function adjudicado() {
-  return { idAsignacion: 'ASG-1', resultadoEstado: 'Cerrada', filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.' } };
+  return { idAsignacion: 'ASG-1', resultadoEstado: 'Cerrada', filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.' } };
 }
 function noAdjudicado() {
   return { idAsignacion: 'ASG-1', resultadoEstado: 'Cerrada', filaExtra: { estadoRevision: 'CERRADO_NO_ADJUDICADO', resultadoFinal: 'No adjudicado', observacionResultado: 'Justificación de prueba.' } };

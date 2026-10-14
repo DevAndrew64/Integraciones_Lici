@@ -232,7 +232,7 @@ describe('POST /api/solicitudes/[id]/cerrar — RECHAZO de Privado para Director
     const { POST } = await import('./route');
     const res = await POST(req({
       idAsignacion: 'ASG-D1', resultadoEstado: 'Cerrada',
-      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Adjudicado a X.' },
+      filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Adjudicado a X.' },
     }), ctx());
     expect(res.status).toBe(403);
     expect(solicitud.estadoSolicitud).toBe('En evaluación');

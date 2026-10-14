@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import LicyTopbar from '@/components/licycolba/LicyTopbar';
 import ProcesosCardsView from '@/components/licycolba/ProcesosCardsView';
 import NitEntidad from '@/components/licycolba/NitEntidad';
+import { nitVerificado, validarNitConDv } from '@/lib/solicitudes/nit-entidad';
 import '@/components/licycolba/procesos-cards.css';
 import { puedeConBD, puedeVerModuloConBD, esSoloLectura } from '@/lib/licycolba/permisos';
 import { esMercadeo, isAdmin, esProcesoPrivadoPorAlias, esEquipoComercial } from '@/lib/roles';
@@ -20319,7 +20320,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                       <span style={{fontSize:11,fontWeight:700,color:'#374151',fontFamily:F}}>Entidad contratante</span>
                     </div>
                     <div style={{display:'flex',flexDirection:'column' as const,gap:8}}>
-                      <NitEntidad solicitudId={solicitudProceso.id} nit={solicitudProceso.nitContacto} fontFamily={F} onNit={(n)=>setSolicitudProceso(p=>p?{...p,nitContacto:n}:p)}/>
+                      <NitEntidad solicitudId={solicitudProceso.id} nit={solicitudProceso.nitContacto} adjudicado={solicitudProceso.resultadoFinal==='Adjudicado'} fontFamily={F} onNit={(n)=>setSolicitudProceso(p=>p?{...p,nitContacto:n}:p)}/>
                       <div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Organización</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.entidad||'—'}</div></div>
                       {solicitudProceso.direccionContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Dirección</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.direccionContacto}</div></div>)}
                       {solicitudProceso.ciudad&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Ciudad</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.ciudad}</div></div>)}
@@ -31260,7 +31261,7 @@ function VistFicha({sol,sesion,variante,onVolver,onGuardado}:{sol:Solicitud;sesi
                   <span style={{fontSize:11,fontWeight:700,color:'#374151',fontFamily:F}}>Entidad contratante</span>
                 </div>
                 <div style={{display:'flex',flexDirection:'column' as const,gap:8}}>
-                  <NitEntidad solicitudId={solActual.id||null} nit={solE.nitContacto} fontFamily={F} puedeDigitar={!esMercadeo(sesion?.rol)}/>
+                  <NitEntidad solicitudId={solActual.id||null} nit={solE.nitContacto} adjudicado={solActual.resultadoFinal==='Adjudicado'} fontFamily={F} puedeDigitar={!esMercadeo(sesion?.rol)} onNit={(n)=>setSolActual(p=>({...p,nitContacto:n}))}/>
                   <div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Organización</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solActual.entidad||'—'}</div></div>
                   {solE.direccionContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Dirección</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solE.direccionContacto}</div></div>)}
                   {solActual.ciudad&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Ciudad</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solActual.ciudad}</div></div>)}
@@ -33680,6 +33681,10 @@ function GestionAsignacionInline({
   // validador del backend en /api/solicitudes/[id]/cerrar, que la exige
   // igual que ya exige `motivoRechazo` en el flujo de Rechazar).
   const [observacionResultado, setObservacionResultado] = React.useState('');
+  // NIT de la entidad contratante: se pide al adjudicar, con su dígito de verificación (lo necesita Contratos). Si ya
+  // está verificado se precarga; uno de antes, sin DV, se muestra solo como referencia.
+  const [nitAdjudicacion, setNitAdjudicacion] = React.useState(nitVerificado(sol.nitContacto) ? String(sol.nitContacto) : '');
+  const validacionNitAdjudicacion = validarNitConDv(nitAdjudicacion);
   const [evidencias, setEvidencias] = React.useState<EvidenciaAsignacion[]>(
     safeArray(getRecordValue(asigActual, 'evidencias')) as any
   );
@@ -35259,6 +35264,26 @@ function GestionAsignacionInline({
               escogió); es obligatoria para habilitar "Finalizar proceso"
               (misma filosofía que `motivoRechazo` en el flujo de Rechazar,
               unas líneas más abajo en este mismo componente). */}
+          {decisionObs === 'adjudicado' && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', fontFamily: F, display: 'block', marginBottom: 6 }}>
+                NIT de la entidad contratante <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <input
+                value={nitAdjudicacion}
+                onChange={e => setNitAdjudicacion(e.target.value)}
+                placeholder="Ej. 900123456-8 (con dígito de verificación)"
+                maxLength={22}
+                style={{ width: '100%', height: 36, border: `1.5px solid ${nitAdjudicacion.trim() && !validacionNitAdjudicacion.ok ? '#fca5a5' : '#e2e8f0'}`, borderRadius: 8, padding: '0 10px', fontSize: 12.5, fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' as const }}
+              />
+              <div style={{ fontSize: 10.5, marginTop: 4, fontFamily: F, color: nitAdjudicacion.trim() && !validacionNitAdjudicacion.ok ? '#dc2626' : '#64748b' }}>
+                {nitAdjudicacion.trim() && !validacionNitAdjudicacion.ok
+                  ? validacionNitAdjudicacion.error
+                  : 'Tómelo del RUT o del pliego de la entidad. Se envía a Contratos.'}
+                {!nitVerificado(sol.nitContacto) && sol.nitContacto ? ` NIT registrado antes, sin verificar: ${sol.nitContacto}.` : ''}
+              </div>
+            </div>
+          )}
           {decisionObs && (
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', fontFamily: F, display: 'block', marginBottom: 6 }}>
@@ -35276,10 +35301,15 @@ function GestionAsignacionInline({
           <BtnGuardar
             onClick={async () => {
               const nuevoEstado = decisionObs === 'adjudicado' ? 'CERRADO_ADJUDICADO' : 'CERRADO_NO_ADJUDICADO';
-              await guardar(nuevoEstado, { resultadoFinal: decisionObs === 'adjudicado' ? 'Adjudicado' : 'No adjudicado', observacionResultado: observacionResultado.trim(), fechaCierre: ahora(), cerradoPor: sesion.usuario });
+              await guardar(nuevoEstado, {
+                resultadoFinal: decisionObs === 'adjudicado' ? 'Adjudicado' : 'No adjudicado',
+                observacionResultado: observacionResultado.trim(),
+                ...(decisionObs === 'adjudicado' && validacionNitAdjudicacion.ok ? { nitEntidad: validacionNitAdjudicacion.nit } : {}),
+                fechaCierre: ahora(), cerradoPor: sesion.usuario,
+              });
               onModuleChange('asignacionesCerradas');
             }}
-            disabled={!decisionObs || !observacionResultado.trim()}
+            disabled={!decisionObs || !observacionResultado.trim() || (decisionObs === 'adjudicado' && !validacionNitAdjudicacion.ok)}
             label="Finalizar proceso"
             bg="#1e5799"
             hoverBg="#174a85"

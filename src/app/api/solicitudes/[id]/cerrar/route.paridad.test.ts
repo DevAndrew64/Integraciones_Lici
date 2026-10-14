@@ -104,7 +104,7 @@ function ctx(id: number) { return { params: Promise.resolve({ id: String(id) }) 
 
 /** Payload real del flujo "resultado del proceso: adjudicado" (page.tsx ~17382). */
 function cierreAdjudicado(idAsignacion: string) {
-  return { idAsignacion, resultadoEstado: 'Cerrada', filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', observacionResultado: 'Justificación de prueba.' } };
+  return { idAsignacion, resultadoEstado: 'Cerrada', filaExtra: { estadoRevision: 'CERRADO_ADJUDICADO', resultadoFinal: 'Adjudicado', nitEntidad: '900123456-8', observacionResultado: 'Justificación de prueba.' } };
 }
 
 describe('Paridad funcional — cierre nuevo vs. efectos internos del cierre anterior', () => {

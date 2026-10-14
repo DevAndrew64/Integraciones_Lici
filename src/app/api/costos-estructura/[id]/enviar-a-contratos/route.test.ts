@@ -70,7 +70,7 @@ const DESTINO = { empresa: '01', undnegocio: 'baq', tipoAdm: 'a', origenProceso:
 beforeEach(() => {
   sesionActual = { id: 1, usuario: 'ana.perez', email: 'ana.perez@grupocolba.com', rol: 'Analista Comercial' };
   registro = { id: 1, procesoCodigo: 'SED-LP-2026-0091', datos: estructura() };
-  solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', resultadoFinal: 'Adjudicado', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: null };
+  solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', resultadoFinal: 'Adjudicado', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900123456-8', direccionContacto: null };
   mocks.enviar.mockReset().mockResolvedValue(enviarOk());
   mocks.auditoria.mockReset();
   envios = [];
@@ -202,6 +202,17 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       const { res, json } = await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: DESTINO });
       expect(res.status).toBe(409);
       expect(json.error).toBe('SOLICITUD_NO_ADJUDICADA');
+    }
+    expect(mocks.enviar).not.toHaveBeenCalled();
+  });
+
+  it('sin NIT verificado (vacío, de antes sin DV o con DV que no corresponde) responde 409 y no llama al puente', async () => {
+    for (const nitContacto of [null, '', '900087223', '900123456-1']) {
+      solicitud = { ...solicitud!, nitContacto };
+      const { res, json } = await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: DESTINO });
+      expect(res.status, String(nitContacto)).toBe(409);
+      expect(json.error).toBe('NIT_SIN_VERIFICAR');
+      expect(json.mensaje).toMatch(/dígito de verificación/);
     }
     expect(mocks.enviar).not.toHaveBeenCalled();
   });
