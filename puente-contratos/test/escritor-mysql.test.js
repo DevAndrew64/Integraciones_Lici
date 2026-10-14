@@ -21,6 +21,16 @@ const datos = (cambiar = () => {}) => {
 };
 const HUELLA = 'ab12cd34ef56a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6';
 
+/** Filas de `nominabq.cargos` como vienen de la base: los de la sede (01/BAQ) y los generales, operativos (sin empresa ni UEN). */
+const NOMINA = () => [
+  { id: 1, empresa: '01', undnegocio: 'BAQ', codigo: 1, nombre: 'GERENTE GENERAL' },
+  { id: 104, empresa: '01', undnegocio: 'BAQ', codigo: 104, nombre: 'SUPERVISOR' },
+  { id: 99, empresa: '', undnegocio: '', codigo: 99, nombre: 'ASEADOR' },
+  { id: 339, empresa: '', undnegocio: '', codigo: 339, nombre: 'SUPERVISOR' },
+  { id: 426, empresa: '', undnegocio: '', codigo: 426, nombre: 'TURNANTE' },
+  { id: 500, empresa: '02', undnegocio: 'MED', codigo: 500, nombre: 'CONDUCTOR' },
+];
+
 /**
  * Pool falso que responde por patrón (el primero que coincide) y registra todo lo que se le pide. Las respuestas imitan lo
  * que devuelve mysql2: `[filas]` en los SELECT y `[{affectedRows}]` en los UPDATE/INSERT.
@@ -35,6 +45,8 @@ function falso(respuestas = {}) {
     [/^SELECT empresa, undnegocio FROM fc_control/, [[{ empresa: '01', undnegocio: 'BAQ' }]]],
     [/FROM fc_conceptos/, [[{ empresa: '01', undnegocio: 'BAQ', codcpto: 'ASE' }]]],
     [/FROM fc_horarios/, [[{ codigo: '941' }]]],
+    [/FROM gl_undnegocios/, [[{ dbnomina: 'nominabq  ' }]]],
+    [/FROM `nominabq`\.cargos/, [NOMINA()]],
     [/^UPDATE fc_control/, [{ affectedRows: 1 }]],
     [/LAST_INSERT_ID\(\) AS numero/, [[{ numero: '937' }]]],
     [/AS n$/, [[{ n: 0 }]]],
@@ -215,11 +227,39 @@ describe('escritor MySQL — cargos', () => {
     assert.ok(posiciones.every((i) => i >= 0) && [...posiciones].sort((a, b) => a - b).join() === posiciones.join(), `fuera de orden: ${posiciones}`);
     assert.equal(f.de(/^INSERT INTO fc_contratos_cargos_iniciales/).length, 3);
     assert.deepEqual(r.escrito.cargos, [
-      { item: 1, cargo: 1, nombre: 'Aseador', cantidad: 4 },
-      { item: 2, cargo: 1, nombre: 'Aseador', cantidad: 2 },
-      { item: 3, cargo: 2, nombre: 'Supervisor', cantidad: 1 },
+      { item: 1, cargo: 99, nombre: 'Aseador', cantidad: 4 },
+      { item: 2, cargo: 99, nombre: 'Aseador', cantidad: 2 },
+      { item: 3, cargo: 339, nombre: 'Supervisor', cantidad: 1 },
     ]);
-    assert.deepEqual(r.advertencias, []);
+    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cargos[2].nombre'], 'SUPERVISOR está en la sede (104) y en los generales (339)');
+  });
+
+  it('el código de cargo es el de la nómina de la UEN: la base sale de gl_undnegocios y se lee antes de reservar el número', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, conCargos());
+    assert.deepEqual(f.de(/FROM gl_undnegocios/)[0].params, ['BAQ', '01']);
+    assert.ok(f.indice(/FROM `nominabq`\.cargos/) < f.indice(/^UPDATE fc_control/));
+    assert.match(r.advertencias[0].mensaje, /nominabq\.cargos .*códigos 104, 339.*se escribió el 339/);
+  });
+
+  it('un cargo que no está en la nómina de la UEN (o solo en la de otra) es un error por línea y no reserva número', async () => {
+    const f = falso();
+    const error = await rechaza(escribir(f.pool, conCargos((e) => { e.cargos[1].nombre = 'Conductor'; })), 422, 'DATOS_INVALIDOS');
+    assert.deepEqual(error.extra.errores.map((e) => e.campo), ['cargos[1].nombre']);
+    assert.match(error.extra.errores[0].mensaje, /«Conductor» no existe en la nómina de la UEN BAQ \(nominabq\.cargos\)/);
+    assert.ok(!f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/));
+  });
+
+  it('sin base de nómina para la UEN, o sin permiso para leerla, no escribe y dice qué falta', async () => {
+    const sinBase = await rechaza(escribir(falso({ [/FROM gl_undnegocios/.source]: [[]] }).pool, conCargos()), 422, 'DATOS_INVALIDOS');
+    assert.match(sinBase.extra.errores[0].mensaje, /gl_undnegocios\.dbnomina/);
+    const raro = await rechaza(escribir(falso({ [/FROM gl_undnegocios/.source]: [[{ dbnomina: 'nomina; DROP' }]] }).pool, conCargos()), 422, 'DATOS_INVALIDOS');
+    assert.equal(raro.extra.errores[0].campo, 'cargos');
+    const negado = () => { throw Object.assign(new Error('SELECT command denied'), { errno: 1142 }); };
+    const f = falso({ [/FROM `nominabq`\.cargos/.source]: negado });
+    const sinPermiso = await rechaza(escribir(f.pool, conCargos()), 422, 'DATOS_INVALIDOS');
+    assert.match(sinPermiso.extra.errores[0].mensaje, /permiso de lectura \(SELECT\) sobre nominabq\.cargos/);
+    assert.ok(!f.hubo(/^UPDATE/));
   });
 
   it('cada cargo lleva el número de oferta reservado, la marca de origen y NOW() en el SQL; el horario solo si viene', async () => {
@@ -267,15 +307,16 @@ describe('escritor MySQL — cargos', () => {
   });
 
   it('avisa si los cargos no suman lo que equivale la mano de obra, pero escribe', async () => {
-    const r = await escribir(falso().pool, conCargos((e) => { e.tarifa.manoObra = 70000000; }));
+    const r = await escribir(falso().pool, conCargos((e) => { e.tarifa.manoObra = 70000000; e.cargos[2].nombre = 'Turnante — bloque integrado de 42h'; }));
     assert.deepEqual(r.advertencias.map((a) => a.campo), ['cargos']);
+    assert.equal(r.escrito.cargos[2].cargo, 426, 'el turnante automático de LiciColba es el cargo TURNANTE');
     assert.equal(r.escrito.cargos.length, 3);
   });
 
   it('sin cargos ni siquiera consulta fc_horarios ni toca la tabla de cargos', async () => {
     const f = falso();
     const r = await escribir(f.pool, datos());
-    assert.ok(!f.hubo(/cargos_iniciales/) && !f.hubo(/FROM fc_horarios/));
+    assert.ok(!f.hubo(/cargos_iniciales/) && !f.hubo(/FROM fc_horarios/) && !f.hubo(/gl_undnegocios|\.cargos/));
     assert.deepEqual(r.escrito.cargos, []);
   });
 });

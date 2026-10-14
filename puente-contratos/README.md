@@ -23,7 +23,7 @@ La oferta se identifica en Contratos por **(empresa, UEN, n.º de oferta)**. Des
 | 2 | **Next.js → puente:** cliente HTTP, ruta que arma el JSON, botón «Enviar a Contratos» | — | ✅ |
 | 3 | **Conexión a MySQL y contrato de esquema:** `mysql2` en modo estricto, comprobación de tablas y columnas, `/health` | `information_schema` | ✅ probado también contra un MySQL 5.5 real (Docker) |
 | 4 | **Oferta y tarifa** («Guardar oferta» de Contratos) y **oferta adjudicada:** número de oferta, cliente, concepto, A.I.U., tipo de tarifa, origen y los 6 valores | `fc_contratos_tarifa_inicial` + `fc_ofertas_adjudicadas` (lee `fc_clientes`, `fc_conceptos`, `fc_control`) | ✅ la tarifa se adapta a la base real: si le falta una columna no esencial, se omite y se informa |
-| 5 | **Cargos:** una fila por línea de cargo (código consecutivo, ítem, horario y valores), en la misma transacción | `fc_contratos_cargos_iniciales` (lee `fc_horarios`) | ✅ también se adapta a las columnas reales |
+| 5 | **Cargos:** una fila por línea de cargo (código de nómina, ítem, horario y valores), en la misma transacción | `fc_contratos_cargos_iniciales` (lee `fc_horarios`, `gl_undnegocios` y `<dbnomina>.cargos`) | ✅ también se adapta a las columnas reales |
 | 6 | **Lista de precios de insumos:** una fila por código de elemento del almacén (costo, A.I.U., precio de venta), en la misma transacción que la oferta | `fc_preciosventas_oferta` | ✅ equipos no: sus códigos son de activos fijos y no hay tabla viva para ellos |
 | 7 | **No continuos y valores agregados:** solo sus totales (`vlr_nocontinuos`, `vlr_otros`); el detalle no tiene tabla viva | `fc_ofertas_adjudicadas` | ✅ totales |
 
@@ -262,7 +262,7 @@ Cómo se llenan las columnas: `tarifa` = suma de los seis valores; `tar_manoobra
 
 Si el envío trae `cargos`, se escriben en la **misma transacción** que la tarifa (todo o nada): una fila de `fc_contratos_cargos_iniciales` por línea, con las 47 columnas del INSERT de `cmdGrabar.Click` en su orden (más `codhorario` si el cargo trae horario).
 
-- **El código de cargo es un consecutivo por oferta** (1, 2, 3…), como exige el formulario de octubre: la misma información (nombre y salario) tiene el mismo código y dos cargos distintos nunca comparten uno. El **ítem** es el número de la línea, y nunca se repite dentro de (sección, cargo).
+- **El código de cargo es el de la nómina de la UEN**: Contratos muestra el cargo buscando ese código en la tabla `cargos` de la base de nómina que indica `gl_undnegocios.dbnomina` (`nominabq` en Barranquilla, `nominamn` en la mina). El puente cruza cada línea por nombre (sin tildes ni mayúsculas; los nombres cortados a 30 caracteres de `nominamn` también sirven; el turnante automático es el cargo TURNANTE), prefiere los cargos generales (sin empresa ni UEN, los operativos) a los de la sede, y si hay varios códigos con el mismo nombre usa el menor y lo avisa. Un cargo que no está en la nómina bloquea el envío. El usuario de la conexión necesita `SELECT` sobre `<dbnomina>.cargos`. El **ítem** es el número de la línea, y nunca se repite dentro de (sección, cargo).
 - **Valores sin A.I.U. ni IVA** (el A.I.U. se aplica en la tarifa). `valorTotal` es el costo mensual de toda la línea tal como lo calcula la pantalla de costos (laboral + dotación, EPP, exámenes, cursos y vacunas + bonos no prestacionales); `valorUnitario` es ese total ÷ las personas. El puente exige `valorTotal = valorUnitario × cantidad` (1 peso de holgura por el redondeo a 5 decimales) y **avisa** si los cargos, con A.I.U., no suman la mano de obra de la tarifa.
 - LiciColba envía **una línea por cada línea de Mano de Obra** (menos las marcadas Valor Agregado, cuyo costo va a su propio subtotal) **más las líneas automáticas de turnantes**. En conjunto suman exactamente el total de Mano de Obra del panel de Resumen, y el servidor lo comprueba antes de enviar: si no cuadra, no envía nada.
 - El horario (`codigoHorario`) debe existir en `fc_horarios`: Contratos lo crea antes de la oferta. Un horario que no existe es un error por línea, junto con los demás, y no se reserva ningún número.
@@ -270,7 +270,7 @@ Si el envío trae `cargos`, se escriben en la **misma transacción** que la tari
 
 **Lo que no escribe todavía** (queda en el valor con que el formulario inserta —el de la base— y se completa en Contratos): la sección de nómina (`cod_seccion`), los estudios y la experiencia, los grupos de dotación, EPP, exámenes y cursos, el tipo de contrato, el municipio, los bonos y los recargos. La respuesta lo lista en `noEscrito`.
 
-**Por confirmar con Contratos (preguntas 4 y 8 del Excel):** cómo se relaciona el código consecutivo con el de nómina, si estudios y experiencia pueden ir vacíos, y si el formulario vigente guarda además el horario, los bonos y los importes «globales» (hoy el puente escribe el horario, que la plantilla de producción sí trae).
+**Por confirmar con Contratos (preguntas 4 y 8 del Excel):** si estudios y experiencia pueden ir vacíos, y si el formulario vigente guarda además el horario, los bonos y los importes «globales» (hoy el puente escribe el horario, que la plantilla de producción sí trae).
 
 ### Permisos mínimos de MySQL
 

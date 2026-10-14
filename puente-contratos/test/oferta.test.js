@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
-  marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
+  codigosDeNomina, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from '../src/oferta.js';
 import { validarContrato } from '../src/validar.js';
 
@@ -223,6 +223,54 @@ describe('comparable', () => {
   });
 });
 
+describe('codigosDeNomina', () => {
+  const contexto = { empresa: '01', undnegocio: 'BAQ', base: 'nominabq' };
+  /** Como en nominabq.cargos: los de la sede (01/BAQ), los generales (operativos, sin empresa ni UEN) y uno de otra UEN. */
+  const BAQ = [
+    { empresa: '01', undnegocio: 'BAQ', codigo: 8, nombre: 'SECRETARIA' },
+    { empresa: '01', undnegocio: 'BAQ', codigo: 16, nombre: 'SECRETARIA' },
+    { empresa: '01', undnegocio: 'BAQ', codigo: 104, nombre: 'SUPERVISOR' },
+    { empresa: '', undnegocio: '', codigo: 339, nombre: 'SUPERVISOR' },
+    { empresa: '', undnegocio: '', codigo: 99, nombre: 'ASEADOR' },
+    { empresa: '', undnegocio: '', codigo: 18, nombre: 'SUPERVISOR  SENIOR' },
+    { empresa: '', undnegocio: '', codigo: 426, nombre: 'TURNANTE' },
+    { empresa: '02', undnegocio: 'MED', codigo: 500, nombre: 'CONDUCTOR' },
+    { empresa: '', undnegocio: '', codigo: null, nombre: 'SIN CODIGO' },
+  ];
+  const cruzar = (nombres, filas = BAQ, ctx = contexto) => codigosDeNomina(nombres.map((nombre) => ({ nombre })), filas, ctx);
+
+  it('cruza por nombre sin importar mayúsculas, tildes ni espacios repetidos', () => {
+    const r = cruzar(['Aseador', 'supervisor senior']);
+    assert.deepEqual(r.codigos, [99, 18]);
+    assert.deepEqual([r.errores, r.advertencias], [[], []]);
+  });
+
+  it('prefiere el cargo general (operativo) al de la sede, y avisa cuando el nombre tiene varios códigos', () => {
+    const r = cruzar(['Supervisor', 'Secretaria']);
+    assert.deepEqual(r.codigos, [339, 8]);
+    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cargos[0].nombre', 'cargos[1].nombre']);
+    assert.match(r.advertencias[1].mensaje, /códigos 8, 16\): se escribió el 8/);
+  });
+
+  it('un cargo que no está, que es de otra empresa/UEN, o una fila sin código: error por línea', () => {
+    const r = cruzar(['Conductor', 'Sin código', '  ']);
+    assert.deepEqual(r.codigos, [null, null, null]);
+    assert.deepEqual(r.errores.map((e) => e.campo), ['cargos[0].nombre', 'cargos[1].nombre', 'cargos[2].nombre']);
+    assert.match(r.errores[0].mensaje, /«Conductor» no existe en la nómina de la UEN BAQ \(nominabq\.cargos\)/);
+  });
+
+  it('el turnante automático de LiciColba es el cargo TURNANTE', () => {
+    assert.deepEqual(cruzar(['Turnante — bloque integrado de 42h']).codigos, [426]);
+  });
+
+  it('nominamn.cargos no tiene empresa ni UEN y corta el nombre en 30 caracteres: igual se cruza', () => {
+    const mina = [{ codigo: 112, nombre: 'UJIER' }, { codigo: 77, nombre: 'OPERADOR DE EQUIPO PESADO MINE' }];
+    const r = cruzar(['Ujier', 'Operador de equipo pesado minero'], mina, { empresa: '03', undnegocio: 'MIN', base: 'nominamn' });
+    assert.deepEqual(r.codigos, [112, 77]);
+    assert.deepEqual(r.errores, []);
+  });
+});
+
 describe('planDeCargos', () => {
   /** Dos líneas del mismo cargo (mismo nombre y salario), el mismo nombre con otro salario y otro cargo. Suman 71.500.001. */
   const CARGOS = () => [
@@ -247,11 +295,9 @@ describe('planDeCargos', () => {
     assert.deepEqual([filas[1].dotm, filas[1].dotf, filas[1].epp, filas[1].examen, filas[1].cod_grupo_curso], ['', '', '', '', '']);
   });
 
-  it('el consecutivo del cargo incluye los grupos, como «Guardar oferta»: mismo nombre y salario con otra dotación ⇒ otro código', () => {
-    const { filas } = planDeCargos(conCargos((e) => { e.cargos[1].grupoDotacionMasculina = 'M025'; }), { numOferta: 937, huella: HUELLA });
-    assert.deepEqual(filas.map((f) => f.cargo), [1, 2, 3, 4]);
-    const iguales = planDeCargos(conCargos((e) => { e.cargos[0].grupoEpp = 'EP001'; e.cargos[1].grupoEpp = 'EP001'; }), { numOferta: 937, huella: HUELLA }).filas;
-    assert.deepEqual(iguales.map((f) => f.cargo), [1, 1, 2, 3]);
+  it('el código de cargo es el de nómina que se le pase por línea; sin él (modo prueba) va nulo', () => {
+    assert.deepEqual(planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA, codigosNomina: [99, 99, 99, 339] }).filas.map((f) => f.cargo), [99, 99, 99, 339]);
+    assert.deepEqual(planDeCargos(conCargos(), { huella: HUELLA }).filas.map((f) => f.cargo), [null, null, null, null]);
   });
 
   it('escribe EXACTAMENTE las 47 columnas del INSERT de cargos de cmdGrabar.Click, en su orden; el horario se agrega solo si viene', () => {
@@ -263,20 +309,19 @@ describe('planDeCargos', () => {
     assert.equal(filas[0][COLUMNA_CARGO_HORARIO], '941');
   });
 
-  it('el código de cargo es un consecutivo por oferta: misma información ⇒ mismo código; otro salario u otro cargo ⇒ otro código', () => {
-    const { filas } = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA });
-    assert.deepEqual(filas.map((f) => f.cargo), [1, 1, 2, 3]);
-    assert.deepEqual(filas.map((f) => f.item), [1, 2, 3, 4], 'cada línea tiene su ítem: nunca se repite (sección, ítem, cargo)');
+  it('cada línea tiene su ítem (1, 2, 3…): nunca se repite (sección, ítem, cargo) aunque el cargo de nómina sea el mismo', () => {
+    const { filas } = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA, codigosNomina: [99, 99, 99, 339] });
+    assert.deepEqual(filas.map((f) => f.item), [1, 2, 3, 4]);
     const claves = filas.map((f) => `${f.cod_seccion}|${f.item}|${f.cargo}`);
     assert.equal(new Set(claves).size, claves.length);
   });
 
   it('cada valor va a la columna que le corresponde; lo que LiciColba no trae queda como lo inserta el formulario', () => {
-    const { filas } = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA });
+    const { filas } = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA, codigosNomina: [99, 99, 99, 339] });
     const { fadd, ...fila } = filas[0];
     assert.equal(fadd, AHORA);
     assert.deepEqual(fila, {
-      empresa: '01', undnegocio: 'BAQ', ncontrato: '', num_oferta: 937, consec: 1, concepto: 'ASE', cod_seccion: 0, tipo_cargo: '', item: 1, cargo: 1,
+      empresa: '01', undnegocio: 'BAQ', ncontrato: '', num_oferta: 937, consec: 1, concepto: 'ASE', cod_seccion: 0, tipo_cargo: '', item: 1, cargo: 99,
       jornada: 8, horassem: 48, cantidad: 4, vlr_unitario: 10000000, vlr_total: 40000000, codmun: '', salario: 1423500, dotm: '', dotf: '', riesgo: 1, tipocont: '',
       epp: '', examen: '', snextras: 0, snrecargos: 0, snfestivos: 0, snextrasf: 0, cnextras: 0, cnrecargos: 0, cnfestivos: 0, cnextrasf: 0,
       rnocturno: 0, ediurnas: 0, rfestivas: 0, enocturnas: 0, hfestivas: 0, efestivas: 0, enocturnasf: 0,

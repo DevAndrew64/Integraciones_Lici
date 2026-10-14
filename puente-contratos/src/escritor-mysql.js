@@ -4,8 +4,9 @@
  * nada de la estructura, en este orden:
  *
  *   1. un candado por solicitud (GET_LOCK): dos envíos simultáneos de la misma solicitud no crean dos ofertas;
- *   2. el cliente debe existir en Contratos (se busca por NIT; razón social y NIT se toman de allí) y el contador de
- *      ofertas de (empresa, UEN) debe existir en `fc_control`;
+ *   2. el cliente debe existir en Contratos (se busca por NIT; razón social y NIT se toman de allí), el contador de
+ *      ofertas de (empresa, UEN) debe existir en `fc_control` y cada cargo debe existir en la nómina de la UEN
+ *      (`<gl_undnegocios.dbnomina>.cargos`): su código de nómina es el que se escribe;
  *   3. ¿ya se envió? (la marca `LICICOLBA:<solicitud>:` en `pc_add`): se responde 409 con la oferta existente;
  *   4. reserva del número de oferta con UN solo UPDATE atómico sobre `fc_control` (MyISAM: no se puede revertir; un
  *      número reservado y no usado se pierde, igual que en Visual FoxPro) y comprobación de que nadie lo usó;
@@ -19,7 +20,7 @@
 import { ErrorNegocio } from './errores.js';
 import { digitoVerificacion } from './nit.js';
 import {
-  AHORA, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
+  AHORA, codigosDeNomina, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
   planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa,
 } from './oferta.js';
 
@@ -106,6 +107,31 @@ async function buscarHorarios(conexion, codigos) {
   if (codigos.length === 0) return new Set();
   const [filas] = await conexion.query('SELECT codigo FROM fc_horarios WHERE codigo IN (?)', [codigos]);
   return new Set(filas.map((f) => texto(f.codigo).toUpperCase()));
+}
+
+/** Un nombre de base de datos que se puede poner en el SQL tal cual (viene de `gl_undnegocios`, no del usuario, pero igual se valida). */
+const NOMBRE_DE_BASE = /^[A-Za-z0-9_]{1,64}$/;
+/** Sin permiso sobre la base o la tabla, o que no existen: se informa como dato a corregir, no como fallo interno. */
+const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1146]);
+
+/**
+ * La tabla `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
+ * `nominamn`), en el mismo servidor de Contratos. Devuelve sus filas o el error que impide escribir los cargos.
+ */
+async function leerCargosDeNomina(conexion, empresa, undnegocio) {
+  const [unidades] = await conexion.query('SELECT dbnomina FROM gl_undnegocios WHERE codigo = ? AND empresa = ?', [undnegocio, empresa]);
+  const bases = [...new Set(unidades.map((u) => texto(u.dbnomina)).filter(Boolean))];
+  if (bases.length !== 1 || !NOMBRE_DE_BASE.test(bases[0])) {
+    return { error: `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina). Avise a Contratos.` };
+  }
+  const base = bases[0];
+  try {
+    const [filas] = await conexion.query(`SELECT * FROM \`${base}\`.cargos`);
+    return { base, filas };
+  } catch (error) {
+    if (!ERRORES_DE_ACCESO.has(error?.errno)) throw error;
+    return { base, error: `No se pudo leer ${base}.cargos para tomar el código de nómina de los cargos (código ${error.errno}). El usuario de la conexión necesita permiso de lectura (SELECT) sobre ${base}.cargos.` };
+  }
 }
 
 /** Reserva el siguiente número de oferta de (empresa, UEN). El UPDATE es atómico: dos reservas simultáneas nunca reciben el mismo número. */
@@ -216,7 +242,18 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
             errores.push({ campo: `cargos[${i}].codigoHorario`, mensaje: `El horario «${c.codigoHorario}» no existe en Contratos. Créelo en Contratos y vuelva a enviar.` });
           }
         });
-        const planCargos = planDeCargos(datosDeContratos, { huella });
+        let codigosNomina = null;
+        if (cargos.length > 0) {
+          const nomina = await leerCargosDeNomina(conexion, empresa, undnegocio);
+          if (nomina.error) errores.push({ campo: 'cargos', mensaje: nomina.error });
+          else {
+            const cruce = codigosDeNomina(cargos, nomina.filas, { empresa, undnegocio, base: nomina.base });
+            errores.push(...cruce.errores);
+            advertencias.push(...cruce.advertencias);
+            codigosNomina = cruce.codigos;
+          }
+        }
+        const planCargos = planDeCargos(datosDeContratos, { huella, codigosNomina });
         errores.push(...planCargos.errores);
         errores.push(...planDeOfertaAdjudicada(datosDeContratos, { cliente: clienteParaPlan, ...contexto }).errores);
         const precios = planDePreciosOferta(datosDeContratos);
@@ -227,7 +264,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
         const { fila: filaTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella });
-        const { filas: filasDeCargos } = planDeCargos(datosDeContratos, { numOferta, huella });
+        const { filas: filasDeCargos } = planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina });
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
         await conexion.beginTransaction();

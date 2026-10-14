@@ -279,6 +279,60 @@ export function noEscritoPorColumnasAusentes(datos, omitidas = {}) {
 
 const pesos = (n) => Math.round(n).toLocaleString('es-CO');
 
+/** Desde este largo, el nombre de nómina puede venir cortado (`nominamn.cargos.nombre` es char(30)). */
+const LARGO_NOMBRE_CORTADO = 30;
+
+/**
+ * Código de nómina de cada línea de cargo. Contratos muestra el cargo de la oferta buscando su código en la tabla `cargos`
+ * de la base de nómina de la UEN (`gl_undnegocios.dbnomina`: `nominabq` en Barranquilla, `nominamn` en la mina), así que el
+ * código escrito debe ser ese, no un número propio de LiciColba.
+ *
+ * - Se cruza por nombre (sin tildes, mayúsculas ni espacios repetidos). Un nombre de nómina cortado (30 caracteres) sirve
+ *   si el de LiciColba empieza igual. El turnante automático de LiciColba («Turnante — …») es el cargo TURNANTE.
+ * - Solo cuentan las filas sin empresa/UEN o de la misma empresa y UEN de la oferta (`nominamn.cargos` no tiene esas columnas).
+ *   Se prefieren las generales (sin UEN), que son los cargos operativos; las de la UEN son el personal de la sede.
+ * - Si hay varios códigos con el mismo nombre se usa el menor y se avisa. Si no hay ninguno, es un error: no se escribe.
+ *
+ * @param {object[]} cargos `datos.cargos`
+ * @param {Record<string, unknown>[]} filasNomina filas de `<dbnomina>.cargos`
+ * @param {{empresa: string, undnegocio: string, base: string}} contexto
+ * @returns {{codigos: (number | null)[], errores: {campo: string, mensaje: string}[], advertencias: {campo: string, mensaje: string}[]}}
+ */
+export function codigosDeNomina(cargos, filasNomina, { empresa, undnegocio, base }) {
+  const errores = [];
+  const advertencias = [];
+  const mayus = (v) => String(v ?? '').trim().toUpperCase();
+  const candidatas = filasNomina
+    .map((f) => ({ codigo: Number(f.codigo), nombre: String(f.nombre ?? '').trim(), empresa: mayus(f.empresa), undnegocio: mayus(f.undnegocio) }))
+    .filter((f) => Number.isInteger(f.codigo) && f.codigo > 0 && f.nombre)
+    .filter((f) => (!f.empresa || f.empresa === mayus(empresa)) && (!f.undnegocio || f.undnegocio === mayus(undnegocio)))
+    .map((f) => ({ ...f, clave: comparable(f.nombre) }));
+
+  const codigos = cargos.map((c, i) => {
+    const campo = `cargos[${i}].nombre`;
+    const nombre = comparable(c.nombre ?? '');
+    if (!nombre) {
+      errores.push({ campo, mensaje: `La línea ${i + 1} de cargos no tiene nombre de cargo.` });
+      return null;
+    }
+    let opciones = candidatas.filter((f) => f.clave === nombre);
+    if (opciones.length === 0) opciones = candidatas.filter((f) => f.nombre.length >= LARGO_NOMBRE_CORTADO && nombre.startsWith(f.clave));
+    if (opciones.length === 0 && nombre.startsWith('TURNANTE')) opciones = candidatas.filter((f) => f.clave === 'TURNANTE');
+    if (opciones.length === 0) {
+      errores.push({ campo, mensaje: `El cargo «${String(c.nombre).trim()}» no existe en la nómina de la UEN ${undnegocio} (${base}.cargos). Use el nombre del cargo como está en nómina o pida a Nómina que lo cree, y vuelva a enviar.` });
+      return null;
+    }
+    const generales = opciones.filter((f) => !f.undnegocio);
+    const todos = [...new Set(opciones.map((f) => f.codigo))].sort((a, b) => a - b);
+    const elegido = Math.min(...(generales.length > 0 ? generales : opciones).map((f) => f.codigo));
+    if (todos.length > 1) {
+      advertencias.push({ campo, mensaje: `En ${base}.cargos hay varios cargos «${String(c.nombre).trim()}» (códigos ${todos.join(', ')}): se escribió el ${elegido}. Revíselo en Contratos.` });
+    }
+    return elegido;
+  });
+  return { codigos, errores, advertencias };
+}
+
 /**
  * Filas de `fc_contratos_cargos_iniciales`: una por línea de cargo, con el mismo orden y los mismos valores que el INSERT de
  * Visual FoxPro. Los grupos de dotación (M/F), EPP, examen y curso van cuando LiciColba los identifica (uno por tipo). Lo que
@@ -286,29 +340,25 @@ const pesos = (n) => Math.round(n).toLocaleString('es-CO');
  * tipo de contrato, municipio, bonos y recargos) queda en el valor con que el formulario lo inserta —el mismo de la base—
  * y se completa en Contratos.
  *
- * - El **código de cargo es un consecutivo por oferta** (ya no el código de nómina): la misma información de cargo (nombre y
- *   salario) tiene el mismo código y dos cargos distintos nunca comparten uno; así lo exige el formulario.
+ * - El **código de cargo es el de la nómina de la UEN** (`codigosNomina`, ver `codigosDeNomina`): Contratos muestra el cargo
+ *   buscando ese código en `nominabq.cargos`, `nominamn.cargos`… Sin él (modo prueba, que no consulta la base) va nulo.
  * - `item` es el número de la línea dentro de la oferta (1, 2, 3…): nunca se repite dentro de (sección, cargo), como exige el formulario.
  * - `valorTotal` debe ser `valorUnitario × cantidad` (con 1 peso de holgura por el redondeo a 5 decimales).
  * - Si los cargos no suman lo que equivale la mano de obra de la tarifa, avisa (puede faltar algún cargo): no bloquea.
  *
  * @param {object} datos contrato v1 ya validado
- * @param {{numOferta?: number | null, huella?: string}} contexto `numOferta` null = aún no reservado (modo prueba)
+ * @param {{numOferta?: number | null, huella?: string, codigosNomina?: (number | null)[] | null}} contexto `numOferta` null = aún
+ *   no reservado (modo prueba); `codigosNomina[i]` = código de nómina de la línea i
  * @returns {{errores: {campo: string, mensaje: string}[], advertencias: {campo: string, mensaje: string}[], filas: Record<string, unknown>[]}}
  */
-export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
+export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomina = null } = {}) {
   const errores = [];
   const advertencias = [];
   const cargos = datos.cargos ?? [];
   if (cargos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
   const { oferta, origen, contrato, tarifa } = datos;
 
-  const codigos = new Map();
   const filas = cargos.map((c, i) => {
-    // Llave del consecutivo, como «Guardar oferta»: mismo nombre, grupos (dotación, EPP, examen, curso) y salario ⇒ mismo código.
-    const grupos = [c.grupoDotacionFemenina, c.grupoDotacionMasculina, c.grupoEpp, c.grupoExamen, c.grupoCurso].map((g) => g ?? '');
-    const clave = [comparable(c.nombre), ...grupos, c.salario].join('|');
-    if (!codigos.has(clave)) codigos.set(clave, codigos.size + 1);
     if (Math.abs(c.valorTotal - c.valorUnitario * c.cantidad) > 1) {
       errores.push({ campo: `cargos[${i}].valorTotal`, mensaje: 'No coincide con valorUnitario × cantidad.' });
     }
@@ -322,7 +372,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '' } = {}) {
       cod_seccion: 0, // la sección de nómina la digita Nómina en Contratos
       tipo_cargo: '',
       item: i + 1,
-      cargo: codigos.get(clave),
+      cargo: codigosNomina?.[i] ?? null,
       jornada: c.jornada,
       horassem: c.horasSemana,
       cantidad: c.cantidad,
