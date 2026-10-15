@@ -96,6 +96,8 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       // Sin destino elegido viaja vacío (nunca se infiere); la tarifa sale de los totales con el A.I.U. incluido (8 %).
       oferta: { empresa: null, undnegocio: null, tipoAdm: null, origenProceso: null, codServicio: null, descripcionServicio: null },
       tarifa: { manoObra: 13111200, insumos: 0, maquinaria: 0, administrativos: 5400, valorAgregado: 0, serviciosNoContinuos: 0 },
+      // Pestaña «Costos Admtivos»: cada concepto con su valor mensual sin A.I.U.
+      costosAdministrativos: [{ concepto: 'Papelería', valorMensual: 5000 }],
     });
     expect(json.ok).toBe(true);
     expect(String(json.mensaje)).toContain('modo prueba');

@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cargosParaPuente, type CargoPantallaDto } from './cargos';
-import { armarPayloadContratos, insumosParaPuente, leerDestino } from './payload';
+import { armarPayloadContratos, costosAdministrativosParaPuente, insumosParaPuente, leerDestino } from './payload';
 
 const RUTA = resolve(process.cwd(), 'puente-contratos/test/fixtures/payload-licicolba.json');
 
@@ -34,6 +34,16 @@ function payload() {
       { codigo: '18111', nombre: 'JABON LIQUIDO', unidad: 'GL', cantidad: 2, frecuenciaMeses: 1, valorUnitarioSinIva: 25000, valorUnitarioConIva: 29750, valorMensual: 50000, valorAgregado: false },
       { codigo: '01050', nombre: 'BOLSA', unidad: 'UN', cantidad: 10, frecuenciaMeses: 1, valorUnitarioSinIva: 1234.5, valorUnitarioConIva: 1469.06, valorMensual: 12345, valorAgregado: false },
     ]),
+    // Administrativos 5.000 = pólizas + impuestos + papelería; Microsoft en 0 no viaja.
+    costosAdministrativos: costosAdministrativosParaPuente({
+      variables: [
+        { concepto: 'Papelería', cantidad: 5, valorUnitario: 300, valorMensual: 1500 },
+        { concepto: 'Microsoft', cantidad: 1, valorUnitario: 0, valorMensual: 0 },
+      ],
+      totalVariables: 1500,
+      valorMensualPolizas: 2500,
+      valorMensualImpuestos: 1000,
+    }),
   });
 }
 

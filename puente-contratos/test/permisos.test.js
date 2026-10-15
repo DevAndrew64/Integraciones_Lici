@@ -39,10 +39,12 @@ describe('sentenciasDePermisos', () => {
     ]);
   });
 
-  it('módulo implementado (6): tarifa, cargos, oferta adjudicada, lista de precios, clientes, conceptos, contador y horarios', () => {
+  it('módulo implementado (6): tarifa, cargos, oferta adjudicada, lista de precios, insumos y costos administrativos, clientes, conceptos, contador y horarios', () => {
     assert.equal(MODULO_IMPLEMENTADO, 6);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 8);
+    assert.equal(sentencias.length, 11);
+    assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_contratos_costos_admtivos_iniciales` TO 'puente'@'%';"));
+    assert.ok(sentencias.includes("GRANT SELECT, INSERT, DELETE ON `almacen`.`fc_elemxcont` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_contratos_cargos_iniciales` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_preciosventas_oferta` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';"));
@@ -59,9 +61,9 @@ describe('sentenciasDePermisos', () => {
     assert.ok(!control.includes('SELECT,') && !control.includes('SELECT ON'), 'nunca SELECT de toda la fila: trae usuario y clave de conexión');
   });
 
-  it('nunca pide DELETE ni UPDATE de datos de la oferta: solo el contador de fc_control se actualiza', () => {
+  it('nunca pide UPDATE de datos de la oferta (solo el contador de fc_control); DELETE solo en fc_elemxcont, para borrar lo propio si el envío falla', () => {
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: 99 });
-    assert.deepEqual(sentencias.filter((s) => /DELETE/.test(s)), []);
+    assert.deepEqual(sentencias.filter((s) => /DELETE/.test(s)).map((s) => /`(\w+)` TO /.exec(s)[1]), ['fc_elemxcont']);
     assert.deepEqual(sentencias.filter((s) => /UPDATE/.test(s)).map((s) => /`(\w+)` TO /.exec(s)[1]), ['fc_control']);
   });
 

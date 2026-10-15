@@ -68,11 +68,31 @@
   "insumos": [
     {
       "codigo": "18111",
-      "valorUnitario": 25000
+      "valorUnitario": 25000,
+      "cantidad": 2,
+      "frecuenciaMeses": 1,
+      "valorUnitarioConIva": 29750
     },
     {
       "codigo": "01050",
-      "valorUnitario": 1234.5
+      "valorUnitario": 1234.5,
+      "cantidad": 10,
+      "frecuenciaMeses": 1,
+      "valorUnitarioConIva": 1469.06
+    }
+  ],
+  "costosAdministrativos": [
+    {
+      "concepto": "Pólizas",
+      "valorMensual": 2500
+    },
+    {
+      "concepto": "Impuestos",
+      "valorMensual": 1000
+    },
+    {
+      "concepto": "Papelería",
+      "valorMensual": 1500
     }
   ]
 }

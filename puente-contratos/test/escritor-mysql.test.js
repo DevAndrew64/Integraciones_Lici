@@ -43,6 +43,7 @@ function falso(respuestas = {}) {
     [/pc_add LIKE/, [[]]],
     [/FROM fc_clientes/, [[{ nit: '900123456-8  ', rsocial: 'CLIENTE DE PRUEBA S.A.S.' }]]],
     [/^SELECT empresa, undnegocio FROM fc_control/, [[{ empresa: '01', undnegocio: 'BAQ' }]]],
+    [/FROM fc_conceptos_costos_admtivos/, [[{ id: 1, descripcion: 'PÓLIZAS' }, { id: 2, descripcion: 'IMPUESTOS' }, { id: 6, descripcion: 'PAPELERÍA Y OFICINAS  ' }, { id: 11, descripcion: 'OTROS' }]]],
     [/FROM fc_conceptos/, [[{ empresa: '01', undnegocio: 'BAQ', codcpto: 'ASE' }]]],
     [/FROM fc_horarios/, [[{ codigo: '941' }]]],
     [/FROM gl_undnegocios/, [[{ dbnomina: 'nominabq  ' }]]],
@@ -55,6 +56,9 @@ function falso(respuestas = {}) {
     [/^INSERT INTO fc_contratos_cargos_iniciales/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_ofertas_adjudicadas/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_preciosventas_oferta/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_contratos_costos_admtivos_iniciales/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_elemxcont/, [{ affectedRows: 1 }]],
+    [/^DELETE FROM fc_elemxcont/, [{ affectedRows: 1 }]],
   ].map(([patron, valor]) => [patron, respuestas[patron.source] ?? valor]);
   const conexion = {
     async query(sql, params = []) {
@@ -417,6 +421,71 @@ describe('escritor MySQL — lista de precios de insumos (módulo 6)', () => {
     const error = await rechaza(escribir(f.pool, conInsumos()), 422, 'DATOS_INVALIDOS');
     assert.equal(error.extra.numeroPerdido, 937);
     assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
+  });
+});
+
+describe('escritor MySQL — pestañas Costos Admtivos e Insumos de la Oferta Inicial', () => {
+  const completa = () => datos((e) => {
+    e.insumos = [
+      { codigo: '18111', nombre: 'Jabón', valorUnitario: 10000, cantidad: 3, frecuenciaMeses: 2, valorUnitarioConIva: 11900 },
+      { codigo: '01050', valorUnitario: 500, cantidad: 10, frecuenciaMeses: 1, valorUnitarioConIva: 595 },
+    ];
+    e.costosAdministrativos = [{ concepto: 'Pólizas', valorMensual: 2500 }, { concepto: 'Papelería', valorMensual: 1500 }, { concepto: 'Microsoft', valorMensual: 300 }];
+  });
+
+  it('lee el catálogo antes de reservar el número y escribe costos y luego insumos en la MISMA transacción, al final', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, completa());
+    assert.ok(f.indice(/FROM fc_conceptos_costos_admtivos/) < f.indice(/^UPDATE fc_control/));
+    const orden = [/^INSERT INTO fc_preciosventas_oferta/, /^INSERT INTO fc_contratos_costos_admtivos_iniciales/, /^INSERT INTO fc_elemxcont/, /^COMMIT$/].map((p) => f.indice(p));
+    assert.deepEqual([...orden].sort((a, b) => a - b), orden);
+    assert.deepEqual(r.escrito.costosAdministrativos, [{ id_cpto_costo: 1, valor: 2500 }, { id_cpto_costo: 6, valor: 1500 }, { id_cpto_costo: 11, valor: 300 }]);
+    assert.deepEqual(r.escrito.insumosOferta, [
+      { codele: '18111', cantidad: 3, frecuencia: 2, vlr_unitario: 11900 },
+      { codele: '01050', cantidad: 10, frecuencia: 1, vlr_unitario: 595 },
+    ]);
+    assert.ok(r.advertencias.some((a) => /OTROS.*Microsoft/.test(a.mensaje)));
+  });
+
+  it('cada fila lleva el número reservado, el NIT y nombre del cliente de Contratos y la marca de origen', async () => {
+    const f = falso();
+    await escribir(f.pool, completa());
+    const [costo] = f.de(/^INSERT INTO fc_contratos_costos_admtivos_iniciales/);
+    assert.equal(costo.sql, 'INSERT INTO fc_contratos_costos_admtivos_iniciales (empresa, undnegocio, num_oferta, ncontrato, consec, concepto, punto_entrega, nombre_punto, codmun, id_cpto_costo, valor, user_add, fadd, pc_add) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)');
+    assert.deepEqual(costo.params.slice(0, 11), ['01', 'BAQ', 937, '', 1, 'ASE', '0000000000', 'CLIENTE DE PRUEBA S.A.S.', '', 1, 2500]);
+    assert.match(costo.params.at(-1), /^LICICOLBA:42:/);
+    const [insumo] = f.de(/^INSERT INTO fc_elemxcont/);
+    assert.deepEqual(insumo.params.slice(0, 12), ['01', 'BAQ', '900123456-8', '', 'F', '18111', 3, 2, 11900, 0, 937, 1]);
+  });
+
+  it('sin costos administrativos no consulta el catálogo ni toca la tabla', async () => {
+    const f = falso();
+    await escribir(f.pool);
+    assert.ok(!f.hubo(/costos_admtivos/) && !f.hubo(/fc_elemxcont/));
+  });
+
+  it('un id que no es auto_increment se asigna MAX(id) + 1 también en estas tablas', async () => {
+    const f = falso();
+    await escribir(f.pool, completa(), { idManualPorTabla: { fc_contratos_costos_admtivos_iniciales: true, fc_elemxcont: true } });
+    assert.deepEqual(f.de(/MAX\(id\)/).map((s) => /FROM (\w+)/.exec(s.sql)[1]), [...Array(3).fill('fc_contratos_costos_admtivos_iniciales'), 'fc_elemxcont', 'fc_elemxcont']);
+  });
+
+  it('si falla un insumo (MyISAM no se revierte) borra SOLO lo suyo: misma oferta, usuario y marca; el número se pierde', async () => {
+    let n = 0;
+    const f = falso({ [/^INSERT INTO fc_elemxcont/.source]: () => { n += 1; if (n === 2) throw Object.assign(new Error('Data too long'), { errno: 1406 }); return [{ affectedRows: 1 }]; } });
+    const error = await rechaza(escribir(f.pool, completa()), 422, 'DATOS_INVALIDOS');
+    assert.equal(error.extra.numeroPerdido, 937);
+    assert.ok(f.indice(/^ROLLBACK$/) < f.indice(/^DELETE FROM fc_elemxcont/));
+    const [borrado] = f.de(/^DELETE FROM fc_elemxcont/);
+    assert.equal(borrado.sql, 'DELETE FROM fc_elemxcont WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? AND user_add = ? AND pc_add = ?');
+    assert.deepEqual(borrado.params.slice(0, 4), ['01', 'BAQ', 937, 'LICICOLBA']);
+    assert.match(borrado.params[4], /^LICICOLBA:42:/);
+  });
+
+  it('si falla antes de los insumos no borra nada en fc_elemxcont', async () => {
+    const f = falso({ [/^INSERT INTO fc_contratos_costos_admtivos_iniciales/.source]: () => { throw Object.assign(new Error('x'), { errno: 1406 }); } });
+    await rechaza(escribir(f.pool, completa()), 422, 'DATOS_INVALIDOS');
+    assert.ok(!f.hubo(/fc_elemxcont/));
   });
 });
 

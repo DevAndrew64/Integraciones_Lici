@@ -553,6 +553,19 @@ CREATE TABLE `fc_conceptos` (
   KEY `codcpto` (`codcpto`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='tabla de conceptos de facturacion';
 
+-- Catálogo de conceptos de la pestaña «Costos Admtivos» (id_cpto_costo), como en la base viva.
+CREATE TABLE `fc_conceptos_costos_admtivos` (
+  `id` int(18) NOT NULL AUTO_INCREMENT,
+  `descripcion` varchar(150) DEFAULT '',
+  `user_add` varchar(36) DEFAULT '',
+  `fadd` datetime DEFAULT '0000-00-00 00:00:00',
+  `pc_add` varchar(180) DEFAULT '',
+  `user_mod` varchar(36) DEFAULT '',
+  `fmod` datetime DEFAULT '0000-00-00 00:00:00',
+  `pc_mod` varchar(180) DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 -- fc_control va reducida a lo que el puente usa: la real tiene 157 columnas, entre ellas usuario y clave de conexión.
 -- Una fila por (empresa, UEN); num_oferta guarda el ÚLTIMO número de oferta usado.
 CREATE TABLE `fc_control` (

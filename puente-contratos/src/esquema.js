@@ -116,6 +116,9 @@ export function largoDeColumna(real, tabla, columna) {
   return m ? Number(m[1]) : null;
 }
 
+/** Otras tablas donde el puente inserta filas y cuyo id puede no ser auto_increment. */
+const TABLAS_CON_ID = ['fc_contratos_costos_admtivos_iniciales', 'fc_elemxcont'];
+
 const columnaReal = (real, tabla, columna) => Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === columna)?.[1];
 const idManualDe = (real, tabla) => {
   const id = columnaReal(real, tabla, 'id');
@@ -138,7 +141,7 @@ export function opcionesDeEscritura(real) {
     idManual: idManualDe(real, tabla),
     largoUserAdd: largoDeColumna(real, tabla, 'user_add'),
     largoPcAdd: largoDeColumna(real, tabla, 'pc_add'),
-    idManualPorTabla: Object.fromEntries(Object.keys(TABLAS_ADAPTABLES).map((n) => [n, idManualDe(real, n)])),
+    idManualPorTabla: Object.fromEntries([...Object.keys(TABLAS_ADAPTABLES), ...TABLAS_CON_ID].map((n) => [n, idManualDe(real, n)])),
     omitir,
   };
 }

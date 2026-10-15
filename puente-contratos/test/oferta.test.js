@@ -3,7 +3,8 @@ import { describe, it } from 'node:test';
 import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
-  codigosDeNomina, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
+  codigosDeNomina, conceptoDeCostoAdmtivo, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta,
+  planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from '../src/oferta.js';
 import { validarContrato } from '../src/validar.js';
 
@@ -187,6 +188,109 @@ describe('planDePreciosOferta (módulo 6)', () => {
       if (largo && typeof valor === 'string') assert.ok(valor.length <= Number(largo[1]), `${columna}: ${valor.length} > ${largo[1]}`);
     }
     assert.ok(!('id' in fila), 'el id lo pone la base (auto_increment)');
+  });
+});
+
+const cabeEnLaTabla = (tabla, fila) => {
+  const columnas = cargarEsquemaEsperado().tablas[tabla].columnas;
+  for (const [columna, valor] of Object.entries(fila)) {
+    const definicion = columnas[columna];
+    assert.ok(definicion, `la columna ${tabla}.${columna} no está en esquema-esperado.json`);
+    const largo = /^(?:var)?char\((\d+)\)$/.exec(definicion.tipo ?? '');
+    if (largo && typeof valor === 'string') assert.ok(valor.length <= Number(largo[1]), `${columna}: ${valor.length} > ${largo[1]}`);
+  }
+};
+
+describe('planDeInsumosOferta (pestaña Insumos, fc_elemxcont)', () => {
+  const conInsumos = (cambiar = () => {}) => datos((e) => {
+    e.insumos = [
+      { codigo: '18111', nombre: 'Jabón', valorUnitario: 10000, cantidad: 3, frecuenciaMeses: 2, valorUnitarioConIva: 11900.123456 },
+      { codigo: 'ab01', nombre: 'Bolsa', valorUnitario: 500, cantidad: 10, frecuenciaMeses: 1, valorUnitarioConIva: 595 },
+    ];
+    cambiar(e);
+  });
+
+  it('una fila por insumo como las ofertas a mano: tipo F, cantidad, frecuencia y valor CON IVA; NIT y nombre del cliente', () => {
+    const { errores, advertencias, filas } = planDeInsumosOferta(conInsumos(), { numOferta: 937, huella: HUELLA, cliente: CLIENTE });
+    assert.deepEqual([errores, advertencias], [[], []]);
+    assert.deepEqual(filas.map(describirFila), [
+      {
+        empresa: '01', undnegocio: 'BAQ', nit: '900123456-8', ncontrato: '', tipo_insumo: 'F', codele: '18111', cantidad: 3, frecuencia: 2, vlr_unitario: 11900.12346,
+        cantsoli: 0, num_oferta: 937, consec: 1, concepto: 'ASE', codmun: '', fadd: 'NOW()', user_add: 'LICICOLBA', pc_add: marcaDeOrigen(42, HUELLA), nitloc: '',
+        nombre_punto: 'CLIENTE DE PRUEBA S.A.S.', clase: 1, vlr_unitario_va: 0,
+      },
+      {
+        empresa: '01', undnegocio: 'BAQ', nit: '900123456-8', ncontrato: '', tipo_insumo: 'F', codele: 'AB01', cantidad: 10, frecuencia: 1, vlr_unitario: 595,
+        cantsoli: 0, num_oferta: 937, consec: 1, concepto: 'ASE', codmun: '', fadd: 'NOW()', user_add: 'LICICOLBA', pc_add: marcaDeOrigen(42, HUELLA), nitloc: '',
+        nombre_punto: 'CLIENTE DE PRUEBA S.A.S.', clase: 1, vlr_unitario_va: 0,
+      },
+    ]);
+  });
+
+  it('un insumo sin cantidad, frecuencia o valor con IVA no va a la pestaña (sí a la lista de precios) y se avisa', () => {
+    const { advertencias, filas } = planDeInsumosOferta(conInsumos((e) => {
+      delete e.insumos[0].valorUnitarioConIva;
+      e.insumos[1].cantidad = 0;
+    }), { cliente: CLIENTE });
+    assert.deepEqual(filas, []);
+    assert.deepEqual(advertencias.map((a) => a.mensaje), ['Sin cantidad, frecuencia o valor con IVA (van solo a la lista de precios): 18111, ab01.']);
+  });
+
+  it('sin insumos no hay filas; las columnas existen y lo que se escribe cabe', () => {
+    assert.deepEqual(planDeInsumosOferta(datos()).filas, []);
+    const largo = { nit: '900123456-8', rsocial: 'Ñ'.repeat(200) };
+    const [fila] = planDeInsumosOferta(conInsumos(), { numOferta: 1, huella: HUELLA, cliente: largo }).filas;
+    assert.equal(fila.nombre_punto.length, 60);
+    cabeEnLaTabla('fc_elemxcont', fila);
+  });
+});
+
+describe('planDeCostosAdministrativos (pestaña Costos Admtivos)', () => {
+  const conCostos = (costos) => datos((e) => (e.costosAdministrativos = costos));
+
+  it('conceptoDeCostoAdmtivo: por nombre sin tildes, por alias, y si no existe a «OTROS»', () => {
+    assert.equal(conceptoDeCostoAdmtivo('Pólizas').id, 1);
+    assert.equal(conceptoDeCostoAdmtivo('Papelería').id, 6);
+    assert.equal(conceptoDeCostoAdmtivo('Plan de datos').id, 8);
+    assert.equal(conceptoDeCostoAdmtivo('Transporte de insumos').id, 3);
+    assert.deepEqual(conceptoDeCostoAdmtivo('Microsoft'), { id: 11, descripcion: 'OTROS', esOtros: true });
+    assert.equal(conceptoDeCostoAdmtivo('Microsoft', [{ id: 1, descripcion: 'PÓLIZAS' }]), null);
+  });
+
+  it('una fila por concepto de Contratos con su valor mensual en pesos; lo que no existe se suma en OTROS y se avisa', () => {
+    const { errores, advertencias, filas } = planDeCostosAdministrativos(conCostos([
+      { concepto: 'Pólizas', valorMensual: 2500.4 },
+      { concepto: 'Impuestos', valorMensual: 1000 },
+      { concepto: 'Papelería', valorMensual: 1500 },
+      { concepto: 'Microsoft', valorMensual: 300 },
+      { concepto: 'Carnet', valorMensual: 200 },
+      { concepto: 'Kontrol ID', valorMensual: 0 },
+    ]), { numOferta: 937, huella: HUELLA, cliente: CLIENTE });
+    assert.deepEqual(errores, []);
+    assert.deepEqual(advertencias.map((a) => a.mensaje), ['Van en «OTROS» porque Contratos no tiene ese concepto: Microsoft, Carnet.']);
+    const comun = {
+      empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', punto_entrega: '0000000000',
+      nombre_punto: 'CLIENTE DE PRUEBA S.A.S.', codmun: '', user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: marcaDeOrigen(42, HUELLA),
+    };
+    assert.deepEqual(filas.map(describirFila), [
+      { ...comun, id_cpto_costo: 1, valor: 2500 },
+      { ...comun, id_cpto_costo: 2, valor: 1000 },
+      { ...comun, id_cpto_costo: 6, valor: 1500 },
+      { ...comun, id_cpto_costo: 11, valor: 500 },
+    ].map((f) => Object.fromEntries(Object.keys(filas[0]).map((k) => [k, f[k]]))));
+  });
+
+  it('usa el catálogo que se le pase (el real de la base) y sin «OTROS» un concepto desconocido detiene el envío', () => {
+    const catalogo = [{ id: 7, descripcion: 'PÓLIZAS' }];
+    const { errores, filas } = planDeCostosAdministrativos(conCostos([{ concepto: 'Pólizas', valorMensual: 1 }, { concepto: 'Carnet', valorMensual: 1 }]), { catalogo });
+    assert.deepEqual(filas.map((f) => f.id_cpto_costo), [7]);
+    assert.deepEqual(errores.map((e) => e.campo), ['costosAdministrativos[1].concepto']);
+  });
+
+  it('sin costos no hay filas; las columnas existen y lo que se escribe cabe', () => {
+    assert.deepEqual(planDeCostosAdministrativos(datos()).filas, []);
+    const [fila] = planDeCostosAdministrativos(conCostos([{ concepto: 'Pólizas', valorMensual: 1 }]), { numOferta: 1, huella: HUELLA, cliente: CLIENTE }).filas;
+    cabeEnLaTabla('fc_contratos_costos_admtivos_iniciales', fila);
   });
 });
 

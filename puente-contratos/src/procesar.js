@@ -1,6 +1,8 @@
 import { ErrorNegocio } from './errores.js';
 import { nitConDV } from './nit.js';
-import { describirFila, noEscritoEnLaOferta, planDeCargos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa } from './oferta.js';
+import {
+  describirFila, noEscritoEnLaOferta, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa,
+} from './oferta.js';
 import { huella as calcularHuella, validarContrato } from './validar.js';
 
 /**
@@ -27,6 +29,13 @@ export const escritorPrueba = {
       const precios = planDePreciosOferta(datos);
       if (precios.filas.length > 0) escribiria.preciosOferta = precios.filas.map(describirFila);
       advertencias.push(...precios.errores, ...precios.advertencias);
+      const clienteDePrueba = { nit: nitCompleto, rsocial: datos.cliente.razonSocial };
+      const costos = planDeCostosAdministrativos(datos, { huella, cliente: clienteDePrueba });
+      if (costos.filas.length > 0) escribiria.costosAdministrativos = costos.filas.map(describirFila);
+      advertencias.push(...costos.errores, ...costos.advertencias);
+      const insumosOferta = planDeInsumosOferta(datos, { huella, cliente: clienteDePrueba });
+      if (insumosOferta.filas.length > 0) escribiria.insumosOferta = insumosOferta.filas.map(describirFila);
+      advertencias.push(...insumosOferta.errores, ...insumosOferta.advertencias);
     }
     return { escribiria, noEscrito: noEscritoEnLaOferta(datos), advertencias };
   },

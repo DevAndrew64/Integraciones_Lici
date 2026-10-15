@@ -13,8 +13,8 @@ import { esquemaHastaModulo } from './esquema.js';
 const IDENTIFICADOR = /^[A-Za-z0-9_.%-]+$/;
 
 export function clausulasDeTabla(tabla) {
+  if (tabla.uso === 'escritura') return ['SELECT', 'INSERT', ...(tabla.permisos ?? [])];
   if (tabla.permisos) return tabla.permisos;
-  if (tabla.uso === 'escritura') return ['SELECT', 'INSERT'];
   return [`SELECT (${Object.keys(tabla.columnas).join(', ')})`];
 }
 

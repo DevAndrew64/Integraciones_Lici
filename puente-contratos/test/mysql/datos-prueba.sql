@@ -14,6 +14,7 @@ DELETE FROM fc_clientes;
 DELETE FROM fc_control;
 DELETE FROM fc_conceptos;
 DELETE FROM fc_horarios;
+DELETE FROM fc_conceptos_costos_admtivos;
 
 INSERT INTO fc_clientes (undnegocio, nit, sucursal, rsocial, snbasertf) VALUES
   ('BAQ', '900123456-8', '00', 'CLIENTE DE PRUEBA S.A.S.', 'N');
@@ -32,3 +33,8 @@ INSERT INTO fc_conceptos (empresa, undnegocio, codcpto) VALUES
 INSERT INTO fc_horarios (codigo, horario, snactivo) VALUES
   ('941', 'LUN-VIE 6-14', 1),
   ('942', 'LUN-SAB 14-22', 1);
+
+INSERT INTO fc_conceptos_costos_admtivos (id, descripcion) VALUES
+  (1, 'PÓLIZAS'), (2, 'IMPUESTOS'), (3, 'TRANSPORTE INSUMOS'), (4, 'SUPERVISIÓN - VISITAS'), (5, 'VIÁTICOS SUPERVISIÓN'),
+  (6, 'PAPELERÍA Y OFICINAS'), (7, 'EXCEDENTE DE I.U.'), (8, 'PLANES DE DATOS'), (9, 'MANTENIMIENTO DE EQUIPOS'),
+  (10, 'VALORES AGREGADOS CUANDO X OBLIGACION SE REQUIERA'), (11, 'OTROS');

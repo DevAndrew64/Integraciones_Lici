@@ -11,7 +11,9 @@
  *   4. reserva del número de oferta con UN solo UPDATE atómico sobre `fc_control` (MyISAM: no se puede revertir; un
  *      número reservado y no usado se pierde, igual que en Visual FoxPro) y comprobación de que nadie lo usó;
  *   5. En UNA transacción: la tarifa (`fc_contratos_tarifa_inicial`), sus cargos (`fc_contratos_cargos_iniciales`), la oferta
- *      adjudicada (`fc_ofertas_adjudicadas`) y su lista de precios de insumos (`fc_preciosventas_oferta`). Las columnas de
+ *      adjudicada (`fc_ofertas_adjudicadas`), su lista de precios de insumos (`fc_preciosventas_oferta`), sus costos
+ *      administrativos (`fc_contratos_costos_admtivos_iniciales`) y, al final, sus insumos (`fc_elemxcont`, MyISAM: si algo
+ *      falla después, se borran las filas que alcanzó a escribir este envío). Las columnas de
  *      la tarifa y los cargos que esa base no tenga se omiten; si un `id` no es auto_increment, se asigna MAX(id) + 1.
  *
  * Todas las sentencias llevan parámetros; los nombres de tabla y columna son constantes del código, nunca datos. Nada de
@@ -21,13 +23,16 @@ import { ErrorNegocio } from './errores.js';
 import { digitoVerificacion } from './nit.js';
 import {
   AHORA, codigosDeNomina, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
-  planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa,
+  planDeCostosAdministrativos, planDeInsumosOferta, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from './oferta.js';
 
 const TABLA_TARIFA = 'fc_contratos_tarifa_inicial';
 const TABLA_CARGOS = 'fc_contratos_cargos_iniciales';
 const TABLA_OFERTAS = 'fc_ofertas_adjudicadas';
 const TABLA_PRECIOS = 'fc_preciosventas_oferta';
+const TABLA_COSTOS_ADMTIVOS = 'fc_contratos_costos_admtivos_iniciales';
+/** MyISAM (no se revierte con ROLLBACK): se escribe al final y, si algo falla, se borran las filas propias. */
+const TABLA_INSUMOS_OFERTA = 'fc_elemxcont';
 const INTENTOS_NUMERO = 3;
 const ESPERA_BLOQUEO_S = 10;
 
@@ -109,6 +114,20 @@ async function buscarHorarios(conexion, codigos) {
   return new Set(filas.map((f) => texto(f.codigo).toUpperCase()));
 }
 
+/** Catálogo de conceptos de costos administrativos de Contratos (`id_cpto_costo`). */
+async function leerConceptosCostosAdmtivos(conexion) {
+  const [filas] = await conexion.query('SELECT id, descripcion FROM fc_conceptos_costos_admtivos');
+  return filas.map((f) => ({ id: Number(f.id), descripcion: texto(f.descripcion) }));
+}
+
+/** Borra los insumos que este envío alcanzó a escribir en `fc_elemxcont` (MyISAM): solo los suyos, por número y marca. */
+async function borrarInsumosPropios(conexion, { empresa, undnegocio, numOferta, marca }) {
+  await conexion.query(
+    `DELETE FROM ${TABLA_INSUMOS_OFERTA} WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? AND user_add = ? AND pc_add = ?`,
+    [empresa, undnegocio, numOferta, USUARIO_PUENTE, marca],
+  );
+}
+
 /** Un nombre de base de datos que se puede poner en el SQL tal cual (viene de `gl_undnegocios`, no del usuario, pero igual se valida). */
 const NOMBRE_DE_BASE = /^[A-Za-z0-9_]{1,64}$/;
 /** Sin permiso sobre la base o la tabla, o que no existen: se informa como dato a corregir, no como fallo interno. */
@@ -183,6 +202,8 @@ function avisosDeCliente(datos, cliente) {
 export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null, largoPcAdd = null, idManualPorTabla = {}, omitir = {} } = {}) {
   const comoTarifa = { omitir: omitir[TABLA_TARIFA] ?? [], idManual: Boolean(idManualPorTabla[TABLA_TARIFA]) };
   const comoCargo = { omitir: omitir[TABLA_CARGOS] ?? [], idManual: Boolean(idManualPorTabla[TABLA_CARGOS]) };
+  const comoCosto = { idManual: Boolean(idManualPorTabla[TABLA_COSTOS_ADMTIVOS]) };
+  const comoInsumo = { idManual: Boolean(idManualPorTabla[TABLA_INSUMOS_OFERTA]) };
   return {
     async escribir(datos, { huella }) {
       const solicitudId = datos.origen.solicitudId;
@@ -258,8 +279,13 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         errores.push(...planDeOfertaAdjudicada(datosDeContratos, { cliente: clienteParaPlan, ...contexto }).errores);
         const precios = planDePreciosOferta(datosDeContratos);
         errores.push(...precios.errores);
+        const conceptosCostos = (datos.costosAdministrativos ?? []).length > 0 ? await leerConceptosCostosAdmtivos(conexion) : [];
+        const planCostos = planDeCostosAdministrativos(datosDeContratos, { huella, catalogo: conceptosCostos });
+        errores.push(...planCostos.errores);
+        const planInsumos = planDeInsumosOferta(datosDeContratos, { huella, cliente: clienteParaPlan });
+        errores.push(...planInsumos.errores);
         if (errores.length > 0) throw new ErrorNegocio(422, 'DATOS_INVALIDOS', 'Contratos no puede recibir esta oferta.', { errores });
-        advertencias.push(...planCargos.advertencias, ...precios.advertencias, ...avisosDeCliente(datos, cliente));
+        advertencias.push(...planCargos.advertencias, ...precios.advertencias, ...planCostos.advertencias, ...planInsumos.advertencias, ...avisosDeCliente(datos, cliente));
 
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
@@ -267,15 +293,27 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         const { filas: filasDeCargos } = planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina });
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
+        const { filas: filasDeCostos } = planDeCostosAdministrativos(datosDeContratos, { numOferta, huella, cliente, catalogo: conceptosCostos });
+        const { filas: filasDeInsumos } = planDeInsumosOferta(datosDeContratos, { numOferta, huella, cliente });
+        let insumosEscritos = false;
         await conexion.beginTransaction();
         try {
           await insertar(conexion, TABLA_TARIFA, filaTarifa, comoTarifa);
           for (const filaDeCargo of filasDeCargos) await insertar(conexion, TABLA_CARGOS, filaDeCargo, comoCargo);
           await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
           for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);
+          for (const filaDeCosto of filasDeCostos) await insertar(conexion, TABLA_COSTOS_ADMTIVOS, filaDeCosto, comoCosto);
+          // Lo último antes del COMMIT: fc_elemxcont es MyISAM y cada fila queda escrita al insertarla.
+          insumosEscritos = filasDeInsumos.length > 0;
+          for (const filaDeInsumo of filasDeInsumos) await insertar(conexion, TABLA_INSUMOS_OFERTA, filaDeInsumo, comoInsumo);
           await conexion.commit();
         } catch (error) {
           await conexion.rollback().catch(() => {});
+          if (insumosEscritos) {
+            await borrarInsumosPropios(conexion, { empresa, undnegocio, numOferta, marca: filasDeInsumos[0].pc_add }).catch((e) => {
+              console.error(JSON.stringify({ evento: 'insumos-sin-compensar', numOferta, codigo: e?.code ?? null }));
+            });
+          }
           error.numeroPerdido = numOferta;
           throw error;
         }
@@ -293,6 +331,8 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
             cargos: filasDeCargos.map((f) => ({ item: f.item, cargo: f.cargo, nombre: f.nom_cargo, cantidad: f.cantidad })),
             ofertaAdjudicada: describirFila(fila),
             preciosOferta: filasDePrecios.map((f) => ({ codigo: f.codigo, vr_costo: f.vr_costo, valor: f.valor })),
+            costosAdministrativos: filasDeCostos.map((f) => ({ id_cpto_costo: f.id_cpto_costo, valor: f.valor })),
+            insumosOferta: filasDeInsumos.map((f) => ({ codele: f.codele, cantidad: f.cantidad, frecuencia: f.frecuencia, vlr_unitario: f.vlr_unitario })),
             ...(Object.keys(omitir).length > 0 ? { columnasOmitidas: omitir } : {}),
           },
         };

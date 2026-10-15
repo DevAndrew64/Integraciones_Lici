@@ -1,5 +1,5 @@
 import { porcentajeAIU, valorConAIU, type ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
-import type { FilaInsumoPantallaDto, TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
+import type { AdministrativosPantallaDto, FilaInsumoPantallaDto, TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { CargoPayload } from './cargos';
 import type { ErrorCampo, PayloadContratosV1 } from './cliente';
 
@@ -64,10 +64,22 @@ export function normalizarNit(valor: string | null | undefined): string | null {
   return conDigitoVerificacion ? conDigitoVerificacion[1] : t;
 }
 
-/** Insumo de la lista de precios de la oferta (módulo 6): código de elemento del almacén y costo unitario sin IVA ni A.I.U. */
+/**
+ * Insumo de la oferta: código de elemento del almacén y costo unitario sin IVA ni A.I.U. (lista de precios), más la cantidad,
+ * la frecuencia en meses y el valor unitario con IVA con que la pantalla calcula su valor mensual (pestaña Insumos).
+ */
 export interface InsumoPayload {
   codigo: string;
   valorUnitario: number;
+  cantidad: number;
+  frecuenciaMeses: number;
+  valorUnitarioConIva: number;
+}
+
+/** Costo administrativo mensual de la oferta, sin A.I.U. (pestaña Costos Admtivos de Contratos). */
+export interface CostoAdministrativoPayload {
+  concepto: string;
+  valorMensual: number;
 }
 
 /**
@@ -79,7 +91,28 @@ export function insumosParaPuente(filas: FilaInsumoPantallaDto[] | null | undefi
   return (filas ?? [])
     .filter((f) => !f.valorAgregado && /^[A-Za-z0-9]{1,10}$/.test(String(f.codigo ?? '').trim()))
     .filter((f) => Number.isFinite(f.valorUnitarioSinIva) && f.valorUnitarioSinIva >= 0)
-    .map((f) => ({ codigo: f.codigo.trim(), valorUnitario: f.valorUnitarioSinIva }));
+    .map((f) => ({
+      codigo: f.codigo.trim(),
+      valorUnitario: f.valorUnitarioSinIva,
+      cantidad: Number.isFinite(f.cantidad) && f.cantidad > 0 ? f.cantidad : 0,
+      // La pantalla trata una frecuencia vacía o en 0 como mensual.
+      frecuenciaMeses: Number.isFinite(f.frecuenciaMeses) && f.frecuenciaMeses > 0 ? f.frecuenciaMeses : 1,
+      valorUnitarioConIva: Number.isFinite(f.valorUnitarioConIva) && f.valorUnitarioConIva >= 0 ? f.valorUnitarioConIva : 0,
+    }));
+}
+
+/**
+ * Los costos administrativos de la pantalla, uno por concepto con su valor mensual sin A.I.U.: pólizas, impuestos y cada
+ * variable administrativa. Los que valen 0 no viajan. El puente los lleva al concepto de Contratos de igual nombre (o a OTROS).
+ */
+export function costosAdministrativosParaPuente(adm: AdministrativosPantallaDto | null | undefined): CostoAdministrativoPayload[] {
+  if (!adm) return [];
+  const lista: CostoAdministrativoPayload[] = [
+    { concepto: 'Pólizas', valorMensual: adm.valorMensualPolizas },
+    { concepto: 'Impuestos', valorMensual: adm.valorMensualImpuestos },
+    ...(adm.variables ?? []).map((v) => ({ concepto: String(v.concepto ?? '').trim(), valorMensual: v.valorMensual })),
+  ];
+  return lista.filter((c) => c.concepto !== '' && Number.isFinite(c.valorMensual) && c.valorMensual > 0);
 }
 
 /**
@@ -95,10 +128,12 @@ export function armarPayloadContratos(d: {
   destino?: Partial<DestinoContratos> | null;
   /** Líneas de cargo ya convertidas (`cargosParaPuente`); sin ellas la oferta viaja sin mano de obra. */
   cargos?: CargoPayload[] | null;
-  /** Lista de precios de insumos (`insumosParaPuente`, módulo 6). */
+  /** Insumos de la oferta (`insumosParaPuente`): lista de precios y pestaña Insumos. */
   insumos?: InsumoPayload[] | null;
+  /** Costos administrativos (`costosAdministrativosParaPuente`): pestaña Costos Admtivos. */
+  costosAdministrativos?: CostoAdministrativoPayload[] | null;
 }): PayloadContratosV1 {
-  const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos } = d;
+  const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos, costosAdministrativos } = d;
   const aiu = porcentajeAIU(r?.porcentajeIU);
   const conAIU = (costo: number | undefined) => (typeof costo === 'number' && Number.isFinite(costo) ? valorConAIU(costo, aiu) : null);
   return {
@@ -129,6 +164,7 @@ export function armarPayloadContratos(d: {
     },
     ...(cargos && cargos.length > 0 ? { cargos } : {}),
     ...(insumos && insumos.length > 0 ? { insumos } : {}),
+    ...(costosAdministrativos && costosAdministrativos.length > 0 ? { costosAdministrativos } : {}),
   };
 }
 
@@ -151,7 +187,8 @@ const ETIQUETA_CAMPO: Record<string, string> = {
   'oferta.descripcionServicio': 'Descripción del servicio',
   tarifa: 'Tarifa',
   cargos: 'Cargos',
-  insumos: 'Lista de precios de insumos',
+  insumos: 'Insumos',
+  costosAdministrativos: 'Costos administrativos (conceptos que van en OTROS)',
   'tarifa.manoObra': 'Vr. Mano de obra',
   'tarifa.insumos': 'Vr. Insumos',
   'tarifa.maquinaria': 'Vr. Maquinaria',

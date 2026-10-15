@@ -24,7 +24,7 @@ La oferta se identifica en Contratos por **(empresa, UEN, n.º de oferta)**. Des
 | 3 | **Conexión a MySQL y contrato de esquema:** `mysql2` en modo estricto, comprobación de tablas y columnas, `/health` | `information_schema` | ✅ probado también contra un MySQL 5.5 real (Docker) |
 | 4 | **Oferta y tarifa** («Guardar oferta» de Contratos) y **oferta adjudicada:** número de oferta, cliente, concepto, A.I.U., tipo de tarifa, origen y los 6 valores | `fc_contratos_tarifa_inicial` + `fc_ofertas_adjudicadas` (lee `fc_clientes`, `fc_conceptos`, `fc_control`) | ✅ la tarifa se adapta a la base real: si le falta una columna no esencial, se omite y se informa |
 | 5 | **Cargos:** una fila por línea de cargo (código de nómina, ítem, horario y valores), en la misma transacción | `fc_contratos_cargos_iniciales` (lee `fc_horarios`, `gl_undnegocios` y `<dbnomina>.cargos`) | ✅ también se adapta a las columnas reales |
-| 6 | **Lista de precios de insumos:** una fila por código de elemento del almacén (costo, A.I.U., precio de venta), en la misma transacción que la oferta | `fc_preciosventas_oferta` | ✅ equipos no: sus códigos son de activos fijos y no hay tabla viva para ellos |
+| 6 | **Lista de precios, Insumos y Costos Admtivos de la Oferta Inicial:** una fila de precio por código de elemento (costo, A.I.U., precio de venta); una fila de insumo por código (cantidad, frecuencia en meses, valor unitario con IVA, tipo `F`, NIT y nombre del cliente); una fila de costo administrativo por concepto de Contratos (valor mensual sin A.I.U.; lo que Contratos no tiene va a «OTROS») | `fc_preciosventas_oferta`, `fc_elemxcont`, `fc_contratos_costos_admtivos_iniciales` (lee `fc_conceptos_costos_admtivos`) | ✅ todo en la misma transacción; `fc_elemxcont` es MyISAM: va al final y, si algo falla, el puente borra solo sus filas (misma oferta, `user_add` y marca) |
 | 7 | **No continuos y valores agregados:** solo sus totales (`vlr_nocontinuos`, `vlr_otros`); el detalle no tiene tabla viva | `fc_ofertas_adjudicadas` | ✅ totales |
 
 Los datos generales del contrato (fechas, reajuste, suministros…) viven en `fc_contratos`, que se crea **después** de la oferta; dónde guardarlos antes de que exista el contrato lo define Contratos (ver el Excel de mapeo).
@@ -284,9 +284,12 @@ npm run permisos:generar -- --usuario puente --base almacen
 # GRANT SELECT (empresa, undnegocio, codcpto) ON `almacen`.`fc_conceptos` TO 'puente'@'%';
 # GRANT SELECT (empresa, undnegocio, num_oferta), UPDATE (num_oferta) ON `almacen`.`fc_control` TO 'puente'@'%';
 # GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';
+# GRANT SELECT, INSERT ON `almacen`.`fc_contratos_costos_admtivos_iniciales` TO 'puente'@'%';
+# GRANT SELECT, INSERT, DELETE ON `almacen`.`fc_elemxcont` TO 'puente'@'%';
+# GRANT SELECT (id, descripcion) ON `almacen`.`fc_conceptos_costos_admtivos` TO 'puente'@'%';
 ```
 
-Sin DDL, sin DELETE, los cargos solo se insertan (el puente no los lee) y de `fc_control` solo el contador (la fila trae usuario y clave de conexión). `npm run test:mysql` crea un usuario con exactamente esos permisos y corre todo el módulo con él (incluido el arranque del servicio y su verificación de esquema); también comprueba que lo demás le está denegado.
+Sin DDL; DELETE solo en `fc_elemxcont` (MyISAM, no se revierte con la transacción: el puente borra sus propias filas si el envío falla); los cargos solo se insertan (el puente no los lee) y de `fc_control` solo el contador (la fila trae usuario y clave de conexión). `npm run test:mysql` crea un usuario con exactamente esos permisos y corre todo el módulo con él (incluido el arranque del servicio y su verificación de esquema); también comprueba que lo demás le está denegado.
 
 ### Por confirmar con Contratos (preguntas 4 a 7 del Excel de mapeo)
 

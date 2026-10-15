@@ -59,7 +59,8 @@ const ESQUEMA = {
  */
 const LISTAS = {
   // Módulo 5 — la mano de obra de la oferta: una fila por línea de cargo (cargo + horario). Los valores van SIN A.I.U. ni IVA
-  // (así los guarda Contratos: el A.I.U. se aplica en la tarifa). El código del cargo no viaja: es un consecutivo por oferta.
+  // (así los guarda Contratos: el A.I.U. se aplica en la tarifa). El código del cargo no viaja: el puente lo toma de la
+  // nómina de la UEN por el nombre.
   cargos: {
     max: 300,
     aviso: 'Sin cargos: la oferta se crea sin mano de obra y se completa en Contratos.',
@@ -90,6 +91,20 @@ const LISTAS = {
       codigo: { tipo: 'codigo', max: 10, requerido: true }, // fc_preciosventas_oferta.codigo char(10)
       nombre: { tipo: 'texto', max: 254, silencioso: true }, // solo para los mensajes: Contratos no lo guarda aquí
       valorUnitario: { tipo: 'monto', max: 99_999_999_999, requerido: true }, // decimal(15,4)
+      // Pestaña Insumos de la oferta (`fc_elemxcont`): cantidad y frecuencia (meses) de facturación y valor unitario con IVA.
+      cantidad: { tipo: 'monto', max: 99_999_999, silencioso: true },
+      frecuenciaMeses: { tipo: 'monto', max: 999, silencioso: true },
+      valorUnitarioConIva: { tipo: 'monto', max: 99_999_999_999, silencioso: true },
+    },
+  },
+  // Pestaña Costos Admtivos de la oferta (`fc_contratos_costos_admtivos_iniciales`): pólizas, impuestos y cada variable
+  // administrativa con su valor MENSUAL, sin A.I.U. El puente lo lleva al concepto de Contratos de igual nombre (o a OTROS).
+  costosAdministrativos: {
+    max: 100,
+    aviso: null,
+    campos: {
+      concepto: { tipo: 'texto', max: 150, requerido: true },
+      valorMensual: { tipo: 'monto', max: 999_999_999_999, requerido: true }, // valor decimal(18,0): se redondea al peso
     },
   },
 };

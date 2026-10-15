@@ -230,6 +230,162 @@ export function planDePreciosOferta(datos, { numOferta = null } = {}) {
   return { errores, advertencias, filas };
 }
 
+/** Punto de entrega de las filas de la oferta que no son de una sede: así lo deja el formulario en las ofertas hechas a mano. */
+export const PUNTO_SIN_SEDE = '0000000000';
+/** Tipo de insumo con que el formulario guarda los insumos de una oferta en `fc_elemxcont` (todas las ofertas a mano: «F»). */
+export const TIPO_INSUMO_OFERTA = 'F';
+const NOMBRE_PUNTO_MAX = 60; // fc_elemxcont.nombre_punto y fc_contratos_costos_admtivos_iniciales.nombre_punto
+const cincoDecimales = (n) => Math.round(n * 1e5) / 1e5;
+const recortar = (texto, largo) => Array.from(String(texto ?? '').trim()).slice(0, largo).join('');
+
+/**
+ * Pestaña «Insumos» de la Oferta Inicial — filas de `fc_elemxcont` (MyISAM, compartida con los contratos vigentes: el
+ * puente solo escribe y, si algo falla, borra las suyas). Una por insumo con código, como las ofertas hechas a mano:
+ * cantidad y frecuencia (meses) de facturación y el valor unitario CON IVA, que es con el que LiciColba calcula el
+ * valor mensual (cantidad × valor ÷ frecuencia): así la pestaña suma lo mismo que «Vr. Insumos» de la tarifa, sin A.I.U.
+ * Un insumo que llegue sin cantidad, frecuencia o valor con IVA va solo a la lista de precios, y se avisa.
+ *
+ * @param {object} datos contrato v1 ya validado
+ * @param {{numOferta?: number | null, huella?: string, cliente?: {nit: string, rsocial: string} | null}} contexto
+ */
+export function planDeInsumosOferta(datos, { numOferta = null, huella = '', cliente = null } = {}) {
+  const errores = [];
+  const advertencias = [];
+  const insumos = datos.insumos ?? [];
+  if (insumos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
+  const { oferta, origen } = datos;
+  const sinDetalle = [];
+  const filas = [];
+  insumos.forEach((insumo, i) => {
+    const { cantidad, frecuenciaMeses, valorUnitarioConIva } = insumo;
+    if ([cantidad, frecuenciaMeses, valorUnitarioConIva].some((v) => v === null || v === undefined) || cantidad <= 0) {
+      sinDetalle.push(insumo.codigo ?? `#${i + 1}`);
+      return;
+    }
+    filas.push({
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      nit: cliente?.nit ?? '',
+      ncontrato: '',
+      tipo_insumo: TIPO_INSUMO_OFERTA,
+      codele: insumo.codigo.toUpperCase(),
+      cantidad,
+      frecuencia: frecuenciaMeses > 0 ? frecuenciaMeses : 1,
+      vlr_unitario: cincoDecimales(valorUnitarioConIva),
+      cantsoli: 0,
+      num_oferta: numOferta,
+      consec: 1,
+      concepto: oferta.codServicio,
+      codmun: '',
+      fadd: AHORA,
+      user_add: USUARIO_PUENTE,
+      pc_add: marcaDeOrigen(origen.solicitudId, huella),
+      nitloc: '',
+      nombre_punto: recortar(cliente?.rsocial, NOMBRE_PUNTO_MAX),
+      clase: 1,
+      vlr_unitario_va: 0,
+    });
+  });
+  if (sinDetalle.length > 0) {
+    advertencias.push({ campo: 'insumos', mensaje: `Sin cantidad, frecuencia o valor con IVA (van solo a la lista de precios): ${sinDetalle.join(', ')}.` });
+  }
+  return { errores, advertencias, filas };
+}
+
+/**
+ * Catálogo `fc_conceptos_costos_admtivos` como está hoy en Contratos. El escritor lee el real; esta copia es solo para el
+ * modo prueba, que no consulta la base.
+ */
+export const CATALOGO_COSTOS_ADMTIVOS = Object.freeze([
+  { id: 1, descripcion: 'PÓLIZAS' },
+  { id: 2, descripcion: 'IMPUESTOS' },
+  { id: 3, descripcion: 'TRANSPORTE INSUMOS' },
+  { id: 4, descripcion: 'SUPERVISIÓN - VISITAS' },
+  { id: 5, descripcion: 'VIÁTICOS SUPERVISIÓN' },
+  { id: 6, descripcion: 'PAPELERÍA Y OFICINAS' },
+  { id: 7, descripcion: 'EXCEDENTE DE I.U.' },
+  { id: 8, descripcion: 'PLANES DE DATOS' },
+  { id: 9, descripcion: 'MANTENIMIENTO DE EQUIPOS' },
+  { id: 10, descripcion: 'VALORES AGREGADOS CUANDO X OBLIGACION SE REQUIERA' },
+  { id: 11, descripcion: 'OTROS' },
+]);
+
+/** Conceptos de LiciColba que en Contratos se llaman distinto (comparables, sin tildes ni puntuación). */
+const ALIAS_COSTO_ADMTIVO = {
+  PAPELERIA: 'PAPELERIA Y OFICINAS',
+  'PLAN DE DATOS': 'PLANES DE DATOS',
+  'TRANSPORTE DE INSUMOS': 'TRANSPORTE INSUMOS',
+  SUPERVISION: 'SUPERVISION VISITAS',
+  'VISITAS DE SUPERVISION': 'SUPERVISION VISITAS',
+  'VIATICOS DE SUPERVISION': 'VIATICOS SUPERVISION',
+  VIATICOS: 'VIATICOS SUPERVISION',
+};
+const OTROS_COSTOS = 'OTROS';
+
+/** El concepto de Contratos para un concepto de LiciColba: por nombre (o su alias); si no hay, «OTROS». */
+export function conceptoDeCostoAdmtivo(concepto, catalogo = CATALOGO_COSTOS_ADMTIVOS) {
+  const clave = comparable(concepto);
+  const buscado = ALIAS_COSTO_ADMTIVO[clave] ?? clave;
+  const porNombre = catalogo.find((c) => comparable(c.descripcion) === buscado);
+  if (porNombre) return { ...porNombre, esOtros: false };
+  const otros = catalogo.find((c) => comparable(c.descripcion) === OTROS_COSTOS);
+  return otros ? { ...otros, esOtros: true } : null;
+}
+
+/**
+ * Pestaña «Costos Admtivos» de la Oferta Inicial — filas de `fc_contratos_costos_admtivos_iniciales`: una por concepto de
+ * Contratos (`id_cpto_costo` de `fc_conceptos_costos_admtivos`) con su valor MENSUAL en pesos, SIN A.I.U. (la pantalla
+ * muestra aparte el valor con A.I.U.). Pólizas e impuestos van a sus conceptos; cada variable administrativa de LiciColba
+ * va al concepto de igual nombre y, si Contratos no lo tiene, a «OTROS» (se avisa cuáles). Varios conceptos de LiciColba
+ * que caen en el mismo de Contratos se suman en una sola fila, como en las ofertas hechas a mano.
+ *
+ * @param {object} datos contrato v1 ya validado
+ * @param {{numOferta?: number | null, huella?: string, cliente?: {rsocial: string} | null, catalogo?: {id: number, descripcion: string}[]}} contexto
+ */
+export function planDeCostosAdministrativos(datos, { numOferta = null, huella = '', cliente = null, catalogo = CATALOGO_COSTOS_ADMTIVOS } = {}) {
+  const errores = [];
+  const advertencias = [];
+  const costos = datos.costosAdministrativos ?? [];
+  if (costos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
+  const { oferta, origen } = datos;
+  const porConcepto = new Map();
+  const aOtros = [];
+  costos.forEach((c, i) => {
+    if (!(c.valorMensual > 0)) return;
+    const destino = conceptoDeCostoAdmtivo(c.concepto, catalogo);
+    if (!destino) {
+      errores.push({ campo: `costosAdministrativos[${i}].concepto`, mensaje: `El concepto «${c.concepto}» no existe en Contratos y Contratos no tiene el concepto «OTROS».` });
+      return;
+    }
+    if (destino.esOtros && comparable(c.concepto) !== OTROS_COSTOS) aOtros.push(c.concepto);
+    const actual = porConcepto.get(destino.id) ?? { id: destino.id, valor: 0 };
+    actual.valor += c.valorMensual;
+    porConcepto.set(destino.id, actual);
+  });
+  if (aOtros.length > 0) {
+    advertencias.push({ campo: 'costosAdministrativos', mensaje: `Van en «OTROS» porque Contratos no tiene ese concepto: ${aOtros.join(', ')}.` });
+  }
+  const filas = [...porConcepto.values()]
+    .sort((a, b) => a.id - b.id)
+    .map(({ id, valor }) => ({
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      ncontrato: '',
+      consec: 1,
+      concepto: oferta.codServicio,
+      punto_entrega: PUNTO_SIN_SEDE,
+      nombre_punto: recortar(cliente?.rsocial, NOMBRE_PUNTO_MAX),
+      codmun: '',
+      id_cpto_costo: id,
+      valor: Math.round(valor),
+      user_add: USUARIO_PUENTE,
+      fadd: AHORA,
+      pc_add: marcaDeOrigen(origen.solicitudId, huella),
+    }));
+  return { errores, advertencias, filas };
+}
+
 /** Las 47 columnas del INSERT de cargos de `cmdGrabar.Click`, en su orden. */
 export const COLUMNAS_CARGO_VFP = [
   'empresa', 'undnegocio', 'ncontrato', 'num_oferta', 'consec', 'concepto', 'cod_seccion', 'tipo_cargo', 'item', 'cargo', 'jornada', 'horassem',

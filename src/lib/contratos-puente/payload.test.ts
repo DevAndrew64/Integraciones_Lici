@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
-import { armarPayloadContratos, describirError, insumosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
+import { armarPayloadContratos, costosAdministrativosParaPuente, describirError, insumosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
 
 const solicitud = (o: Partial<SolicitudParaPuente> = {}): SolicitudParaPuente => ({
   id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: 'Calle 1 # 2-3', ...o,
@@ -114,8 +114,17 @@ describe('insumosParaPuente (módulo 6)', () => {
       fila({ codigo: 'CON ESPACIO' }),
       fila({ codigo: '22222', valorAgregado: true }),
       fila({ codigo: '33333', valorUnitarioSinIva: Number.NaN }),
-    ])).toEqual([{ codigo: '18111', valorUnitario: 25000 }, { codigo: '01050', valorUnitario: 1234.5 }]);
+    ])).toEqual([
+      { codigo: '18111', valorUnitario: 25000, cantidad: 1, frecuenciaMeses: 1, valorUnitarioConIva: 29750 },
+      { codigo: '01050', valorUnitario: 1234.5, cantidad: 1, frecuenciaMeses: 1, valorUnitarioConIva: 29750 },
+    ]);
     expect(insumosParaPuente(null)).toEqual([]);
+  });
+
+  it('lleva cantidad, frecuencia y valor con IVA para la pestaña Insumos; una frecuencia vacía o en 0 es mensual', () => {
+    expect(insumosParaPuente([fila({ cantidad: 4, frecuenciaMeses: 0, valorUnitarioConIva: Number.NaN })])).toEqual([
+      { codigo: '18111', valorUnitario: 25000, cantidad: 4, frecuenciaMeses: 1, valorUnitarioConIva: 0 },
+    ]);
   });
 
   it('sin insumos el payload no lleva la lista (la huella del puente no cambia)', () => {
@@ -145,5 +154,30 @@ describe('describirError', () => {
     expect(describirError({ campo: 'cliente.nit', mensaje: 'El cliente con NIT 900123456 no existe en Contratos. Créelo en Contratos y vuelva a enviar.' })).toBe(
       'NIT del cliente: El cliente con NIT 900123456 no existe en Contratos. Créelo en Contratos y vuelva a enviar.',
     );
+  });
+});
+
+describe('costosAdministrativosParaPuente (pestaña Costos Admtivos)', () => {
+  const adm = (cambios: Record<string, unknown> = {}) => ({
+    variables: [
+      { concepto: ' Papelería ', cantidad: 1, valorUnitario: 1500, valorMensual: 1500 },
+      { concepto: 'Microsoft', cantidad: 1, valorUnitario: 0, valorMensual: 0 },
+      { concepto: '', cantidad: 1, valorUnitario: 10, valorMensual: 10 },
+    ],
+    totalVariables: 1500, valorMensualPolizas: 2500, valorMensualImpuestos: 1000, ...cambios,
+  });
+  it('pólizas, impuestos y cada variable con su valor mensual; las que valen 0 o no tienen nombre no viajan', () => {
+    expect(costosAdministrativosParaPuente(adm())).toEqual([
+      { concepto: 'Pólizas', valorMensual: 2500 },
+      { concepto: 'Impuestos', valorMensual: 1000 },
+      { concepto: 'Papelería', valorMensual: 1500 },
+    ]);
+    expect(costosAdministrativosParaPuente(adm({ valorMensualPolizas: Number.NaN, valorMensualImpuestos: 0 }))).toEqual([{ concepto: 'Papelería', valorMensual: 1500 }]);
+    expect(costosAdministrativosParaPuente(null)).toEqual([]);
+  });
+
+  it('sin costos el payload no lleva la lista', () => {
+    const p = armarPayloadContratos({ solicitud: { id: 1, codigoProceso: 'X', entidad: 'E', objeto: null, nitContacto: '900123456', direccionContacto: null }, procesoCodigo: 'X', resultado: null, costosAdministrativos: [] });
+    expect('costosAdministrativos' in p).toBe(false);
   });
 });
