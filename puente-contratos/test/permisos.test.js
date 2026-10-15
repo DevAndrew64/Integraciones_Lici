@@ -39,10 +39,13 @@ describe('sentenciasDePermisos', () => {
     ]);
   });
 
-  it('módulo implementado (6): tarifa, cargos, oferta adjudicada, lista de precios, insumos y costos administrativos, clientes, conceptos, contador y horarios', () => {
-    assert.equal(MODULO_IMPLEMENTADO, 6);
+  it('módulo implementado (7): tarifa, cargos, oferta adjudicada, lista de precios, insumos, costos administrativos, equipos, no continuos y valores agregados, clientes, conceptos, contador y horarios', () => {
+    assert.equal(MODULO_IMPLEMENTADO, 7);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 11);
+    assert.equal(sentencias.length, 14);
+    for (const t of ['fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales']) {
+      assert.ok(sentencias.includes(`GRANT SELECT, INSERT ON \`almacen\`.\`${t}\` TO 'puente'@'%';`), t);
+    }
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_contratos_costos_admtivos_iniciales` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT, INSERT, DELETE ON `almacen`.`fc_elemxcont` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_contratos_cargos_iniciales` TO 'puente'@'%';"));

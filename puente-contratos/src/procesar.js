@@ -1,7 +1,7 @@
 import { ErrorNegocio } from './errores.js';
 import { nitConDV } from './nit.js';
 import {
-  describirFila, noEscritoEnLaOferta, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa,
+  describirFila, noEscritoEnLaOferta, planDeCargos, planDeCostosAdministrativos, planDeEquipos, planDeNoContinuos, planDeValoresAgregados, planDeInsumosOferta, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa,
 } from './oferta.js';
 import { huella as calcularHuella, validarContrato } from './validar.js';
 
@@ -36,6 +36,13 @@ export const escritorPrueba = {
       const insumosOferta = planDeInsumosOferta(datos, { huella, cliente: clienteDePrueba });
       if (insumosOferta.filas.length > 0) escribiria.insumosOferta = insumosOferta.filas.map(describirFila);
       advertencias.push(...insumosOferta.errores, ...insumosOferta.advertencias);
+      const equipos = planDeEquipos(datos, { huella, cliente: clienteDePrueba });
+      if (equipos.filas.length > 0) escribiria.equipos = equipos.filas.map(describirFila);
+      const noContinuos = planDeNoContinuos(datos, { huella, cliente: clienteDePrueba });
+      if (noContinuos.filas.length > 0) escribiria.serviciosNoContinuos = noContinuos.filas.map(describirFila);
+      const valores = planDeValoresAgregados(datos, { huella });
+      if (valores.filas.length > 0) escribiria.valoresAgregados = valores.filas.map(describirFila);
+      advertencias.push(...equipos.advertencias, ...noContinuos.advertencias, ...valores.advertencias);
     }
     return { escribiria, noEscrito: noEscritoEnLaOferta(datos), advertencias };
   },

@@ -4,7 +4,7 @@ import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
   codigosDeNomina, conceptoDeCostoAdmtivo, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta,
-  planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
+  planDeEquipos, planDeNoContinuos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, planDeValoresAgregados, TIPO_VALOR_AGREGADO, tipoDeActividad, USUARIO_PUENTE,
 } from '../src/oferta.js';
 import { validarContrato } from '../src/validar.js';
 
@@ -291,6 +291,75 @@ describe('planDeCostosAdministrativos (pestaña Costos Admtivos)', () => {
     assert.deepEqual(planDeCostosAdministrativos(datos()).filas, []);
     const [fila] = planDeCostosAdministrativos(conCostos([{ concepto: 'Pólizas', valorMensual: 1 }]), { numOferta: 1, huella: HUELLA, cliente: CLIENTE }).filas;
     cabeEnLaTabla('fc_contratos_costos_admtivos_iniciales', fila);
+  });
+});
+
+describe('planDeEquipos (pestaña Equipos)', () => {
+  const conEquipos = (equipos) => datos((e) => (e.equipos = equipos));
+  const ASPIRADORA = { codigoGrupo: '004', codigoSubtipo: '096', descripcion: 'Aspiradora industrial', valorUnitario: 1190000, cantidadRequerida: 2, cantidadComprar: 1, mesesDepreciacion: 12, valorMesMantenimiento: 23000.4 };
+
+  it('una fila por máquina como las ofertas a mano: grupo/subtipo, a comprar, requeridas, meses, valor con IVA y mantenimiento', () => {
+    const { errores, advertencias, filas } = planDeEquipos(conEquipos([ASPIRADORA]), { numOferta: 937, huella: HUELLA, cliente: CLIENTE });
+    assert.deepEqual([errores, advertencias], [[], []]);
+    assert.deepEqual(describirFila(filas[0]), {
+      empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo_servicio: '', codmun: '', punto_entrega: '0000000000',
+      nom_punto_entrega: 'CLIENTE DE PRUEBA S.A.S.', tipo_equipo: '004', subtipo_equipo: '096', codigo: '', descrip_equipo: 'Aspiradora industrial',
+      precio_costo: 1190000, porc_vlr_compra: 1, cantidad: 1, frecuencia: 12, valor: 1190000, cant_facturar: 2, valor_inicial: 1190000,
+      user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: marcaDeOrigen(42, HUELLA), vlr_mes_mantenimiento: 23000, vlr_mes_otr_rubros: 0, clase: 1, valor_inicial_va: 0,
+    });
+    cabeEnLaTabla('fc_contratos_equipos_iniciales', filas[0]);
+  });
+
+  it('sin compra ni mantenimiento no va; sin grupo va y se avisa', () => {
+    const { advertencias, filas } = planDeEquipos(conEquipos([
+      { ...ASPIRADORA, cantidadComprar: 0, valorMesMantenimiento: 0 },
+      { ...ASPIRADORA, codigoGrupo: null, descripcion: 'Escalera' },
+    ]));
+    assert.deepEqual(filas.map((f) => f.descrip_equipo), ['Escalera']);
+    assert.deepEqual(advertencias.map((a) => a.mensaje), [
+      'Sin compra ni mantenimiento (no van a la pestaña Equipos): Aspiradora industrial.',
+      'Sin grupo o subtipo del activo (se completan en Contratos): Escalera.',
+    ]);
+  });
+});
+
+describe('planDeNoContinuos (pestaña Servs. No Continuos)', () => {
+  const BRIGADA = { actividad: 14, uen: 'BAQ', descripcion: 'Brigada de aseo', frecuencia: 3, manoObra: 116969, insumos: 61439, equipos: 35266, otrosCostos: 0, valorServicio: 213674, valorMensual: 71224.67 };
+  const conServicios = (servicios) => datos((e) => (e.serviciosNoContinuos = servicios));
+
+  it('una fila por servicio: actividad y UEN del catálogo, frecuencia, costo de cada servicio por rubro y valor mensual (VM)', () => {
+    const { errores, advertencias, filas } = planDeNoContinuos(conServicios([BRIGADA]), { numOferta: 937, huella: HUELLA, cliente: CLIENTE });
+    assert.deepEqual([errores, advertencias], [[], []]);
+    const f = describirFila(filas[0]);
+    assert.deepEqual(
+      [f.actividad, f.UEN_Adm, f.uen_punto, f.tipo_actividad, f.frecuencia, f.tipo_facturacion, f.valor, f.vlr_mes, f.vlr_mano_obra, f.vlr_insumos, f.vlr_equipos, f.vlr_costos, f.cant_servs_contrato, f.clase, f.tipo],
+      [14, 'BAQ', 'BAQ', 'AMBOS', 3, 'VM', 213674, 71225, 116969, 61439, 35266, 0, 4, 1, 1],
+    );
+    assert.equal(f.descrip_servicio, 'Brigada de aseo');
+    cabeEnLaTabla('fc_contratos_no_continuos_iniciales', filas[0]);
+  });
+
+  it('tipo de actividad según lo que lleva; sin código del catálogo va y se avisa; sin valor no va', () => {
+    assert.deepEqual([tipoDeActividad({ manoObra: 1, equipos: 0 }), tipoDeActividad({ manoObra: 0, equipos: 1 }), tipoDeActividad({ manoObra: 1, equipos: 1 })], ['REHUM', 'MAQUI', 'AMBOS']);
+    const { advertencias, filas } = planDeNoContinuos(conServicios([{ ...BRIGADA, actividad: null }, { ...BRIGADA, valorMensual: 0 }]));
+    assert.equal(filas.length, 1);
+    assert.equal(filas[0].actividad, 0);
+    assert.equal(advertencias.length, 1);
+  });
+});
+
+describe('planDeValoresAgregados (pestaña Valores Agregados)', () => {
+  it('una fila por valor agregado con su tipo, valor mensual, tipo y frecuencia de reinversión y porcentaje; marca en usuario/pc', () => {
+    const { filas } = planDeValoresAgregados(datos((e) => (e.valoresAgregados = [
+      { tipo: 'REINVERSION', valorMensual: 291666.666, frecuencia: 12, tipoReinversion: 'PORCENTAJE', porcentaje: 1.5 },
+      { tipo: 'MAQUINARIA', valorMensual: 1000 },
+      { tipo: 'SNC', valorMensual: 0 },
+    ])), { numOferta: 937, huella: HUELLA });
+    assert.deepEqual(filas.map(describirFila), [
+      { empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo: TIPO_VALOR_AGREGADO.REINVERSION, valor: 291666.67, tipo_reinv: 2, frec_reinv: 12, porc_reinv: 1.5, fproc: 'NOW()', usuario: 'LICICOLBA', pc: marcaDeOrigen(42, HUELLA) },
+      { empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo: TIPO_VALOR_AGREGADO.MAQUINARIA, valor: 1000, tipo_reinv: 1, frec_reinv: 1, porc_reinv: 0, fproc: 'NOW()', usuario: 'LICICOLBA', pc: marcaDeOrigen(42, HUELLA) },
+    ]);
+    cabeEnLaTabla('fc_contratos_vlrs_agregs_iniciales', filas[0]);
   });
 });
 

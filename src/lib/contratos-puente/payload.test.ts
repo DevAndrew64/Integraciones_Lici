@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
-import { armarPayloadContratos, costosAdministrativosParaPuente, describirError, insumosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
+import {
+  armarPayloadContratos, costosAdministrativosParaPuente, describirError, equiposParaPuente, insumosParaPuente, serviciosNoContinuosParaPuente, valoresAgregadosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
 
 const solicitud = (o: Partial<SolicitudParaPuente> = {}): SolicitudParaPuente => ({
   id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: 'Calle 1 # 2-3', ...o,
@@ -179,5 +180,30 @@ describe('costosAdministrativosParaPuente (pestaña Costos Admtivos)', () => {
   it('sin costos el payload no lleva la lista', () => {
     const p = armarPayloadContratos({ solicitud: { id: 1, codigoProceso: 'X', entidad: 'E', objeto: null, nitContacto: '900123456', direccionContacto: null }, procesoCodigo: 'X', resultado: null, costosAdministrativos: [] });
     expect('costosAdministrativos' in p).toBe(false);
+  });
+});
+
+describe('equipos, no continuos y valores agregados para Contratos', () => {
+  const maquina = (c: Record<string, unknown> = {}) => ({
+    codigo: '004-096', descripcion: 'Aspiradora “Pro”', categoria: '', cantidadRequerida: 2, cantidadComprar: 1, valorUnitario: 1000000, valorMesComprar: 0,
+    valorMesMantenimiento: 23000, valorAgregado: false, codigoGrupo: '004', codigoSubtipo: '096', mesesDepreciacion: 12, valorConIva: 1190000, ...c,
+  });
+  it('equipos: sin los de valor agregado, valor con IVA, códigos solo si caben y texto que Contratos puede guardar', () => {
+    expect(equiposParaPuente([maquina(), maquina({ valorAgregado: true }), maquina({ codigoGrupo: 'ABCD', mesesDepreciacion: 0 })])).toEqual([
+      { codigoGrupo: '004', codigoSubtipo: '096', descripcion: 'Aspiradora Pro', valorUnitario: 1190000, cantidadRequerida: 2, cantidadComprar: 1, mesesDepreciacion: 12, valorMesMantenimiento: 23000 },
+      { codigoGrupo: null, codigoSubtipo: '096', descripcion: 'Aspiradora Pro', valorUnitario: 1190000, cantidadRequerida: 2, cantidadComprar: 1, mesesDepreciacion: 1, valorMesMantenimiento: 23000 },
+    ]);
+  });
+
+  it('no continuos: código numérico del catálogo como actividad, frecuencia 1-15 (si no, mensual); sin los de valor agregado ni los de valor 0', () => {
+    const srv = (c: Record<string, unknown> = {}) => ({ codigo: '14', uen: 'BAQ', descripcion: 'Brigada', frecuencia: 3, manoObra: 100, insumos: 50, equipos: 0, otrosCostos: 0, valorServicio: 150, valorMensual: 50, valorAgregado: false, ...c });
+    expect(serviciosNoContinuosParaPuente([srv(), srv({ codigo: '', frecuencia: 20 }), srv({ valorAgregado: true }), srv({ valorMensual: 0 })]).map((s) => [s.actividad, s.frecuencia])).toEqual([[14, 3], [null, 1]]);
+  });
+
+  it('valores agregados: los que tienen valor, con su frecuencia y el porcentaje de la reinversión', () => {
+    expect(valoresAgregadosParaPuente([
+      { tipo: 'REINVERSION', descripcion: 'R', valorMensual: 1000, frecuencia: 12, tipoReinversion: 'PORCENTAJE', porcentaje: 2 },
+      { tipo: 'SNC', descripcion: 'S', valorMensual: 0, frecuencia: null, tipoReinversion: null, porcentaje: null },
+    ])).toEqual([{ tipo: 'REINVERSION', descripcion: 'R', valorMensual: 1000, frecuencia: 12, tipoReinversion: 'PORCENTAJE', porcentaje: 2 }]);
   });
 });

@@ -94,5 +94,41 @@
       "concepto": "Papelería",
       "valorMensual": 1500
     }
+  ],
+  "equipos": [
+    {
+      "codigoGrupo": "004",
+      "codigoSubtipo": "096",
+      "descripcion": "Aspiradora industrial Pro",
+      "valorUnitario": 1190000,
+      "cantidadRequerida": 2,
+      "cantidadComprar": 1,
+      "mesesDepreciacion": 12,
+      "valorMesMantenimiento": 23000
+    }
+  ],
+  "serviciosNoContinuos": [
+    {
+      "actividad": 14,
+      "uen": "BAQ",
+      "descripcion": "Brigada de aseo",
+      "frecuencia": 3,
+      "manoObra": 116969,
+      "insumos": 61439,
+      "equipos": 35266,
+      "otrosCostos": 0,
+      "valorServicio": 213674,
+      "valorMensual": 71224.67
+    }
+  ],
+  "valoresAgregados": [
+    {
+      "tipo": "REINVERSION",
+      "descripcion": "Reinversión anual",
+      "valorMensual": 291666.67,
+      "frecuencia": 12,
+      "tipoReinversion": "VALOR",
+      "porcentaje": null
+    }
   ]
 }

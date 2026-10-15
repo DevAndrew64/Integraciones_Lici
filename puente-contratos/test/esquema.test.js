@@ -95,11 +95,22 @@ describe('compararEsquema — tablas de escritura', () => {
     assert.deepEqual(compararEsquema(escritura, real).map((p) => p.columna).sort(), ['fecha']);
   });
 
+  it('una tabla «opcional» que no existe no es un problema (el puente no la escribe)', () => {
+    const esperadoOpcional = { tablas: { fc_x: { motor: 'InnoDB', uso: 'escritura', opcional: true, columnas: { id: { tipo: 'int(1)', nulable: false } } } } };
+    assert.deepEqual(compararEsquema(esperadoOpcional, {}), []);
+    assert.deepEqual(compararEsquema({ tablas: { fc_x: { ...esperadoOpcional.tablas.fc_x, opcional: undefined } } }, {}).map((p) => p.problema), ['La tabla no existe.']);
+  });
+
   it('opcionesDeEscritura: id manual si no es auto_increment, y los largos reales de user_add y pc_add', () => {
     const tabla = (id) => ({ fc_ofertas_adjudicadas: { motor: 'InnoDB', columnas: { id, user_add: { tipo: 'varchar(12)', nulable: true }, pc_add: { tipo: 'char(40)', nulable: true } } } });
     assert.deepEqual(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, autoIncremento: true })), {
       idManual: false, largoUserAdd: 12, largoPcAdd: 40,
-      idManualPorTabla: { fc_contratos_tarifa_inicial: false, fc_contratos_cargos_iniciales: false, fc_contratos_costos_admtivos_iniciales: false, fc_elemxcont: false }, omitir: {},
+      idManualPorTabla: {
+        fc_contratos_tarifa_inicial: false, fc_contratos_cargos_iniciales: false, fc_contratos_costos_admtivos_iniciales: false, fc_elemxcont: false,
+        fc_contratos_equipos_iniciales: false, fc_contratos_no_continuos_iniciales: false, fc_contratos_vlrs_agregs_iniciales: false,
+      },
+      omitir: {},
+      tablasAusentes: ['fc_contratos_vlrs_agregs_iniciales'],
     });
     assert.equal(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, obligatoria: true })).idManual, true);
   });
@@ -190,12 +201,14 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
 
   it('cubre la tabla donde el puente escribe hoy, las de fases siguientes y las de consulta', () => {
     const escritura = Object.entries(real.tablas).filter(([, t]) => t.uso === 'escritura').map(([n]) => n).sort();
-    assert.deepEqual(escritura, ['fc_contratos_cargos_iniciales', 'fc_contratos_costos_admtivos_iniciales', 'fc_contratos_tarifa_inicial', 'fc_elemxcont', 'fc_ofertas_adjudicadas', 'fc_preciosventas_oferta']);
+    assert.deepEqual(escritura, [
+      'fc_contratos_cargos_iniciales', 'fc_contratos_costos_admtivos_iniciales', 'fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales',
+      'fc_contratos_tarifa_inicial', 'fc_contratos_vlrs_agregs_iniciales', 'fc_elemxcont', 'fc_ofertas_adjudicadas', 'fc_preciosventas_oferta',
+    ]);
     assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_conceptos_costos_admtivos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
     assert.deepEqual(real.tablas.fc_elemxcont.permisos, ['DELETE'], 'MyISAM: si el envío falla después de escribir sus insumos, los borra');
-    for (const t of ['fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales']) {
-      assert.ok(!real.tablas[t], `${t}: no se usa (no existe o no se puede usar en la base viva)`);
-    }
+    assert.equal(real.tablas.fc_contratos_vlrs_agregs_iniciales.opcional, true, 'sin confirmar que exista en la base viva: si falta, no se escribe');
+    assert.ok(!real.tablas.fc_contratos_servs_agregs_iniciales, 'la pestaña Valores Agregados lee vlrs_agregs (tipo, valor, reinversión), no servs_agregs');
   });
 
   it('fc_ofertas_adjudicadas: las columnas leídas de la base viva que el puente llena; los largos no confirmados sin tipo', () => {

@@ -60,6 +60,9 @@ function falso(respuestas = {}) {
     [/^INSERT INTO fc_contratos_costos_admtivos_iniciales/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_elemxcont/, [{ affectedRows: 1 }]],
     [/^DELETE FROM fc_elemxcont/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_contratos_equipos_iniciales/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_contratos_no_continuos_iniciales/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_contratos_vlrs_agregs_iniciales/, [{ affectedRows: 1 }]],
   ].map(([patron, valor]) => [patron, respuestas[patron.source] ?? valor]);
   const conexion = {
     async query(sql, params = []) {
@@ -502,6 +505,40 @@ describe('escritor MySQL — pestañas Costos Admtivos e Insumos de la Oferta In
     const f = falso({ [/^INSERT INTO fc_contratos_costos_admtivos_iniciales/.source]: () => { throw Object.assign(new Error('x'), { errno: 1406 }); } });
     await rechaza(escribir(f.pool, completa()), 422, 'DATOS_INVALIDOS');
     assert.ok(!f.hubo(/fc_elemxcont/));
+  });
+});
+
+describe('escritor MySQL — pestañas Equipos, Servs. No Continuos y Valores Agregados', () => {
+  const completa = () => datos((e) => {
+    e.equipos = [{ codigoGrupo: '004', codigoSubtipo: '096', descripcion: 'Aspiradora', valorUnitario: 1190000, cantidadRequerida: 2, cantidadComprar: 1, mesesDepreciacion: 12, valorMesMantenimiento: 23000 }];
+    e.serviciosNoContinuos = [{ actividad: 14, uen: 'BAQ', descripcion: 'Brigada', frecuencia: 3, manoObra: 100, insumos: 50, equipos: 0, otrosCostos: 0, valorServicio: 150, valorMensual: 50 }];
+    e.valoresAgregados = [{ tipo: 'REINVERSION', valorMensual: 1000, frecuencia: 12, tipoReinversion: 'VALOR' }];
+  });
+
+  it('escribe las tres en la MISMA transacción, antes de fc_elemxcont y del COMMIT, con el número reservado', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, completa());
+    const orden = [/^INSERT INTO fc_ofertas_adjudicadas/, /^INSERT INTO fc_contratos_equipos_iniciales/, /^INSERT INTO fc_contratos_no_continuos_iniciales/, /^INSERT INTO fc_contratos_vlrs_agregs_iniciales/, /^COMMIT$/].map((p) => f.indice(p));
+    assert.ok(orden.every((x) => x >= 0));
+    assert.deepEqual([...orden].sort((a, b) => a - b), orden);
+    assert.equal(f.de(/^INSERT INTO fc_contratos_equipos_iniciales/)[0].params[2], 937);
+    assert.match(f.de(/^INSERT INTO fc_contratos_vlrs_agregs_iniciales/)[0].sql, /usuario, pc\) VALUES/);
+    assert.deepEqual(r.escrito.equipos.map((e) => e.descrip_equipo), ['Aspiradora']);
+    assert.deepEqual(r.escrito.serviciosNoContinuos.map((e) => e.vlr_mes), [50]);
+    assert.deepEqual(r.escrito.valoresAgregados.map((e) => e.valor), [1000]);
+  });
+
+  it('si la base no tiene la tabla de valores agregados, escribe lo demás y lo avisa', async () => {
+    const f = falso();
+    const r = await escribir(f.pool, completa(), { tablasAusentes: ['fc_contratos_vlrs_agregs_iniciales'] });
+    assert.ok(!f.hubo(/vlrs_agregs/) && f.hubo(/^INSERT INTO fc_contratos_equipos_iniciales/));
+    assert.ok(r.advertencias.some((a) => a.campo === 'valoresAgregados'));
+  });
+
+  it('si falla un no continuo se revierte TODO', async () => {
+    const f = falso({ [/^INSERT INTO fc_contratos_no_continuos_iniciales/.source]: () => { throw Object.assign(new Error('x'), { errno: 1406 }); } });
+    await rechaza(escribir(f.pool, completa()), 422, 'DATOS_INVALIDOS');
+    assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
   });
 });
 

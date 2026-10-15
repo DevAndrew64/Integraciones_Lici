@@ -17,7 +17,12 @@ export function serializarEsquema(esquema) {
       ([c, v], j, cols) => `   ${JSON.stringify(c)}: {"tipo": ${JSON.stringify(v.tipo)}, "nulable": ${v.nulable}}${j < cols.length - 1 ? ',' : ''}`,
     );
     // `modulo` (módulo del plan que usa la tabla) y `permisos` (cláusulas de GRANT que se apartan de lo habitual) son opcionales.
-    const opcionales = [t.modulo === undefined ? '' : `"modulo": ${t.modulo}, `, t.permisos === undefined ? '' : `"permisos": ${JSON.stringify(t.permisos)}, `].join('');
+    // `opcional` (la tabla puede no existir en la base: si falta, el puente no la escribe y lo avisa).
+    const opcionales = [
+      t.modulo === undefined ? '' : `"modulo": ${t.modulo}, `,
+      t.opcional === undefined ? '' : `"opcional": ${t.opcional}, `,
+      t.permisos === undefined ? '' : `"permisos": ${JSON.stringify(t.permisos)}, `,
+    ].join('');
     const cabecera = `  ${JSON.stringify(nombre)}: {"motor": ${JSON.stringify(t.motor)}, "uso": ${JSON.stringify(t.uso)}, ${opcionales}"columnas": {`;
     return [cabecera, ...columnas, `  }}${i < todas.length - 1 ? ',' : ''}`].join('\n');
   });
@@ -53,7 +58,7 @@ export function compararEsquema(esperado, real) {
   for (const [tabla, t] of Object.entries(esperado.tablas)) {
     const r = reales[tabla.toLowerCase()];
     if (!r) {
-      problemas.push({ tabla, problema: 'La tabla no existe.' });
+      if (!t.opcional) problemas.push({ tabla, problema: 'La tabla no existe.' });
       continue;
     }
     if (t.motor && r.motor && norm(t.motor) !== norm(r.motor)) {
@@ -117,7 +122,9 @@ export function largoDeColumna(real, tabla, columna) {
 }
 
 /** Otras tablas donde el puente inserta filas y cuyo id puede no ser auto_increment. */
-const TABLAS_CON_ID = ['fc_contratos_costos_admtivos_iniciales', 'fc_elemxcont'];
+const TABLAS_CON_ID = ['fc_contratos_costos_admtivos_iniciales', 'fc_elemxcont', 'fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales'];
+/** Tablas que pueden no existir en la base (`opcional` en el contrato): si faltan, el puente no las escribe. */
+const TABLAS_OPCIONALES = ['fc_contratos_vlrs_agregs_iniciales'];
 
 const columnaReal = (real, tabla, columna) => Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === columna)?.[1];
 const idManualDe = (real, tabla) => {
@@ -143,6 +150,7 @@ export function opcionesDeEscritura(real) {
     largoPcAdd: largoDeColumna(real, tabla, 'pc_add'),
     idManualPorTabla: Object.fromEntries([...Object.keys(TABLAS_ADAPTABLES), ...TABLAS_CON_ID].map((n) => [n, idManualDe(real, n)])),
     omitir,
+    tablasAusentes: TABLAS_OPCIONALES.filter((n) => !Object.keys(real ?? {}).some((r) => r.toLowerCase() === n)),
   };
 }
 

@@ -107,6 +107,55 @@ const LISTAS = {
       valorMensual: { tipo: 'monto', max: 999_999_999_999, requerido: true }, // valor decimal(18,0): se redondea al peso
     },
   },
+  // Pestaña Equipos de la oferta (`fc_contratos_equipos_iniciales`): cada máquina de la pestaña Maquinaria (sin las de Valor
+  // agregado), con el grupo y el subtipo del catálogo de activos fijos, el valor unitario CON IVA y el mantenimiento mensual.
+  equipos: {
+    max: 500,
+    aviso: null,
+    campos: {
+      codigoGrupo: { tipo: 'codigo', max: 3, silencioso: true }, // tipo_equipo char(3)
+      codigoSubtipo: { tipo: 'codigo', max: 3, silencioso: true }, // subtipo_equipo char(3)
+      descripcion: { tipo: 'texto', max: 254, requerido: true }, // descrip_equipo varchar(50): se recorta
+      valorUnitario: { tipo: 'monto', max: 9_999_999_999_999, silencioso: true }, // precio_costo decimal(18,2)
+      cantidadRequerida: { tipo: 'monto', max: 99_999_999, silencioso: true }, // cant_facturar decimal(10,2)
+      cantidadComprar: { tipo: 'monto', max: 99_999_999, silencioso: true }, // cantidad decimal(10,2)
+      mesesDepreciacion: { tipo: 'entero', min: 1, max: 999, silencioso: true }, // frecuencia decimal(3,0)
+      valorMesMantenimiento: { tipo: 'monto', max: 999_999_999_999, silencioso: true }, // vlr_mes_mantenimiento int(15)
+    },
+  },
+  // Pestaña Servs. No Continuos (`fc_contratos_no_continuos_iniciales`): cada servicio (sin los de Valor agregado), con el
+  // código y la UEN del catálogo de no continuos, su frecuencia (código 1-15 de Grupo Colba), el costo de cada servicio por
+  // rubro y lo que vale por mes, sin A.I.U.
+  serviciosNoContinuos: {
+    max: 200,
+    aviso: null,
+    campos: {
+      actividad: { tipo: 'entero', min: 0, max: 999, silencioso: true }, // actividad int(3)
+      uen: { tipo: 'codigo', max: 3, silencioso: true }, // UEN_Adm y uen_punto char(3)
+      descripcion: { tipo: 'texto', max: 250, requerido: true },
+      frecuencia: { tipo: 'entero', min: 1, max: 15, requerido: true },
+      manoObra: { tipo: 'monto', max: 999_999_999_999, silencioso: true },
+      insumos: { tipo: 'monto', max: 999_999_999_999, silencioso: true },
+      equipos: { tipo: 'monto', max: 999_999_999_999, silencioso: true },
+      otrosCostos: { tipo: 'monto', max: 999_999_999_999, silencioso: true },
+      valorServicio: { tipo: 'monto', max: 999_999_999_999, requerido: true }, // valor decimal(18,0)
+      valorMensual: { tipo: 'monto', max: 999_999_999, requerido: true }, // vlr_mes int(12)
+    },
+  },
+  // Pestaña Valores Agregados (`fc_contratos_vlrs_agregs_iniciales`): cada fila de la pestaña Valor Agregado de LiciColba con
+  // su valor mensual sin A.I.U.; las reinversiones traen además su tipo y su porcentaje.
+  valoresAgregados: {
+    max: 500,
+    aviso: null,
+    campos: {
+      tipo: { tipo: 'opcion', opciones: ['REINVERSION', 'MANO_DE_OBRA', 'INSUMOS', 'MAQUINARIA', 'SNC', 'EPP'], requerido: true },
+      descripcion: { tipo: 'texto', max: 254, silencioso: true }, // solo para los mensajes
+      valorMensual: { tipo: 'monto', max: 9_999_999_999_999, requerido: true }, // valor decimal(15,2)
+      frecuencia: { tipo: 'entero', min: 1, max: 15, silencioso: true }, // frec_reinv int(3)
+      tipoReinversion: { tipo: 'opcion', opciones: ['VALOR', 'PORCENTAJE'], silencioso: true },
+      porcentaje: { tipo: 'monto', max: 100, silencioso: true }, // porc_reinv decimal(7,4)
+    },
+  },
 };
 
 /** Secciones que pueden faltar (los remitentes de los módulos 1 y 2 no las mandan); para escribir son obligatorias. */

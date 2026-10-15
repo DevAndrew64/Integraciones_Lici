@@ -100,6 +100,40 @@ export interface FilaMaquinariaPantallaDto {
   valorMesMantenimiento: number;
   /** Marcado como Valor agregado: se lista, pero NO suma en los subtotales de Maquinaria. */
   valorAgregado: boolean;
+  /** Para «Enviar a Contratos» (pestaña Equipos): grupo y subtipo del catálogo de activos fijos, meses de depreciación y valor con IVA. */
+  codigoGrupo?: string;
+  codigoSubtipo?: string;
+  mesesDepreciacion?: number;
+  valorConIva?: number;
+}
+
+/** Un servicio no continuo tal como lo muestra la pantalla (para «Enviar a Contratos»). Valores sin A.I.U. */
+export interface ServicioNoContinuoPantallaDto {
+  /** Código del catálogo de no continuos y su UEN (los mismos de Contratos); vacíos si el servicio es manual. */
+  codigo: string;
+  uen: string;
+  descripcion: string;
+  /** Código de periodicidad de Grupo Colba (1-12 meses, 13 quincenal, 14 semanal, 15 a solicitud). */
+  frecuencia: number;
+  /** Costo de cada servicio por rubro (antes de repartirlo en la frecuencia); `manoObra` incluye dotación, EPP y exámenes. */
+  manoObra: number;
+  insumos: number;
+  equipos: number;
+  otrosCostos: number;
+  valorServicio: number;
+  /** Lo que vale por mes: lo que suma en el total de Servicios no continuos. */
+  valorMensual: number;
+  valorAgregado: boolean;
+}
+
+/** Una fila de la pestaña Valor Agregado (para «Enviar a Contratos»): ya mensualizada, sin A.I.U. */
+export interface FilaValorAgregadoPantallaDto {
+  tipo: 'REINVERSION' | 'MANO_DE_OBRA' | 'INSUMOS' | 'MAQUINARIA' | 'SNC' | 'EPP';
+  descripcion: string;
+  valorMensual: number;
+  frecuencia: number | null;
+  tipoReinversion: 'VALOR' | 'PORCENTAJE' | null;
+  porcentaje: number | null;
 }
 
 export interface CostosPantallaDto {
@@ -115,6 +149,9 @@ export interface CostosPantallaDto {
   insumos: { filas: FilaInsumoPantallaDto[]; total: number };
   /** Subtotales de la pestaña Maquinaria y Equipos (sin las filas de Valor agregado). */
   maquinaria: { filas: FilaMaquinariaPantallaDto[]; subtotalAdquisicion: number; subtotalMantenimiento: number };
+  /** Solo para «Enviar a Contratos» (el Excel no los usa). */
+  serviciosNoContinuos?: ServicioNoContinuoPantallaDto[];
+  valoresAgregados?: FilaValorAgregadoPantallaDto[];
 }
 
 export type ResultadoValidacionCostosPantalla = { ok: true } | { ok: false; errores: string[] };

@@ -10,7 +10,10 @@ import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/cont
 import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
 import { enviarAContratos } from '@/lib/contratos-puente/directo';
 import { nitVerificado } from '@/lib/solicitudes/nit-entidad';
-import { armarPayloadContratos, costosAdministrativosParaPuente, describirCampo, describirError, etiquetaCampo, insumosParaPuente, leerDestino } from '@/lib/contratos-puente/payload';
+import {
+  armarPayloadContratos, costosAdministrativosParaPuente, describirCampo, describirError, equiposParaPuente, etiquetaCampo, insumosParaPuente, leerDestino,
+  serviciosNoContinuosParaPuente, valoresAgregadosParaPuente,
+} from '@/lib/contratos-puente/payload';
 
 /**
  * Puente a Contratos (módulos 2 y 4) — escribe en el MySQL de Contratos de la intranet (directo, con el código de
@@ -88,6 +91,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       cargos,
       insumos: insumosParaPuente((body?.costosDto as CostosPantallaDto).insumos?.filas),
       costosAdministrativos: costosAdministrativosParaPuente((body?.costosDto as CostosPantallaDto).administrativos),
+      equipos: equiposParaPuente((body?.costosDto as CostosPantallaDto).maquinaria.filas),
+      serviciosNoContinuos: serviciosNoContinuosParaPuente((body?.costosDto as CostosPantallaDto).serviciosNoContinuos),
+      valoresAgregados: valoresAgregadosParaPuente((body?.costosDto as CostosPantallaDto).valoresAgregados),
     });
     const r = await enviarAContratos(payload);
 

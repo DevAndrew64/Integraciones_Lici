@@ -14502,8 +14502,29 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
           cantidadRequerida:r.cantidadRequerida,cantidadComprar:r.cantidadComprar,valorUnitario:r.valorUnitario,
           valorMesComprar:r.valorMesComprar,valorMesMantenimiento:r.valorMesMantenimiento,
           valorAgregado:esRecursoValorAgregado(r),
+          codigoGrupo:r.codigoGrupo??'',codigoSubtipo:r.codigoSubtipo??'',mesesDepreciacion:r.mesesDepreciacion,valorConIva:r.valorConIva,
         })),
       },
+      serviciosNoContinuos:serviciosNoContinuos.map(srv=>{
+        const t=calcularTotalesServicioNoContinuo(srv,totalesManoObraPorServicioNoContinuo.get(srv.id)??0);
+        const frecuencia=t.frecuenciaServicioCodigo??(Number.isInteger(t.frecuenciaServicioMeses)&&t.frecuenciaServicioMeses>=1&&t.frecuenciaServicioMeses<=12?t.frecuenciaServicioMeses:1);
+        return{
+          codigo:srv.origen==='MANUAL'?'':String(srv.codigo??''),uen:srv.origen==='MANUAL'?'':String(srv.undneg??''),
+          descripcion:srv.descripcion,frecuencia,
+          // La mano de obra es lo que queda del servicio fuera de insumos, equipos y otros costos (cargos, tarifas, dotación, exámenes).
+          manoObra:t.subtotalAntesFrecuencia-t.insumos-t.maquinariaEquipos-t.otrosCostos,
+          insumos:t.insumos,equipos:t.maquinariaEquipos,otrosCostos:t.otrosCostos,
+          valorServicio:t.subtotalAntesFrecuencia,valorMensual:t.total,
+          valorAgregado:esRecursoValorAgregado(srv),
+        };
+      }),
+      valoresAgregados:filasConsolidadasValorAgregado.map(f=>{
+        const rein=f.tipo==='REINVERSION'?reinversiones.find(r=>'rein-'+r.id===f.claveFila):undefined;
+        return{
+          tipo:f.tipo,descripcion:f.descripcion,valorMensual:f.valorMensual,frecuencia:f.frecuencia??null,
+          tipoReinversion:rein?.tipoReinversion??null,porcentaje:rein?.tipoReinversion==='PORCENTAJE'?(rein.porcentaje??null):null,
+        };
+      }),
       dotacionEpp:{
         total:totalDotacionEppGeneral,
         cargos:lineasManoObraDisponibles.map(l=>({

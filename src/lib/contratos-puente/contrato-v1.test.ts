@@ -9,7 +9,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cargosParaPuente, type CargoPantallaDto } from './cargos';
-import { armarPayloadContratos, costosAdministrativosParaPuente, insumosParaPuente, leerDestino } from './payload';
+import {
+  armarPayloadContratos, costosAdministrativosParaPuente, equiposParaPuente, insumosParaPuente, leerDestino, serviciosNoContinuosParaPuente, valoresAgregadosParaPuente,
+} from './payload';
 
 const RUTA = resolve(process.cwd(), 'puente-contratos/test/fixtures/payload-licicolba.json');
 
@@ -44,6 +46,17 @@ function payload() {
       valorMensualPolizas: 2500,
       valorMensualImpuestos: 1000,
     }),
+    equipos: equiposParaPuente([{
+      codigo: '004-096', descripcion: 'Aspiradora industrial “Pro”', categoria: '', cantidadRequerida: 2, cantidadComprar: 1, valorUnitario: 1000000,
+      valorMesComprar: 99166.67, valorMesMantenimiento: 23000, valorAgregado: false, codigoGrupo: '004', codigoSubtipo: '096', mesesDepreciacion: 12, valorConIva: 1190000,
+    }]),
+    serviciosNoContinuos: serviciosNoContinuosParaPuente([{
+      codigo: '14', uen: 'BAQ', descripcion: 'Brigada de aseo', frecuencia: 3, manoObra: 116969, insumos: 61439, equipos: 35266, otrosCostos: 0,
+      valorServicio: 213674, valorMensual: 71224.67, valorAgregado: false,
+    }]),
+    valoresAgregados: valoresAgregadosParaPuente([
+      { tipo: 'REINVERSION', descripcion: 'Reinversión anual', valorMensual: 291666.67, frecuencia: 12, tipoReinversion: 'VALOR', porcentaje: null },
+    ]),
   });
 }
 

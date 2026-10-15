@@ -386,6 +386,187 @@ export function planDeCostosAdministrativos(datos, { numOferta = null, huella = 
   return { errores, advertencias, filas };
 }
 
+const dosDecimales = (n) => Math.round(n * 100) / 100;
+const NOMBRE_PUNTO_EQUIPOS_MAX = 50; // fc_contratos_equipos_iniciales.nom_punto_entrega char(50)
+const DESCRIPCION_EQUIPO_MAX = 50; // descrip_equipo varchar(50)
+
+/**
+ * Pestaña «Equipos» de la Oferta Inicial — filas de `fc_contratos_equipos_iniciales`, una por máquina de la pestaña
+ * Maquinaria de LiciColba (las de Valor agregado van a su pestaña). Grupo y subtipo del activo son los del catálogo de
+ * activos fijos (los mismos códigos de Contratos: `tipo_equipo`/`subtipo_equipo`). Como en las ofertas hechas a mano:
+ * `cantidad` = a comprar, `cant_facturar` = requeridas, `frecuencia` = meses de depreciación. El precio va CON IVA y
+ * `porc_vlr_compra` en 1, así `valor × cantidad ÷ frecuencia` + el mantenimiento mensual suman lo de «Vr. Maquinaria» de la
+ * tarifa, sin A.I.U. (las ofertas a mano usan 0,82; se ajusta en Contratos si aplica).
+ *
+ * @param {object} datos contrato v1 ya validado
+ * @param {{numOferta?: number | null, huella?: string, cliente?: {rsocial: string} | null}} contexto
+ */
+export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = null } = {}) {
+  const errores = [];
+  const advertencias = [];
+  const equipos = datos.equipos ?? [];
+  if (equipos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
+  const { oferta, origen } = datos;
+  const sinValor = [];
+  const sinGrupo = [];
+  const filas = [];
+  equipos.forEach((e, i) => {
+    const comprar = e.cantidadComprar ?? 0;
+    const mantenimiento = e.valorMesMantenimiento ?? 0;
+    if (!(comprar > 0 && e.valorUnitario > 0) && !(mantenimiento > 0)) {
+      sinValor.push(e.descripcion || `#${i + 1}`);
+      return;
+    }
+    if (!e.codigoGrupo || !e.codigoSubtipo) sinGrupo.push(e.descripcion || `#${i + 1}`);
+    const precio = dosDecimales(e.valorUnitario ?? 0);
+    filas.push({
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      ncontrato: '',
+      consec: 1,
+      concepto: oferta.codServicio,
+      tipo_servicio: '',
+      codmun: '',
+      punto_entrega: PUNTO_SIN_SEDE,
+      nom_punto_entrega: recortar(cliente?.rsocial, NOMBRE_PUNTO_EQUIPOS_MAX),
+      tipo_equipo: e.codigoGrupo ?? '',
+      subtipo_equipo: e.codigoSubtipo ?? '',
+      codigo: '',
+      descrip_equipo: recortar(e.descripcion, DESCRIPCION_EQUIPO_MAX),
+      precio_costo: precio,
+      porc_vlr_compra: 1,
+      cantidad: dosDecimales(comprar),
+      frecuencia: e.mesesDepreciacion ?? 1,
+      valor: precio,
+      cant_facturar: dosDecimales(e.cantidadRequerida ?? comprar),
+      valor_inicial: precio,
+      user_add: USUARIO_PUENTE,
+      fadd: AHORA,
+      pc_add: marcaDeOrigen(origen.solicitudId, huella),
+      vlr_mes_mantenimiento: Math.round(mantenimiento),
+      vlr_mes_otr_rubros: 0,
+      clase: 1,
+      valor_inicial_va: 0,
+    });
+  });
+  if (sinValor.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Sin compra ni mantenimiento (no van a la pestaña Equipos): ${sinValor.join(', ')}.` });
+  if (sinGrupo.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Sin grupo o subtipo del activo (se completan en Contratos): ${sinGrupo.join(', ')}.` });
+  return { errores, advertencias, filas };
+}
+
+/** Tipo de actividad de un no continuo en Contratos, según qué lleva: personal (REHUM), equipos (MAQUI) o ambos. */
+export function tipoDeActividad({ manoObra, equipos }) {
+  if (manoObra > 0 && equipos > 0) return 'AMBOS';
+  return equipos > 0 ? 'MAQUI' : 'REHUM';
+}
+/** Facturación por valor mensual: LiciColba reparte cada servicio en los meses de su frecuencia. */
+export const FACTURACION_NO_CONTINUO = 'VM';
+
+/**
+ * Pestaña «Servs. No Continuos» de la Oferta Inicial — filas de `fc_contratos_no_continuos_iniciales`, una por servicio
+ * no continuo de LiciColba (los de Valor agregado van a su pestaña). `actividad` y `UEN_Adm`/`uen_punto` son el código y la
+ * UEN del catálogo de no continuos (el mismo de Contratos); `frecuencia` es el código de periodicidad de Grupo Colba (1-12
+ * meses, 13 quincenal, 14 semanal, 15 a solicitud). `valor` es el costo de cada servicio (mano de obra + insumos + equipos
+ * + otros costos) y `vlr_mes` lo que vale por mes, sin A.I.U.: la suma de `vlr_mes` es lo de «Vr. Servicios No Continuos».
+ *
+ * @param {object} datos contrato v1 ya validado
+ * @param {{numOferta?: number | null, huella?: string, cliente?: {rsocial: string} | null}} contexto
+ */
+export function planDeNoContinuos(datos, { numOferta = null, huella = '', cliente = null } = {}) {
+  const errores = [];
+  const advertencias = [];
+  const servicios = datos.serviciosNoContinuos ?? [];
+  if (servicios.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
+  const { oferta, origen, contrato } = datos;
+  const sinCatalogo = [];
+  const filas = [];
+  servicios.forEach((s, i) => {
+    if (!(s.valorMensual > 0)) return;
+    if (!s.actividad) sinCatalogo.push(s.descripcion || `#${i + 1}`);
+    const manoObra = Math.round(s.manoObra ?? 0);
+    const insumos = Math.round(s.insumos ?? 0);
+    const equipos = Math.round(s.equipos ?? 0);
+    const otros = Math.round(s.otrosCostos ?? 0);
+    const meses = s.frecuencia >= 1 && s.frecuencia <= 12 ? s.frecuencia : null;
+    filas.push({
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      ncontrato: '',
+      consec: 1,
+      concepto: oferta.codServicio,
+      UEN_Adm: s.uen ?? '',
+      actividad: s.actividad ?? 0,
+      tipo_actividad: tipoDeActividad({ manoObra, equipos }),
+      tipo: 1,
+      clase: 1,
+      frecuencia: s.frecuencia,
+      punto_entrega: PUNTO_SIN_SEDE,
+      nombre_punto: recortar(cliente?.rsocial, NOMBRE_PUNTO_MAX),
+      codmun: '',
+      descrip_servicio: recortar(s.descripcion, 250),
+      tipo_facturacion: FACTURACION_NO_CONTINUO,
+      valor: Math.round(s.valorServicio),
+      vlr_mes: Math.round(s.valorMensual),
+      vlr_mano_obra: manoObra,
+      vlr_insumos: insumos,
+      vlr_equipos: equipos,
+      vlr_costos: otros,
+      cant_servs_mes: 1,
+      cant_servs_contrato: meses && contrato?.plazoMeses ? Math.max(1, Math.floor(contrato.plazoMeses / meses)) : 0,
+      uen_punto: s.uen ?? '',
+      user_add: USUARIO_PUENTE,
+      fadd: AHORA,
+      pc_add: marcaDeOrigen(origen.solicitudId, huella),
+    });
+  });
+  if (sinCatalogo.length > 0) advertencias.push({ campo: 'serviciosNoContinuos', mensaje: `Sin código del catálogo de no continuos (la actividad se elige en Contratos): ${sinCatalogo.join(', ')}.` });
+  return { errores, advertencias, filas };
+}
+
+/**
+ * Tipo de valor agregado en Contratos (`fc_contratos_vlrs_agregs_iniciales.tipo`) para cada tipo de LiciColba.
+ * POR CONFIRMAR con Contratos: se tomó el orden de los tipos de la pestaña Valor Agregado de LiciColba.
+ */
+export const TIPO_VALOR_AGREGADO = Object.freeze({ REINVERSION: 1, MANO_DE_OBRA: 2, INSUMOS: 3, MAQUINARIA: 4, SNC: 5, EPP: 6 });
+
+/**
+ * Pestaña «Valores Agregados» de la Oferta Inicial — filas de `fc_contratos_vlrs_agregs_iniciales`, una por fila de la
+ * pestaña Valor Agregado de LiciColba (reinversiones y recursos marcados como valor agregado), con su valor MENSUAL sin
+ * A.I.U. (la suma es «Vr. Valor Agregado» de la tarifa), el tipo de reinversión (1 valor, 2 porcentaje), su frecuencia
+ * (código de Grupo Colba) y el porcentaje. Esta tabla no tiene `user_add`/`pc_add`: la marca va en `usuario`/`pc`.
+ *
+ * @param {object} datos contrato v1 ya validado
+ * @param {{numOferta?: number | null, huella?: string}} contexto
+ */
+export function planDeValoresAgregados(datos, { numOferta = null, huella = '' } = {}) {
+  const errores = [];
+  const advertencias = [];
+  const valores = datos.valoresAgregados ?? [];
+  if (valores.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
+  const { oferta, origen } = datos;
+  const filas = valores
+    .filter((v) => v.valorMensual > 0)
+    .map((v) => ({
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      ncontrato: '',
+      consec: 1,
+      concepto: oferta.codServicio,
+      tipo: TIPO_VALOR_AGREGADO[v.tipo],
+      valor: dosDecimales(v.valorMensual),
+      tipo_reinv: v.tipoReinversion === 'PORCENTAJE' ? 2 : 1,
+      frec_reinv: v.frecuencia ?? 1,
+      porc_reinv: Math.round((v.porcentaje ?? 0) * 1e4) / 1e4,
+      fproc: AHORA,
+      usuario: USUARIO_PUENTE,
+      pc: marcaDeOrigen(origen.solicitudId, huella),
+    }));
+  return { errores, advertencias, filas };
+}
+
 /** Las 47 columnas del INSERT de cargos de `cmdGrabar.Click`, en su orden. */
 export const COLUMNAS_CARGO_VFP = [
   'empresa', 'undnegocio', 'ncontrato', 'num_oferta', 'consec', 'concepto', 'cod_seccion', 'tipo_cargo', 'item', 'cargo', 'jornada', 'horassem',

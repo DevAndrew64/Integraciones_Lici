@@ -23,7 +23,7 @@ import { ErrorNegocio } from './errores.js';
 import { digitoVerificacion } from './nit.js';
 import {
   AHORA, codigosDeNomina, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
-  planDeCostosAdministrativos, planDeInsumosOferta, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
+  planDeCostosAdministrativos, planDeEquipos, planDeInsumosOferta, planDeNoContinuos, planDeValoresAgregados, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from './oferta.js';
 
 const TABLA_TARIFA = 'fc_contratos_tarifa_inicial';
@@ -33,6 +33,9 @@ const TABLA_PRECIOS = 'fc_preciosventas_oferta';
 const TABLA_COSTOS_ADMTIVOS = 'fc_contratos_costos_admtivos_iniciales';
 /** MyISAM (no se revierte con ROLLBACK): se escribe al final y, si algo falla, se borran las filas propias. */
 const TABLA_INSUMOS_OFERTA = 'fc_elemxcont';
+const TABLA_EQUIPOS = 'fc_contratos_equipos_iniciales';
+const TABLA_NO_CONTINUOS = 'fc_contratos_no_continuos_iniciales';
+const TABLA_VALORES_AGREGADOS = 'fc_contratos_vlrs_agregs_iniciales';
 const INTENTOS_NUMERO = 3;
 const ESPERA_BLOQUEO_S = 10;
 
@@ -207,11 +210,15 @@ function avisosDeCliente(datos, cliente) {
  *   adjudicada y qué columnas de la tarifa y los cargos no existen en esta base
  * @returns {{escribir(datos: object, contexto: {huella: string}): Promise<object>}}
  */
-export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null, largoPcAdd = null, idManualPorTabla = {}, omitir = {} } = {}) {
+export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null, largoPcAdd = null, idManualPorTabla = {}, omitir = {}, tablasAusentes = [] } = {}) {
   const comoTarifa = { omitir: omitir[TABLA_TARIFA] ?? [], idManual: Boolean(idManualPorTabla[TABLA_TARIFA]) };
   const comoCargo = { omitir: omitir[TABLA_CARGOS] ?? [], idManual: Boolean(idManualPorTabla[TABLA_CARGOS]) };
   const comoCosto = { idManual: Boolean(idManualPorTabla[TABLA_COSTOS_ADMTIVOS]) };
   const comoInsumo = { idManual: Boolean(idManualPorTabla[TABLA_INSUMOS_OFERTA]) };
+  const comoEquipo = { idManual: Boolean(idManualPorTabla[TABLA_EQUIPOS]) };
+  const comoNoContinuo = { idManual: Boolean(idManualPorTabla[TABLA_NO_CONTINUOS]) };
+  const comoValorAgregado = { idManual: Boolean(idManualPorTabla[TABLA_VALORES_AGREGADOS]) };
+  const sinValoresAgregados = tablasAusentes.includes(TABLA_VALORES_AGREGADOS);
   return {
     async escribir(datos, { huella }) {
       const solicitudId = datos.origen.solicitudId;
@@ -292,8 +299,18 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         errores.push(...planCostos.errores);
         const planInsumos = planDeInsumosOferta(datosDeContratos, { huella, cliente: clienteParaPlan });
         errores.push(...planInsumos.errores);
+        const planEquipos = planDeEquipos(datosDeContratos, { huella, cliente: clienteParaPlan });
+        const planNoContinuos = planDeNoContinuos(datosDeContratos, { huella, cliente: clienteParaPlan });
+        const planValores = planDeValoresAgregados(datosDeContratos, { huella });
+        errores.push(...planEquipos.errores, ...planNoContinuos.errores, ...planValores.errores);
         if (errores.length > 0) throw new ErrorNegocio(422, 'DATOS_INVALIDOS', 'Contratos no puede recibir esta oferta.', { errores });
-        advertencias.push(...planCargos.advertencias, ...precios.advertencias, ...planCostos.advertencias, ...planInsumos.advertencias, ...avisosDeCliente(datos, cliente));
+        advertencias.push(
+          ...planCargos.advertencias, ...precios.advertencias, ...planCostos.advertencias, ...planInsumos.advertencias,
+          ...planEquipos.advertencias, ...planNoContinuos.advertencias, ...planValores.advertencias, ...avisosDeCliente(datos, cliente),
+        );
+        if (sinValoresAgregados && planValores.filas.length > 0) {
+          advertencias.push({ campo: 'valoresAgregados', mensaje: `Esta base de Contratos no tiene la tabla ${TABLA_VALORES_AGREGADOS}: los valores agregados no se escribieron (sí van en el total de la tarifa).` });
+        }
 
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
@@ -303,6 +320,9 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
         const { filas: filasDeCostos } = planDeCostosAdministrativos(datosDeContratos, { numOferta, huella, cliente, catalogo: conceptosCostos });
         const { filas: filasDeInsumos } = planDeInsumosOferta(datosDeContratos, { numOferta, huella, cliente });
+        const { filas: filasDeEquipos } = planDeEquipos(datosDeContratos, { numOferta, huella, cliente });
+        const { filas: filasDeNoContinuos } = planDeNoContinuos(datosDeContratos, { numOferta, huella, cliente });
+        const filasDeValores = sinValoresAgregados ? [] : planDeValoresAgregados(datosDeContratos, { numOferta, huella }).filas;
         let insumosEscritos = false;
         await conexion.beginTransaction();
         try {
@@ -311,6 +331,9 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
           await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
           for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);
           for (const filaDeCosto of filasDeCostos) await insertar(conexion, TABLA_COSTOS_ADMTIVOS, filaDeCosto, comoCosto);
+          for (const filaDeEquipo of filasDeEquipos) await insertar(conexion, TABLA_EQUIPOS, filaDeEquipo, comoEquipo);
+          for (const filaDeServicio of filasDeNoContinuos) await insertar(conexion, TABLA_NO_CONTINUOS, filaDeServicio, comoNoContinuo);
+          for (const filaDeValor of filasDeValores) await insertar(conexion, TABLA_VALORES_AGREGADOS, filaDeValor, comoValorAgregado);
           // Lo último antes del COMMIT: fc_elemxcont es MyISAM y cada fila queda escrita al insertarla.
           insumosEscritos = filasDeInsumos.length > 0;
           for (const filaDeInsumo of filasDeInsumos) await insertar(conexion, TABLA_INSUMOS_OFERTA, filaDeInsumo, comoInsumo);
@@ -341,6 +364,9 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
             preciosOferta: filasDePrecios.map((f) => ({ codigo: f.codigo, vr_costo: f.vr_costo, valor: f.valor })),
             costosAdministrativos: filasDeCostos.map((f) => ({ id_cpto_costo: f.id_cpto_costo, valor: f.valor })),
             insumosOferta: filasDeInsumos.map((f) => ({ codele: f.codele, cantidad: f.cantidad, frecuencia: f.frecuencia, vlr_unitario: f.vlr_unitario })),
+            equipos: filasDeEquipos.map((f) => ({ descrip_equipo: f.descrip_equipo, tipo_equipo: f.tipo_equipo, subtipo_equipo: f.subtipo_equipo, cantidad: f.cantidad, valor: f.valor, frecuencia: f.frecuencia })),
+            serviciosNoContinuos: filasDeNoContinuos.map((f) => ({ actividad: f.actividad, frecuencia: f.frecuencia, valor: f.valor, vlr_mes: f.vlr_mes })),
+            valoresAgregados: filasDeValores.map((f) => ({ tipo: f.tipo, valor: f.valor, frec_reinv: f.frec_reinv })),
             ...(Object.keys(omitir).length > 0 ? { columnasOmitidas: omitir } : {}),
           },
         };

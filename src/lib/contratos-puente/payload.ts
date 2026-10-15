@@ -1,5 +1,7 @@
 import { porcentajeAIU, valorConAIU, type ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
-import type { AdministrativosPantallaDto, FilaInsumoPantallaDto, TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
+import type {
+  AdministrativosPantallaDto, FilaInsumoPantallaDto, FilaMaquinariaPantallaDto, FilaValorAgregadoPantallaDto, ServicioNoContinuoPantallaDto, TotalesPantallaDto,
+} from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { CargoPayload } from './cargos';
 import type { ErrorCampo, PayloadContratosV1 } from './cliente';
 
@@ -115,6 +117,103 @@ export function costosAdministrativosParaPuente(adm: AdministrativosPantallaDto 
   return lista.filter((c) => c.concepto !== '' && Number.isFinite(c.valorMensual) && c.valorMensual > 0);
 }
 
+/** Máquina de la pestaña Equipos de Contratos: grupo y subtipo del activo, valor con IVA, cantidades, depreciación y mantenimiento. */
+export interface EquipoPayload {
+  codigoGrupo: string | null;
+  codigoSubtipo: string | null;
+  descripcion: string;
+  valorUnitario: number;
+  cantidadRequerida: number;
+  cantidadComprar: number;
+  mesesDepreciacion: number;
+  valorMesMantenimiento: number;
+}
+
+/** Servicio no continuo (pestaña Servs. No Continuos de Contratos): código y UEN del catálogo, frecuencia y costos sin A.I.U. */
+export interface ServicioNoContinuoPayload {
+  actividad: number | null;
+  uen: string | null;
+  descripcion: string;
+  frecuencia: number;
+  manoObra: number;
+  insumos: number;
+  equipos: number;
+  otrosCostos: number;
+  valorServicio: number;
+  valorMensual: number;
+}
+
+/** Fila de la pestaña Valores Agregados de Contratos: valor mensual sin A.I.U., frecuencia y, en reinversiones, su tipo y porcentaje. */
+export interface ValorAgregadoPayload {
+  tipo: FilaValorAgregadoPantallaDto['tipo'];
+  descripcion: string;
+  valorMensual: number;
+  frecuencia: number | null;
+  tipoReinversion: 'VALOR' | 'PORCENTAJE' | null;
+  porcentaje: number | null;
+}
+
+/** Texto que Contratos (latin1) puede guardar: lo demás se cambia por un espacio; sin dobles espacios y hasta `max` caracteres. */
+const textoContratos = (v: string | null | undefined, max: number) =>
+  Array.from(String(v ?? '').normalize('NFC').replace(/[^\x20-\x7E\xA0-\xFF]/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, max).join('');
+const codigoCorto = (v: string | null | undefined, max: number) => {
+  const t = String(v ?? '').trim();
+  return new RegExp(`^[A-Za-z0-9]{1,${max}}$`).test(t) ? t : null;
+};
+const positivo = (v: number | undefined | null) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+const frecuenciaValida = (v: number | null | undefined) => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 15 ? v : null);
+
+/** Las máquinas de la pantalla que van a la pestaña Equipos (sin las de Valor agregado, que van a su pestaña). */
+export function equiposParaPuente(filas: FilaMaquinariaPantallaDto[] | null | undefined): EquipoPayload[] {
+  return (filas ?? [])
+    .filter((f) => !f.valorAgregado && textoContratos(f.descripcion, 254) !== '')
+    .map((f) => ({
+      codigoGrupo: codigoCorto(f.codigoGrupo, 3),
+      codigoSubtipo: codigoCorto(f.codigoSubtipo, 3),
+      descripcion: textoContratos(f.descripcion, 254),
+      valorUnitario: positivo(f.valorConIva ?? f.valorUnitario),
+      cantidadRequerida: positivo(f.cantidadRequerida),
+      cantidadComprar: positivo(f.cantidadComprar),
+      mesesDepreciacion: Math.min(999, Math.max(1, Math.round(positivo(f.mesesDepreciacion) || 1))),
+      valorMesMantenimiento: positivo(f.valorMesMantenimiento),
+    }));
+}
+
+/** Los servicios no continuos de la pantalla (sin los de Valor agregado), con su costo por rubro y su valor mensual. */
+export function serviciosNoContinuosParaPuente(servicios: ServicioNoContinuoPantallaDto[] | null | undefined): ServicioNoContinuoPayload[] {
+  return (servicios ?? [])
+    .filter((s) => !s.valorAgregado && positivo(s.valorMensual) > 0)
+    .map((s) => {
+      const actividad = /^\d{1,3}$/.test(String(s.codigo ?? '').trim()) ? Number(String(s.codigo).trim()) : null;
+      return {
+        actividad,
+        uen: codigoCorto(s.uen, 3),
+        descripcion: textoContratos(s.descripcion, 250) || 'Servicio no continuo',
+        frecuencia: frecuenciaValida(s.frecuencia) ?? 1,
+        manoObra: positivo(s.manoObra),
+        insumos: positivo(s.insumos),
+        equipos: positivo(s.equipos),
+        otrosCostos: positivo(s.otrosCostos),
+        valorServicio: positivo(s.valorServicio),
+        valorMensual: positivo(s.valorMensual),
+      };
+    });
+}
+
+/** Las filas de la pestaña Valor Agregado con valor (reinversiones y recursos marcados como valor agregado). */
+export function valoresAgregadosParaPuente(filas: FilaValorAgregadoPantallaDto[] | null | undefined): ValorAgregadoPayload[] {
+  return (filas ?? [])
+    .filter((f) => positivo(f.valorMensual) > 0)
+    .map((f) => ({
+      tipo: f.tipo,
+      descripcion: textoContratos(f.descripcion, 254),
+      valorMensual: f.valorMensual,
+      frecuencia: frecuenciaValida(f.frecuencia),
+      tipoReinversion: f.tipoReinversion,
+      porcentaje: typeof f.porcentaje === 'number' && Number.isFinite(f.porcentaje) && f.porcentaje >= 0 && f.porcentaje <= 100 ? f.porcentaje : null,
+    }));
+}
+
 /**
  * JSON v1 del puente a partir de lo que LiciColba ya tiene: la solicitud, el Resultado guardado y los totales de la pantalla.
  * Los seis valores de la tarifa son los de la hoja «Contratos» del Excel de costos: costo × (1 + A.I.U.), al peso, antes de IVA;
@@ -132,8 +231,12 @@ export function armarPayloadContratos(d: {
   insumos?: InsumoPayload[] | null;
   /** Costos administrativos (`costosAdministrativosParaPuente`): pestaña Costos Admtivos. */
   costosAdministrativos?: CostoAdministrativoPayload[] | null;
+  /** Pestañas Equipos, Servs. No Continuos y Valores Agregados. */
+  equipos?: EquipoPayload[] | null;
+  serviciosNoContinuos?: ServicioNoContinuoPayload[] | null;
+  valoresAgregados?: ValorAgregadoPayload[] | null;
 }): PayloadContratosV1 {
-  const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos, costosAdministrativos } = d;
+  const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos, costosAdministrativos, equipos, serviciosNoContinuos, valoresAgregados } = d;
   const aiu = porcentajeAIU(r?.porcentajeIU);
   const conAIU = (costo: number | undefined) => (typeof costo === 'number' && Number.isFinite(costo) ? valorConAIU(costo, aiu) : null);
   return {
@@ -165,6 +268,9 @@ export function armarPayloadContratos(d: {
     ...(cargos && cargos.length > 0 ? { cargos } : {}),
     ...(insumos && insumos.length > 0 ? { insumos } : {}),
     ...(costosAdministrativos && costosAdministrativos.length > 0 ? { costosAdministrativos } : {}),
+    ...(equipos && equipos.length > 0 ? { equipos } : {}),
+    ...(serviciosNoContinuos && serviciosNoContinuos.length > 0 ? { serviciosNoContinuos } : {}),
+    ...(valoresAgregados && valoresAgregados.length > 0 ? { valoresAgregados } : {}),
   };
 }
 
@@ -189,6 +295,9 @@ const ETIQUETA_CAMPO: Record<string, string> = {
   cargos: 'Cargos',
   insumos: 'Insumos',
   costosAdministrativos: 'Costos administrativos (conceptos que van en OTROS)',
+  equipos: 'Equipos',
+  serviciosNoContinuos: 'Servicios no continuos',
+  valoresAgregados: 'Valores agregados',
   'tarifa.manoObra': 'Vr. Mano de obra',
   'tarifa.insumos': 'Vr. Insumos',
   'tarifa.maquinaria': 'Vr. Maquinaria',
