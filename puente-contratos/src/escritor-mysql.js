@@ -156,10 +156,18 @@ async function leerCargosDeNomina(conexion, empresa, undnegocio) {
 /** Reserva el siguiente número de oferta de (empresa, UEN). El UPDATE es atómico: dos reservas simultáneas nunca reciben el mismo número. */
 async function reservarNumero(conexion, empresa, undnegocio) {
   const saltados = [];
+  // Las ofertas digitadas en Contratos no siempre mueven fc_control: si ya hay ofertas por encima del contador, se sigue
+  // después de la mayor (si no, cada envío chocaría con números ya usados).
+  const deLaUen = 'WHERE empresa = ? AND undnegocio = ?';
+  const [[usado]] = await conexion.query(
+    `SELECT GREATEST(COALESCE((SELECT MAX(num_oferta) FROM ${TABLA_TARIFA} ${deLaUen}), 0), COALESCE((SELECT MAX(num_oferta) FROM ${TABLA_OFERTAS} ${deLaUen}), 0), COALESCE((SELECT MAX(num_oferta) FROM ${TABLA_COSTOS_ADMTIVOS} ${deLaUen}), 0)) AS mayor`,
+    [empresa, undnegocio, empresa, undnegocio, empresa, undnegocio],
+  );
+  const mayorUsado = Number(usado?.mayor ?? 0);
   for (let intento = 1; intento <= INTENTOS_NUMERO; intento++) {
     const [resultado] = await conexion.query(
-      'UPDATE fc_control SET num_oferta = LAST_INSERT_ID(COALESCE(num_oferta, 0) + 1) WHERE empresa = ? AND undnegocio = ?',
-      [empresa, undnegocio],
+      'UPDATE fc_control SET num_oferta = LAST_INSERT_ID(GREATEST(COALESCE(num_oferta, 0), ?) + 1) WHERE empresa = ? AND undnegocio = ?',
+      [mayorUsado, empresa, undnegocio],
     );
     if (resultado.affectedRows !== 1) {
       throw new ErrorNegocio(409, 'CONTADOR_AMBIGUO', 'El contador de ofertas de esta empresa y UEN no es único en Contratos. Avise a Contratos.');

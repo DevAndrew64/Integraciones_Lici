@@ -48,6 +48,7 @@ function falso(respuestas = {}) {
     [/FROM fc_horarios/, [[{ codigo: '941' }]]],
     [/FROM gl_undnegocios/, [[{ dbnomina: 'nominabq  ' }]]],
     [/FROM `nominabq`\.cargos/, [NOMINA()]],
+    [/AS mayor$/, [[{ mayor: 0 }]]],
     [/^UPDATE fc_control/, [{ affectedRows: 1 }]],
     [/LAST_INSERT_ID\(\) AS numero/, [[{ numero: '937' }]]],
     [/AS n$/, [[{ n: 0 }]]],
@@ -141,8 +142,8 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     const f = falso();
     await escribir(f.pool);
     const actualizacion = f.de(/^UPDATE fc_control/)[0];
-    assert.equal(actualizacion.sql, 'UPDATE fc_control SET num_oferta = LAST_INSERT_ID(COALESCE(num_oferta, 0) + 1) WHERE empresa = ? AND undnegocio = ?');
-    assert.deepEqual(actualizacion.params, ['01', 'BAQ']);
+    assert.equal(actualizacion.sql, 'UPDATE fc_control SET num_oferta = LAST_INSERT_ID(GREATEST(COALESCE(num_oferta, 0), ?) + 1) WHERE empresa = ? AND undnegocio = ?');
+    assert.deepEqual(actualizacion.params, [0, '01', 'BAQ']);
     for (const s of f.de(/fc_control/)) assert.doesNotMatch(s.sql, /SELECT \*|SELECT\s+\w*\s*\*/);
   });
 
@@ -389,6 +390,21 @@ describe('escritor MySQL — número de oferta', () => {
     assert.deepEqual(r.escrito.numerosSaltados, [936, 937]);
   });
 
+  it('si Contratos ya tiene ofertas por encima del contador (digitadas a mano), sigue después de la mayor de la UEN', async () => {
+    let actual = 836;
+    const f = falso({
+      [/AS mayor$/.source]: [[{ mayor: '943' }]],
+      [/^UPDATE fc_control/.source]: (params) => { actual = Math.max(actual, params[0]) + 1; return [{ affectedRows: 1 }]; },
+      [/LAST_INSERT_ID\(\) AS numero/.source]: () => [[{ numero: String(actual) }]],
+    });
+    const r = await escribir(f.pool);
+    assert.equal(r.escrito.numOferta, 944);
+    const mayor = f.de(/AS mayor$/)[0];
+    assert.match(mayor.sql, /MAX\(num_oferta\) FROM fc_contratos_tarifa_inicial .* FROM fc_ofertas_adjudicadas .* FROM fc_contratos_costos_admtivos_iniciales/);
+    assert.deepEqual(mayor.params, ['01', 'BAQ', '01', 'BAQ', '01', 'BAQ']);
+    assert.ok(f.indice(/AS mayor$/) < f.indice(/^UPDATE fc_control/));
+  });
+
   it('tras tres números en uso se rinde con 409 y no escribe', async () => {
     const f = falso(contador(935, [936, 937, 938, 939]));
     const error = await rechaza(escribir(f.pool), 409, 'NUMERO_OFERTA_EN_USO');
@@ -461,7 +477,7 @@ describe('escritor MySQL — pestañas Costos Admtivos e Insumos de la Oferta In
   it('sin costos administrativos no consulta el catálogo ni toca la tabla', async () => {
     const f = falso();
     await escribir(f.pool);
-    assert.ok(!f.hubo(/costos_admtivos/) && !f.hubo(/fc_elemxcont/));
+    assert.ok(!f.hubo(/FROM fc_conceptos_costos_admtivos|INSERT INTO fc_contratos_costos_admtivos/) && !f.hubo(/fc_elemxcont/));
   });
 
   it('un id que no es auto_increment se asigna MAX(id) + 1 también en estas tablas', async () => {
