@@ -20549,7 +20549,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                                 :<div><label style={lbl}>Concepto de facturación</label>
                                   <select style={inp} value={destinoContratos.codServicio} onChange={e=>setDestinoContratos(d=>({...d,codServicio:e.target.value}))}>
                                     <option value="">Seleccione…</option>
-                                    {uenSel.conceptos.map(c=><option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}</option>)}
+                                    {uenSel.conceptos.map(c=><option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}{c.veces?` (${c.veces} tarifa${c.veces===1?'':'s'})`:''}</option>)}
                                   </select></div>)}
                           </div>);
                         })())}

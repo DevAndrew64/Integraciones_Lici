@@ -7,6 +7,8 @@
 export interface ConceptoContratos {
   codigo: string;
   descripcion: string;
+  /** Cuántas tarifas de la UEN en Contratos usan este concepto. */
+  veces?: number;
 }
 
 export interface UenContratos {
@@ -48,7 +50,7 @@ export function empresaDeSolicitud(perfil: string | null | undefined): string | 
  * La UEN que se marca de entrada: la preferida (la última que usó quien envía, o una ciudad de LiciColba) si la empresa la
  * tiene en Contratos; si la empresa tiene una sola UEN, esa; si no, ninguna (quien envía elige).
  */
-const UEN_POR_CIUDAD: Record<string, string> = { BARRANQUILLA: 'BAQ', BOGOTA: 'BOG', MINA: 'MNA' };
+const UEN_POR_CIUDAD: Record<string, string> = { BARRANQUILLA: 'BAQ', BOGOTA: 'BOG', MINA: 'MIN' };
 export function uenSugerida(preferida: string | null | undefined, uens: readonly UenContratos[]): string | null {
   const clave = String(preferida ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
   const codigo = UEN_POR_CIUDAD[clave] ?? clave;

@@ -49,23 +49,35 @@ export function empresaPorNombre(filas, nombre) {
 
 /**
  * Las UEN donde se puede crear la oferta (las que tienen contador en `fc_control`), cada una con sus conceptos de
- * facturación (`fc_conceptos`), en orden de código.
+ * facturación (`fc_conceptos`). `fc_conceptos` mezcla los conceptos de servicio con retenciones y otros cobros: si la UEN
+ * ya tiene ofertas, solo se ofrecen los conceptos con que se han hecho tarifas (`usos`, de `fc_contratos_tarifa_inicial`),
+ * del más usado al menos usado; si nunca se ha usado ninguno, todos, en orden de código.
  */
-export function uensDeEmpresa(empresa, { contadores, conceptos }) {
+export function uensDeEmpresa(empresa, { contadores, conceptos, usos = [] }) {
   const emp = texto(empresa).toUpperCase();
   const uens = [...new Set(contadores.filter((c) => texto(c.empresa).toUpperCase() === emp).map((c) => texto(c.undnegocio).toUpperCase()).filter(Boolean))].sort();
-  return uens.map((uen) => ({
-    codigo: uen,
-    conceptos: conceptos
+  return uens.map((uen) => {
+    const veces = new Map();
+    for (const u of usos) {
+      if (texto(u.undnegocio).toUpperCase() !== uen) continue;
+      const codigo = texto(u.codservicio).toUpperCase();
+      veces.set(codigo, (veces.get(codigo) ?? 0) + Number(u.veces ?? 0));
+    }
+    const todos = conceptos
       .filter((c) => texto(c.empresa).toUpperCase() === emp && texto(c.undnegocio).toUpperCase() === uen && texto(c.codcpto))
-      .map((c) => ({ codigo: texto(c.codcpto).toUpperCase(), descripcion: texto(c.descrip) || texto(c.nombre) }))
-      .sort((a, b) => a.codigo.localeCompare(b.codigo)),
-  }));
+      .map((c) => {
+        const codigo = texto(c.codcpto).toUpperCase();
+        return { codigo, descripcion: texto(c.descrip) || texto(c.nombre), veces: veces.get(codigo) ?? 0 };
+      })
+      .sort((a, b) => a.codigo.localeCompare(b.codigo));
+    const usados = todos.filter((c) => c.veces > 0).sort((a, b) => b.veces - a.veces || a.codigo.localeCompare(b.codigo));
+    return { codigo: uen, conceptos: usados.length > 0 ? usados : todos };
+  });
 }
 
 /**
  * Lee de Contratos el destino de una oferta de la empresa `nombreEmpresa`. Solo SELECT.
- * @returns {Promise<{empresa: {codigo: string, rsocial: string} | null, uens: {codigo: string, conceptos: {codigo: string, descripcion: string}[]}[], error?: string, candidatas?: string[]}>}
+ * @returns {Promise<{empresa: {codigo: string, rsocial: string} | null, uens: {codigo: string, conceptos: {codigo: string, descripcion: string, veces: number}[]}[], error?: string, candidatas?: string[]}>}
  */
 export async function leerDestino(conexion, nombreEmpresa) {
   const [empresas] = await conexion.query('SELECT codigo, undnegocio, rsocial FROM fc_empresas');
@@ -73,5 +85,9 @@ export async function leerDestino(conexion, nombreEmpresa) {
   if ('error' in empresa) return { empresa: null, uens: [], error: empresa.error, candidatas: empresa.candidatas };
   const [contadores] = await conexion.query('SELECT empresa, undnegocio FROM fc_control WHERE empresa = ?', [empresa.codigo]);
   const [conceptos] = await conexion.query('SELECT empresa, undnegocio, codcpto, descrip, nombre FROM fc_conceptos WHERE empresa = ?', [empresa.codigo]);
-  return { empresa, uens: uensDeEmpresa(empresa.codigo, { contadores, conceptos }) };
+  const [usos] = await conexion.query(
+    'SELECT undnegocio, codservicio, COUNT(*) AS veces FROM fc_contratos_tarifa_inicial WHERE empresa = ? GROUP BY undnegocio, codservicio',
+    [empresa.codigo],
+  );
+  return { empresa, uens: uensDeEmpresa(empresa.codigo, { contadores, conceptos, usos }) };
 }
