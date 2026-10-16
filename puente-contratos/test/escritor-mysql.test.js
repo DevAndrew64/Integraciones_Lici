@@ -275,9 +275,9 @@ describe('escritor MySQL — cargos', () => {
     const f = falso();
     await escribir(f.pool, conCargos());
     const [uno, dos] = f.de(/^INSERT INTO fc_contratos_cargos_iniciales/);
-    assert.match(uno.sql, /user_add, fadd, pc_add, codhorario\) VALUES/);
+    assert.match(uno.sql, /user_add, fadd, pc_add, nro_veces_mes, vlr_cargos, clasebono_alim, clasebono_trans, clasebono_prod, clasebono_prest, codhorario\) VALUES/);
     assert.doesNotMatch(dos.sql, /codhorario/);
-    assert.equal(uno.params.length, 47, '48 columnas (47 + horario) menos fadd, que es NOW()');
+    assert.equal(uno.params.length, 53, '54 columnas (47 + 6 de la pantalla + horario) menos fadd, que es NOW()');
     assert.ok(uno.params.includes(937) && uno.params.includes('LICICOLBA:42:ab12cd34ef56') && uno.params.includes('941'));
   });
 

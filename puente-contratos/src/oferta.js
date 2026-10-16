@@ -623,6 +623,16 @@ export const COLUMNAS_CARGO_VFP = [
 export const COLUMNA_CARGO_HORARIO = 'codhorario';
 
 /**
+ * Columnas que el INSERT de `cmdGrabar.Click` no lleva pero que tienen TODAS las ofertas digitadas en Contratos (940, 941,
+ * 943…) y la pantalla «Oferta Inicial» usa al abrir la oferta: veces al mes (30), valor de los cargos (= valor total de la
+ * línea, sin insumos ni equipos repartidos) y la clase de cada bono en «00» (sin bono).
+ */
+export const COLUMNAS_CARGO_PANTALLA = ['nro_veces_mes', 'vlr_cargos', 'clasebono_alim', 'clasebono_trans', 'clasebono_prod', 'clasebono_prest'];
+
+/** `tipo_cargo` de las ofertas digitadas en Contratos: «F» en todas. */
+export const TIPO_CARGO = 'F';
+
+/**
  * Tablas de la oferta que se ADAPTAN a la base real (las activaron después y pueden traer menos columnas que producción):
  * las columnas que el puente escribe y las esenciales. Si falta una esencial no se escribe nada; si falta otra, se omite y
  * se informa. Nunca se crea ni se cambia una columna.
@@ -633,7 +643,7 @@ export const TABLAS_ADAPTABLES = {
     esenciales: ['empresa', 'undnegocio', 'num_oferta', 'nit', 'rsocial', 'codservicio', 'tarifa', 'tar_manoobra', 'tar_impuestos', 'aiu', 'pc_add'],
   },
   fc_contratos_cargos_iniciales: {
-    escritas: [...COLUMNAS_CARGO_VFP, COLUMNA_CARGO_HORARIO],
+    escritas: [...COLUMNAS_CARGO_VFP, ...COLUMNAS_CARGO_PANTALLA, COLUMNA_CARGO_HORARIO],
     esenciales: ['empresa', 'undnegocio', 'num_oferta', 'item', 'cargo', 'cantidad', 'vlr_unitario', 'vlr_total', 'pc_add'],
   },
 };
@@ -750,7 +760,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
       consec: 1,
       concepto: oferta.codServicio,
       cod_seccion: 0, // la sección de nómina la digita Nómina en Contratos
-      tipo_cargo: '',
+      tipo_cargo: TIPO_CARGO,
       item: i + 1,
       cargo: codigosNomina?.[i] ?? null,
       jornada: c.jornada,
@@ -778,6 +788,10 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
       user_add: USUARIO_PUENTE,
       fadd: AHORA,
       pc_add: marcaDeOrigen(origen.solicitudId, huella),
+      // Después de las del formulario (COLUMNAS_CARGO_PANTALLA):
+      nro_veces_mes: 30,
+      vlr_cargos: Math.round(c.valorTotal),
+      clasebono_alim: '00', clasebono_trans: '00', clasebono_prod: '00', clasebono_prest: '00',
     };
     if (c.codigoHorario) fila[COLUMNA_CARGO_HORARIO] = c.codigoHorario;
     return fila;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
-  AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
+  AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_PANTALLA, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
   codigosDeNomina, conceptoDeCostoAdmtivo, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta,
   claveDeSubtipo, dtiposDeEquipos, planDeEquipos, planDeNoContinuos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, planDeValoresAgregados, TIPO_VALOR_AGREGADO, tipoDeActividad, USUARIO_PUENTE,
 } from '../src/oferta.js';
@@ -497,12 +497,12 @@ describe('planDeCargos', () => {
     assert.deepEqual(planDeCargos(conCargos(), { huella: HUELLA }).filas.map((f) => f.cargo), [null, null, null, null]);
   });
 
-  it('escribe EXACTAMENTE las 47 columnas del INSERT de cargos de cmdGrabar.Click, en su orden; el horario se agrega solo si viene', () => {
+  it('escribe las 47 columnas del INSERT de cargos de cmdGrabar.Click en su orden, luego las que usa la pantalla; el horario solo si viene', () => {
     const { filas, errores } = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA });
     assert.deepEqual(errores, []);
     assert.equal(COLUMNAS_CARGO_VFP.length, 47);
-    assert.deepEqual(Object.keys(filas[0]), [...COLUMNAS_CARGO_VFP, COLUMNA_CARGO_HORARIO]);
-    assert.deepEqual(Object.keys(filas[1]), COLUMNAS_CARGO_VFP);
+    assert.deepEqual(Object.keys(filas[0]), [...COLUMNAS_CARGO_VFP, ...COLUMNAS_CARGO_PANTALLA, COLUMNA_CARGO_HORARIO]);
+    assert.deepEqual(Object.keys(filas[1]), [...COLUMNAS_CARGO_VFP, ...COLUMNAS_CARGO_PANTALLA]);
     assert.equal(filas[0][COLUMNA_CARGO_HORARIO], '941');
   });
 
@@ -518,12 +518,15 @@ describe('planDeCargos', () => {
     const { fadd, ...fila } = filas[0];
     assert.equal(fadd, AHORA);
     assert.deepEqual(fila, {
-      empresa: '01', undnegocio: 'BAQ', ncontrato: '', num_oferta: 937, consec: 1, concepto: 'ASE', cod_seccion: 0, tipo_cargo: '', item: 1, cargo: 99,
+      empresa: '01', undnegocio: 'BAQ', ncontrato: '', num_oferta: 937, consec: 1, concepto: 'ASE', cod_seccion: 0, tipo_cargo: 'F', item: 1, cargo: 99,
       jornada: 8, horassem: 48, cantidad: 4, vlr_unitario: 10000000, vlr_total: 40000000, codmun: '', salario: 1423500, dotm: '', dotf: '', riesgo: 1, tipocont: '',
       epp: '', examen: '', snextras: 0, snrecargos: 0, snfestivos: 0, snextrasf: 0, cnextras: 0, cnrecargos: 0, cnfestivos: 0, cnextrasf: 0,
       rnocturno: 0, ediurnas: 0, rfestivas: 0, enocturnas: 0, hfestivas: 0, efestivas: 0, enocturnasf: 0,
       nom_cargo: 'Aseador', nivel_educacion: '', titulo_educacion: '', curso_formacion: '', experiencia: 0, cod_grupo_curso: '',
-      user_add: 'LICICOLBA', pc_add: 'LICICOLBA:42:ab12cd34ef56', codhorario: '941',
+      user_add: 'LICICOLBA', pc_add: 'LICICOLBA:42:ab12cd34ef56',
+      // como las ofertas digitadas en Contratos: 30 veces al mes, valor de cargos = valor total, sin bonos
+      nro_veces_mes: 30, vlr_cargos: 40000000, clasebono_alim: '00', clasebono_trans: '00', clasebono_prod: '00', clasebono_prest: '00',
+      codhorario: '941',
     });
   });
 

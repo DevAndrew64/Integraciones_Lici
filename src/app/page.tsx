@@ -90,6 +90,7 @@ import { CATALOGO_VACUNAS, type VacunaCatalogo } from '@/data/costos-estructura/
 import type { ExportacionManoObraDto, FichaManoObraExportDto, DetalleUnitarioExportDto } from '@/lib/costos-mano-obra/exportacion/tipos-exportacion';
 import type { CargoPantallaDto, GruposCargoDto } from '@/lib/contratos-puente/cargos';
 import { conceptoAutomatico, tipoTarifaContratos, uenSugerida, type UenContratos } from '@/lib/contratos-puente/destino';
+import { horasDeProgramacion } from '@/lib/contratos-puente/horas-cargo';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { calcularMinutosSemanaDistribucion, calcularTotalSemanalCargo, evaluarProgramacionSemanal, puedeGuardarProgramacion as puedeGuardarProgramacionLib } from '@/lib/costos-mano-obra/horarios/distribucion-semanal';
 import { materializarFechasProgramadas } from '@/lib/costos-mano-obra/horarios/materializar-fechas-programadas';
@@ -14604,14 +14605,18 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
         cursos:deLaLinea(cursosRows,lineaId).map(r=>r.codigoGrupo??''),
       };
     };
-    const deLinea=(l:LineaMOExtra,cantidad:number,valorTotal:number,esTurnante:boolean):CargoPantallaDto=>({
-      id:l.id,nombre:l.nombreCargo,cantidad,
-      horasSemana:Number(l.horasSemanal)>0?Number(l.horasSemanal):null,
-      jornada:Number(l.nHoras)>0?Number(l.nHoras):null,
-      salario:Number(l.salarioBase)>0?Number(l.salarioBase):null,
-      arlKey:l.arlKey,codigoHorario:l.codigoHorario,valorTotal,esTurnante,
-      grupos:gruposDe(l.id),
-    });
+    // Horas desde la programación horaria de la línea (la que usa el cálculo); los campos de texto viejos solo si no tiene.
+    const deLinea=(l:LineaMOExtra,cantidad:number,valorTotal:number,esTurnante:boolean):CargoPantallaDto=>{
+      const horas=horasDeProgramacion(l.distribucionesHorario);
+      return{
+        id:l.id,nombre:l.nombreCargo,cantidad,
+        horasSemana:horas.horasSemana??(Number(l.horasSemanal)>0?Number(l.horasSemanal):null),
+        jornada:horas.horasSemana!==null?horas.jornada:(Number(l.nHoras)>0?Number(l.nHoras):null),
+        salario:Number(l.salarioBase)>0?Number(l.salarioBase):null,
+        arlKey:l.arlKey,codigoHorario:l.codigoHorario,valorTotal,esTurnante,
+        grupos:gruposDe(l.id),
+      };
+    };
     const principales=lineasExtra.filter(l=>!l.esValorAgregado).map(l=>{
       const r=resultadosLineasExtraConOtrosCostos.find(x=>x.id===l.id)?.resultado;
       const bonos=resultadosLineasExtraMensuales.find(x=>x.id===l.id)?.bonosNoPrestacionales.totalLinea??0;
