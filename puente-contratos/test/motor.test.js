@@ -56,4 +56,19 @@ describe('crearMotor', () => {
     assert.equal(estado, 503);
     assert.equal(cuerpo.error, 'ESQUEMA_DISTINTO');
   });
+
+  it('destino: lee empresa, UEN y conceptos también en dry-run; sin permiso o sin conexión responde 503', async () => {
+    const pool = { async query(sql) {
+      if (/fc_empresas/.test(sql)) return [[{ codigo: '01', undnegocio: 'BAQ', rsocial: 'ASEOCOLBA S.A.' }]];
+      if (/fc_control/.test(sql)) return [[{ empresa: '01', undnegocio: 'BAQ' }]];
+      return [[]];
+    } };
+    const motor = crearMotor({ modo: 'dry-run', configMySQL: config, esquemaEsperado: cargarEsquemaEsperado(), crearPoolFn: () => pool });
+    assert.deepEqual(await motor.destino('ASEOCOLBA'), { estado: 200, cuerpo: { ok: true, empresa: { codigo: '01', rsocial: 'ASEOCOLBA S.A.' }, uens: [{ codigo: 'BAQ', conceptos: [] }] } });
+    for (const [error, codigo] of [[{ errno: 1142 }, 'SIN_PERMISO'], [{ code: 'ECONNREFUSED' }, 'BD_NO_DISPONIBLE']]) {
+      const roto = crearMotor({ modo: 'dry-run', configMySQL: config, esquemaEsperado: cargarEsquemaEsperado(), crearPoolFn: () => ({ async query() { throw Object.assign(new Error('x'), error); } }) });
+      const r = await roto.destino('ASEOCOLBA');
+      assert.deepEqual([r.estado, r.cuerpo.error], [503, codigo]);
+    }
+  });
 });

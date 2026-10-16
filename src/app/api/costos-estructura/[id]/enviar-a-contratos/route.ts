@@ -9,6 +9,8 @@ import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-e
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
 import { enviarAContratos } from '@/lib/contratos-puente/directo';
+import { tipoTarifaContratos, validarEleccion } from '@/lib/contratos-puente/destino';
+import { destinoDeSolicitud } from '@/lib/contratos-puente/destino-solicitud';
 import { nitVerificado } from '@/lib/solicitudes/nit-entidad';
 import {
   armarPayloadContratos, costosAdministrativosParaPuente, describirCampo, describirError, equiposParaPuente, etiquetaCampo, insumosParaPuente, leerDestino,
@@ -19,7 +21,8 @@ import {
  * Puente a Contratos (módulos 2 y 4) — escribe en el MySQL de Contratos de la intranet (directo, con el código de
  * `puente-contratos/src`; ver `src/lib/contratos-puente/directo.ts`) los datos de la oferta con el JSON v1:
  * razón social, NIT, dirección, objeto, % A.I.U. (el % de I.U. del costeo), valor mensual, plazo, la clave de la oferta
- * (empresa, UEN, tipo de tarifa, origen y concepto, que elige quien envía) y los seis valores de la tarifa. En modo prueba
+ * (la empresa sale del perfil de la solicitud, el tipo de tarifa del costeo y el origen de la fuente; quien envía solo elige la
+ * UEN, y el concepto si la UEN tiene varios, entre los que hay en Contratos) y los seis valores de la tarifa. En modo prueba
  * el puente valida y NO escribe; en modo escritura crea la oferta en Contratos y responde su número.
  *
  * Mismo criterio que el export: los módulos de costos deben estar resueltos (fuente de verdad server-side) y los totales
@@ -68,7 +71,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // `select` explícito: no depende de columnas ajenas a este envío (incidente «column does not exist»).
     const solicitud = await prisma.solicitud.findUnique({
       where: { id: solicitudId },
-      select: { id: true, codigoProceso: true, resultadoFinal: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true },
+      select: {
+        id: true, codigoProceso: true, resultadoFinal: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true,
+        perfil: true, aliasFuente: true, linkSecop: true, linkSecopReg: true,
+      },
     });
     if (!solicitud) return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ENCONTRADA', mensaje: 'La solicitud no existe.' }, { status: 404 });
     if (solicitud.resultadoFinal !== 'Adjudicado') {
@@ -82,12 +88,29 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_CORRESPONDE', mensaje: 'La solicitud no corresponde a este costeo (el código de proceso no coincide).' }, { status: 409 });
     }
 
+    // Empresa, tipo de tarifa y origen los decide el servidor; de la pantalla solo vale la UEN (y el concepto si hay varios),
+    // y solo si existen en Contratos para esa empresa.
+    const totales = (body?.costosDto as CostosPantallaDto).totales; // ya validado arriba
+    const leido = await destinoDeSolicitud(solicitud);
+    if (!leido.ok) return NextResponse.json({ ok: false, error: leido.error, mensaje: leido.mensaje }, { status: leido.estado });
+    const elegido = leerDestino(body?.contratos);
+    const eleccion = validarEleccion(leido.destino, elegido.undnegocio, elegido.codServicio);
+    if (!eleccion.ok) return NextResponse.json({ ok: false, error: 'DESTINO_INVALIDO', mensaje: eleccion.mensaje }, { status: 422 });
+    const concepto = leido.destino.uens.find((u) => u.codigo === eleccion.undnegocio)?.conceptos.find((c) => c.codigo === eleccion.codServicio);
+
     const payload = armarPayloadContratos({
       solicitud,
       procesoCodigo: registro.procesoCodigo,
       resultado: obtenerModulo<ResultadoGuardado>(registro.datos, 'resultado')?.datos ?? null,
-      totales: (body?.costosDto as CostosPantallaDto).totales, // ya validado arriba
-      destino: leerDestino(body?.contratos),
+      totales,
+      destino: {
+        empresa: leido.destino.empresa.codigo,
+        undnegocio: eleccion.undnegocio,
+        tipoAdm: tipoTarifaContratos(totales.administrativos),
+        origenProceso: leido.origenProceso,
+        codServicio: eleccion.codServicio,
+        descripcionServicio: concepto?.descripcion || null,
+      },
       cargos,
       insumos: insumosParaPuente((body?.costosDto as CostosPantallaDto).insumos?.filas),
       costosAdministrativos: costosAdministrativosParaPuente((body?.costosDto as CostosPantallaDto).administrativos),

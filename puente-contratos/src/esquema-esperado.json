@@ -201,7 +201,7 @@
    "empresa": {"tipo": "char(2)", "nulable": true},
    "dbnomina": {"tipo": "char(40)", "nulable": false}
   }},
-  "fc_empresas": {"motor": "MyISAM", "uso": "lectura", "columnas": {
+  "fc_empresas": {"motor": "MyISAM", "uso": "lectura", "modulo": 7, "columnas": {
    "codigo": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": false},
    "rsocial": {"tipo": "char(60)", "nulable": false}
@@ -209,7 +209,9 @@
   "fc_conceptos": {"motor": "MyISAM", "uso": "lectura", "modulo": 4, "columnas": {
    "empresa": {"tipo": "char(2)", "nulable": true},
    "undnegocio": {"tipo": "char(3)", "nulable": true},
-   "codcpto": {"tipo": "char(3)", "nulable": true}
+   "codcpto": {"tipo": "char(3)", "nulable": true},
+   "descrip": {"tipo": "char(60)", "nulable": true},
+   "nombre": {"tipo": "char(40)", "nulable": true}
   }},
   "fc_control": {"motor": "MyISAM", "uso": "contador de ofertas: solo se cuenta y se actualiza num_oferta (la fila trae credenciales)", "modulo": 4, "permisos": ["SELECT (empresa, undnegocio, num_oferta)","UPDATE (num_oferta)"], "columnas": {
    "empresa": {"tipo": "char(2)", "nulable": true},

@@ -3,6 +3,7 @@
  * hace `server.js` al arrancar (verificar el esquema y adaptar la escritura), pero perezoso: la base se verifica en el primer
  * envío y, si falla, se vuelve a intentar en el siguiente (LiciColba no se cae porque Contratos no responda).
  */
+import { leerDestino } from './destino.js';
 import { crearEscritorMySQL } from './escritor-mysql.js';
 import { esquemaHastaModulo, opcionesDeEscritura, verificarEsquema } from './esquema.js';
 import { MODULO_IMPLEMENTADO } from './modulos.js';
@@ -11,11 +12,14 @@ import { procesarEnvio } from './procesar.js';
 
 const ERRORES_DE_CONEXION = new Set(['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'EHOSTUNREACH', 'PROTOCOL_CONNECTION_LOST', 'ER_CON_COUNT_ERROR', 'ER_ACCESS_DENIED_ERROR', 'ER_DBACCESS_DENIED_ERROR']);
 
+/** Sin permiso de lectura sobre una tabla o base (o no existe). */
+const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1143, 1146]);
+
 const respuesta = (estado, error, mensaje) => ({ estado, cuerpo: { ok: false, error, mensaje } });
 
 /**
  * @param {{modo: 'dry-run' | 'escritura', configMySQL: {host: string, port: number, user: string, password: string, database: string}, esquemaEsperado: object, crearPoolFn?: typeof crearPool}} opciones
- * @returns {{enviar(cuerpo: unknown): Promise<{estado: number, cuerpo: Record<string, unknown>}>}}
+ * @returns {{destino(nombreEmpresa: string): Promise<{estado: number, cuerpo: Record<string, unknown>}>, enviar(cuerpo: unknown): Promise<{estado: number, cuerpo: Record<string, unknown>}>}}
  */
 export function crearMotor({ modo, configMySQL, esquemaEsperado, crearPoolFn = crearPool }) {
   // Solo las tablas de los módulos ya implementados: el usuario de MySQL tiene permisos solo sobre esas.
@@ -42,6 +46,25 @@ export function crearMotor({ modo, configMySQL, esquemaEsperado, crearPoolFn = c
   }
 
   return {
+    /**
+     * Empresa, UEN y conceptos de Contratos para una empresa de LiciColba (por su nombre). Solo lee, también en dry-run:
+     * así la pantalla ofrece las UEN reales aunque el envío sea de prueba.
+     */
+    async destino(nombreEmpresa) {
+      try {
+        pool ??= crearPoolFn(configMySQL);
+        return { estado: 200, cuerpo: { ok: true, ...(await leerDestino(pool, nombreEmpresa)) } };
+      } catch (error) {
+        if (ERRORES_DE_ACCESO.has(error?.errno)) {
+          console.error(JSON.stringify({ evento: 'destino-sin-permiso', codigo: error.errno }));
+          return respuesta(503, 'SIN_PERMISO', 'El usuario de Contratos no puede leer las empresas, contadores o conceptos.');
+        }
+        if (!ERRORES_DE_CONEXION.has(error?.code)) throw error;
+        console.error(JSON.stringify({ evento: 'bd-sin-conexion', codigo: error.code }));
+        return respuesta(503, 'BD_NO_DISPONIBLE', 'No se pudo conectar con la base de datos de Contratos.');
+      }
+    },
+
     async enviar(cuerpo) {
       if (modo === 'escritura' && !escritor) {
         try {

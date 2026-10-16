@@ -2,6 +2,7 @@ import 'server-only';
 import esquemaEsperado from '../../../puente-contratos/src/esquema-esperado.json';
 import { crearMotor } from '../../../puente-contratos/src/motor.js';
 import { enviarAlPuente, interpretarRespuesta, type PayloadContratosV1, type ResultadoPuente } from './cliente';
+import type { DestinoLeido } from './destino';
 
 /**
  * Envío a Contratos desde LiciColba, sin servicio aparte: el servidor de LiciColba escribe directo en el MySQL de Contratos
@@ -74,4 +75,33 @@ export async function enviarAContratos(payload: PayloadContratosV1, entorno: Ent
   }
   const { estado, cuerpo } = await (motor ?? motorPara(config)).enviar(payload);
   return interpretarRespuesta(estado, cuerpo);
+}
+
+export type ResultadoDestino =
+  | { ok: true; destino: DestinoLeido }
+  | { ok: false; tipo: 'SIN_EMPRESA' | 'EMPRESA_AMBIGUA'; candidatas: string[] }
+  | { ok: false; tipo: 'NO_DISPONIBLE'; mensaje: string };
+
+/**
+ * Empresa, UEN y conceptos de Contratos para la empresa de la solicitud (`perfil`, p. ej. ASEOCOLBA). Solo lee; funciona
+ * también en dry-run. Con el servicio puente por HTTP (`PUENTE_CONTRATOS_URL`) no está disponible.
+ */
+export async function consultarDestinoContratos(nombreEmpresa: string, entorno: Entorno = process.env, motor?: Pick<Motor, 'destino'>): Promise<ResultadoDestino> {
+  if (entorno.PUENTE_CONTRATOS_URL?.trim()) {
+    return { ok: false, tipo: 'NO_DISPONIBLE', mensaje: 'Con el servicio puente por HTTP no se pueden leer las UEN de Contratos. Quite PUENTE_CONTRATOS_URL de .env.local.' };
+  }
+  let config: ConfigContratos;
+  try {
+    config = leerConfigContratos(entorno);
+  } catch (e) {
+    return { ok: false, tipo: 'NO_DISPONIBLE', mensaje: `La configuración de Contratos no es válida: ${(e as Error).message}` };
+  }
+  const { estado, cuerpo } = await (motor ?? motorPara(config)).destino(nombreEmpresa);
+  const c = cuerpo as Record<string, unknown>;
+  if (estado !== 200 || c.ok !== true) return { ok: false, tipo: 'NO_DISPONIBLE', mensaje: String(c.mensaje ?? 'No se pudo leer Contratos.') };
+  if (!c.empresa) {
+    const tipo = c.error === 'EMPRESA_AMBIGUA' ? 'EMPRESA_AMBIGUA' : 'SIN_EMPRESA';
+    return { ok: false, tipo, candidatas: Array.isArray(c.candidatas) ? c.candidatas.map(String) : [] };
+  }
+  return { ok: true, destino: { empresa: c.empresa as DestinoLeido['empresa'], uens: (c.uens ?? []) as DestinoLeido['uens'] } };
 }

@@ -15,8 +15,8 @@ export interface SolicitudParaPuente {
 }
 
 /**
- * Lo que LiciColba NO tiene y la oferta de Contratos exige: quien envía lo elige. Nada se infiere (las equivalencias
- * perfil → empresa y ciudad → UEN están por confirmar con Contratos).
+ * La clave de la oferta en Contratos. El servidor la arma (ver `destino.ts`): empresa por el perfil, tipo de tarifa por
+ * el costeo, origen por la fuente; de la pantalla solo llegan la UEN y el concepto, que se comprueban contra Contratos.
  */
 export interface DestinoContratos {
   empresa: string | null;

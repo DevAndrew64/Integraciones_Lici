@@ -509,7 +509,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     await denegado('SELECT id FROM fc_control');
     await denegado('UPDATE fc_control SET empresa = "99"');
     await denegado('SELECT direccion FROM fc_clientes');
-    await denegado('SELECT * FROM fc_empresas');
+    await denegado('SELECT * FROM fc_conceptos'); // de los conceptos solo la clave, la descripción y el nombre
     await denegado(`DELETE FROM ${OFERTAS}`);
     await denegado(`UPDATE ${OFERTAS} SET vlr_adjudicado = 0`);
     await denegado(`DROP TABLE ${OFERTAS}`);
@@ -529,7 +529,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     assert.deepEqual((await verificarEsquema(minimo, esquemaHastaModulo(esperado, MODULO_IMPLEMENTADO))).problemas, []);
     const completo = await verificarEsquema(minimo, esperado);
     assert.equal(completo.ok, false);
-    assert.ok(completo.problemas.some((p) => p.tabla === 'fc_empresas' && p.problema === 'La tabla no existe.'));
+    assert.ok(completo.problemas.some((p) => p.tabla === 'gl_undnegocios' && p.problema === 'La tabla no existe.'));
   });
 
   it('el servicio completo (proceso aparte, modo escritura, usuario mínimo): /health ok, escribe, reenvío 409 y 422 sin oferta', async () => {

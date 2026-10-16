@@ -1,14 +1,17 @@
 /**
  * Puente a Contratos (módulos 2 y 4) — POST /api/costos-estructura/[id]/enviar-a-contratos: arma el JSON v1 con la
- * solicitud, el Resultado guardado, los totales de la pantalla y el destino que elige quien envía, lo manda al puente y
- * traduce su respuesta. El puente se simula.
+ * solicitud, el Resultado guardado, los totales de la pantalla y el destino (empresa, tipo de tarifa y origen los decide el
+ * servidor; quien envía elige la UEN y el concepto entre los de Contratos), lo manda al puente y traduce su respuesta.
+ * El puente y la lectura de Contratos se simulan.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoPuente } from '@/lib/contratos-puente/cliente';
 
-const mocks = vi.hoisted(() => ({ enviar: vi.fn(), auditoria: vi.fn() }));
+const mocks = vi.hoisted(() => ({ enviar: vi.fn(), auditoria: vi.fn(), destino: vi.fn() }));
+
+vi.mock('server-only', () => ({}));
 
 let sesionActual: { id: number; usuario: string; email: string; rol: string } | null = null;
 vi.mock('@/lib/session', () => ({ getSession: async () => sesionActual }));
@@ -16,9 +19,15 @@ vi.mock('@/lib/authz', () => ({
   requireEditarCostos: (s: { rol: string } | null) => (!s ? NextResponse.json({ ok: false }, { status: 401 }) : s.rol === 'Mercadeo' ? NextResponse.json({ ok: false }, { status: 403 }) : null),
 }));
 vi.mock('@/lib/audit', () => ({ auditFromRequest: (...a: unknown[]) => { mocks.auditoria(...a); return Promise.resolve(); } }));
-vi.mock('@/lib/contratos-puente/directo', () => ({ enviarAContratos: (...a: unknown[]) => mocks.enviar(...a) }));
+vi.mock('@/lib/contratos-puente/directo', () => ({
+  enviarAContratos: (...a: unknown[]) => mocks.enviar(...a),
+  consultarDestinoContratos: (...a: unknown[]) => mocks.destino(...a),
+}));
 
-type Solicitud = { id: number; codigoProceso: string | null; resultadoFinal: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null };
+type Solicitud = {
+  id: number; codigoProceso: string | null; resultadoFinal: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null;
+  perfil: string | null; aliasFuente: string | null; linkSecop: string | null; linkSecopReg: string | null;
+};
 let registro: { id: number; procesoCodigo: string | null; datos: Record<string, unknown> } | null = null;
 let solicitud: Solicitud | null = null;
 let envios: { detalle: Record<string, unknown>; creadoEn: Date }[] = [];
@@ -65,21 +74,38 @@ const ctx = () => ({ params: Promise.resolve({ id: '1' }) });
 const enviarOk = (): ResultadoPuente => ({
   ok: true, modo: 'dry-run', huella: 'h'.repeat(64), advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato: se completa en Contratos.' }], oferta: null, noEscrito: [],
 });
-const DESTINO = { empresa: '01', undnegocio: 'baq', tipoAdm: 'a', origenProceso: 'lic', codServicio: 'ase', descripcionServicio: 'Aseo y cafetería' };
+/** Lo que la pantalla manda: la UEN y el concepto elegidos. */
+const DESTINO = { undnegocio: 'baq', codServicio: '460' };
+/** Lo que Contratos tiene para ASEOCOLBA: BAQ con dos conceptos, BOG con uno. */
+const CONTRATOS = () => ({
+  ok: true,
+  destino: {
+    empresa: { codigo: '01', rsocial: 'ASEO COLBA S.A.S.' },
+    uens: [
+      { codigo: 'BAQ', conceptos: [{ codigo: '460', descripcion: 'SERVICIO DE ASEO' }, { codigo: '461', descripcion: 'SERVICIO DE CAFETERIA' }] },
+      { codigo: 'BOG', conceptos: [{ codigo: '470', descripcion: 'ASEO BOGOTA' }] },
+    ],
+  },
+});
 
 beforeEach(() => {
   sesionActual = { id: 1, usuario: 'ana.perez', email: 'ana.perez@grupocolba.com', rol: 'Analista Comercial' };
   registro = { id: 1, procesoCodigo: 'SED-LP-2026-0091', datos: estructura() };
-  solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', resultadoFinal: 'Adjudicado', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900123456-8', direccionContacto: null };
+  solicitud = { id: 7, codigoProceso: 'SED-LP-2026-0091', resultadoFinal: 'Adjudicado', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900123456-8', direccionContacto: null,
+    perfil: 'ASEOCOLBA', aliasFuente: 'S2', linkSecop: null, linkSecopReg: null,
+  };
   mocks.enviar.mockReset().mockResolvedValue(enviarOk());
+  mocks.destino.mockReset().mockResolvedValue(CONTRATOS());
   mocks.auditoria.mockReset();
   envios = [];
 });
 afterEach(() => { vi.resetModules(); });
 
+/** Sin «contratos» en el cuerpo, la pantalla manda la UEN y el concepto de DESTINO. */
 async function llamar(body: unknown) {
   const { POST } = await import('./route');
-  const res = await POST(req(body), ctx());
+  const cuerpo = body && typeof body === 'object' && !('contratos' in body) ? { ...body, contratos: DESTINO } : body;
+  const res = await POST(req(cuerpo), ctx());
   return { res, json: (await res.json()) as Record<string, unknown> };
 }
 
@@ -93,8 +119,9 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       origen: { solicitudId: 7, procesoCodigo: 'SED-LP-2026-0091' },
       cliente: { razonSocial: 'Cliente SAS', nit: '900123456', direccion: null },
       contrato: { objeto: 'Aseo integral', porcentajeAIU: 8, valorMensual: 16000000, plazoMeses: 12 },
-      // Sin destino elegido viaja vacío (nunca se infiere); la tarifa sale de los totales con el A.I.U. incluido (8 %).
-      oferta: { empresa: null, undnegocio: null, tipoAdm: null, origenProceso: null, codServicio: null, descripcionServicio: null },
+      // Empresa por el perfil, tarifa «C» (lleva Costos Administrativos), origen LIC (SECOP II), concepto con su descripción.
+      // La tarifa sale de los totales con el A.I.U. incluido (8 %).
+      oferta: { empresa: '01', undnegocio: 'BAQ', tipoAdm: 'C', origenProceso: 'LIC', codServicio: '460', descripcionServicio: 'SERVICIO DE ASEO' },
       tarifa: { manoObra: 13111200, insumos: 0, maquinaria: 0, administrativos: 5400, valorAgregado: 0, serviciosNoContinuos: 0 },
       // Pestaña «Costos Admtivos»: cada concepto con su valor mensual sin A.I.U.
       costosAdministrativos: [{ concepto: 'Papelería', valorMensual: 5000 }],
@@ -140,11 +167,51 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
     expect(String(r.json.mensaje)).toContain('Cargo 1 «ASEADOR» · Horario: El horario «941» no existe en Contratos. Revise el horario del cargo en Mano de Obra.');
   });
 
-  it('el destino que elige quien envía llega al puente normalizado (códigos en mayúsculas); lo desconocido se ignora', async () => {
-    await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: { ...DESTINO, rol: 'Administrador' } });
+  it('empresa, tipo de tarifa y origen los decide el servidor: lo que mande la pantalla para ellos se ignora', async () => {
+    await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: { ...DESTINO, empresa: '99', tipoAdm: 'A', origenProceso: 'INV', descripcionServicio: 'otra' } });
+    expect(mocks.destino).toHaveBeenCalledWith('ASEOCOLBA');
     expect(mocks.enviar.mock.calls[0][0].oferta).toEqual({
-      empresa: '01', undnegocio: 'BAQ', tipoAdm: 'A', origenProceso: 'LIC', codServicio: 'ASE', descripcionServicio: 'Aseo y cafetería',
+      empresa: '01', undnegocio: 'BAQ', tipoAdm: 'C', origenProceso: 'LIC', codServicio: '460', descripcionServicio: 'SERVICIO DE ASEO',
     });
+  });
+
+  it('un proceso digitado a mano (sin SECOP) va como invitación privada', async () => {
+    solicitud = { ...solicitud!, aliasFuente: null };
+    await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(mocks.enviar.mock.calls[0][0].oferta.origenProceso).toBe('INV');
+  });
+
+  it('una UEN con un solo concepto lo lleva sola; con varios hay que elegir uno de esa UEN', async () => {
+    await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: { undnegocio: 'BOG' } });
+    expect(mocks.enviar.mock.calls[0][0].oferta).toMatchObject({ undnegocio: 'BOG', codServicio: '470', descripcionServicio: 'ASEO BOGOTA' });
+    for (const [contratos, texto] of [
+      [{ undnegocio: 'BAQ' }, 'Seleccione el concepto'],
+      [{ undnegocio: 'BAQ', codServicio: '470' }, 'no es de la UEN BAQ'],
+      [{ undnegocio: 'MNA', codServicio: '460' }, 'UEN disponibles: BAQ, BOG'],
+      [{}, 'Seleccione la UEN'],
+    ] as const) {
+      mocks.enviar.mockClear();
+      const { res, json } = await llamar({ solicitudId: 7, costosDto: costosDto(), contratos });
+      expect(res.status).toBe(422);
+      expect(json.error).toBe('DESTINO_INVALIDO');
+      expect(String(json.mensaje)).toContain(texto);
+      expect(mocks.enviar).not.toHaveBeenCalled();
+    }
+  });
+
+  it('sin la empresa en Contratos (o sin perfil) responde 409; con Contratos caído, 503; en ningún caso envía', async () => {
+    mocks.destino.mockResolvedValueOnce({ ok: false, tipo: 'SIN_EMPRESA', candidatas: [] });
+    let r = await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(r.res.status).toBe(409);
+    expect(String(r.json.mensaje)).toContain('No se encontró la empresa ASEOCOLBA');
+    mocks.destino.mockResolvedValueOnce({ ok: false, tipo: 'NO_DISPONIBLE', mensaje: 'No se pudo conectar con la base de datos de Contratos.' });
+    r = await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(r.res.status).toBe(503);
+    solicitud = { ...solicitud!, perfil: null };
+    r = await llamar({ solicitudId: 7, costosDto: costosDto() });
+    expect(r.res.status).toBe(409);
+    expect(r.json.error).toBe('SIN_EMPRESA');
+    expect(mocks.enviar).not.toHaveBeenCalled();
   });
 
   it('en modo escritura responde con la oferta creada en Contratos y la audita con su número (sin datos del cliente)', async () => {
@@ -290,6 +357,31 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
 
     it('exige la solicitud y el permiso de editar costos', async () => {
       expect((await consultar(0)).res.status).toBe(400);
+      sesionActual = null;
+      expect((await consultar()).res.status).toBe(401);
+    });
+  });
+
+  describe('GET destino: empresa, UEN y conceptos de Contratos para la pantalla', () => {
+    const consultar = async (solicitudId = 7) => {
+      const { GET } = await import('./destino/route');
+      const res = await GET(new NextRequest(`http://localhost/api/costos-estructura/1/enviar-a-contratos/destino?solicitudId=${solicitudId}`));
+      return { res, json: (await res.json()) as Record<string, unknown> };
+    };
+
+    it('responde la empresa, sus UEN con conceptos y el origen del proceso', async () => {
+      const { res, json } = await consultar();
+      expect(res.status).toBe(200);
+      expect(json).toEqual({ ok: true, empresa: CONTRATOS().destino.empresa, uens: CONTRATOS().destino.uens, origenProceso: 'LIC' });
+    });
+
+    it('sin la empresa en Contratos responde 409 con el motivo; exige la solicitud y el permiso', async () => {
+      mocks.destino.mockResolvedValueOnce({ ok: false, tipo: 'EMPRESA_AMBIGUA', candidatas: ['01 ASEO COLBA', '05 ASEO COLBA MINA'] });
+      const { res, json } = await consultar();
+      expect(res.status).toBe(409);
+      expect(String(json.mensaje)).toContain('coincide con varias empresas');
+      expect((await consultar(0)).res.status).toBe(400);
+      expect((await consultar(99)).res.status).toBe(404);
       sesionActual = null;
       expect((await consultar()).res.status).toBe(401);
     });

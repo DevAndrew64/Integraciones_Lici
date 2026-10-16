@@ -89,6 +89,7 @@ import matrizIcaData from '@/data/costos-estructura/matriz-ica-por-empresa-munic
 import { CATALOGO_VACUNAS, type VacunaCatalogo } from '@/data/costos-estructura/catalogo-vacunas';
 import type { ExportacionManoObraDto, FichaManoObraExportDto, DetalleUnitarioExportDto } from '@/lib/costos-mano-obra/exportacion/tipos-exportacion';
 import type { CargoPantallaDto, GruposCargoDto } from '@/lib/contratos-puente/cargos';
+import { conceptoAutomatico, tipoTarifaContratos, uenSugerida, type UenContratos } from '@/lib/contratos-puente/destino';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { calcularMinutosSemanaDistribucion, calcularTotalSemanalCargo, evaluarProgramacionSemanal, puedeGuardarProgramacion as puedeGuardarProgramacionLib } from '@/lib/costos-mano-obra/horarios/distribucion-semanal';
 import { materializarFechasProgramadas } from '@/lib/costos-mano-obra/horarios/materializar-fechas-programadas';
@@ -11337,12 +11338,34 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       .catch(()=>{/* sin consulta: el servidor igual rechaza un reenvío */});
     return()=>{vigente=false;};
   },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.resultadoFinal]);
-  // Datos del envío que LiciColba no tiene y la oferta de Contratos exige: los elige quien envía (nada se infiere) y se
-  // recuerdan en este navegador para no reescribirlos en cada oferta.
-  const [destinoContratos,setDestinoContratos]=useState({empresa:'',undnegocio:'',tipoAdm:'',origenProceso:'',codServicio:''});
-  useEffect(()=>{try{const g=window.localStorage.getItem('contratosDestino');if(g)setDestinoContratos(d=>({...d,...JSON.parse(g)}));}catch{/* sin almacenamiento local: se digita de nuevo */}},[]);
-  function cambiarDestinoContratos(clave:string,valor:string){
-    setDestinoContratos(d=>{const n={...d,[clave]:valor};try{window.localStorage.setItem('contratosDestino',JSON.stringify(n));}catch{/* sin almacenamiento local */}return n;});
+  // A dónde va la oferta en Contratos: la empresa sale del perfil de la solicitud y las UEN (con sus conceptos de
+  // facturación) se leen de Contratos; quien envía solo elige la UEN, y el concepto si la UEN tiene varios. La última UEN
+  // usada se recuerda en este navegador. El tipo de tarifa y el origen se calculan (el servidor los vuelve a calcular).
+  const [destinoLeidoContratos,setDestinoLeidoContratos]=useState<{empresa:{codigo:string;rsocial:string};uens:UenContratos[];origenProceso:'LIC'|'INV'}|null>(null);
+  const [errorDestinoContratos,setErrorDestinoContratos]=useState<string|null>(null);
+  const [destinoContratos,setDestinoContratos]=useState({undnegocio:'',codServicio:''});
+  useEffect(()=>{
+    setDestinoLeidoContratos(null);setErrorDestinoContratos(null);
+    if(!costoEstructuraIdActual||!solicitudProceso?.id||solicitudProceso.resultadoFinal!=='Adjudicado')return;
+    let vigente=true;
+    fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos/destino?solicitudId=${solicitudProceso.id}`)
+      .then(async r=>({ok:r.ok,d:await r.json().catch(()=>({}))}))
+      .then(({ok,d})=>{
+        if(!vigente)return;
+        if(!ok||!d?.ok){setErrorDestinoContratos(String(d?.mensaje||'No se pudo leer de Contratos la empresa y las UEN.'));return;}
+        setDestinoLeidoContratos({empresa:d.empresa,uens:d.uens,origenProceso:d.origenProceso});
+        let preferida:string|null=null;
+        try{preferida=window.localStorage.getItem('contratosUen');}catch{/* sin almacenamiento local */}
+        const uen=uenSugerida(preferida,d.uens);
+        setDestinoContratos({undnegocio:uen??'',codServicio:conceptoAutomatico(d.uens.find((u:UenContratos)=>u.codigo===uen))??''});
+      })
+      .catch(()=>{if(vigente)setErrorDestinoContratos('No se pudo conectar para leer la empresa y las UEN de Contratos.');});
+    return()=>{vigente=false;};
+  },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.resultadoFinal]);
+  function elegirUenContratos(codigo:string){
+    const uen=destinoLeidoContratos?.uens.find(u=>u.codigo===codigo);
+    setDestinoContratos({undnegocio:codigo,codServicio:conceptoAutomatico(uen)??''});
+    try{window.localStorage.setItem('contratosUen',codigo);}catch{/* sin almacenamiento local */}
   }
 
   // ── BORRADOR / AUTOSAVE (localStorage) ────────────────────────────────────
@@ -14707,6 +14730,9 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     if(modulosConCambiosSinGuardar.length>0){setEnvioContratos({ok:false,texto:`Guarde los cambios de ${modulosConCambiosSinGuardar.join(', ')} antes de enviar a Contratos.`});return;}
     if(ofertaEnviada){setEnvioContratos({ok:false,texto:'Este proceso adjudicado ya se envió a Contratos.'});return;}
     if(solicitudProceso.resultadoFinal!=='Adjudicado'){setEnvioContratos({ok:false,texto:'Solo se puede enviar a Contratos un proceso Adjudicado.'});return;}
+    if(errorDestinoContratos){setEnvioContratos({ok:false,texto:errorDestinoContratos});return;}
+    if(!destinoContratos.undnegocio){setEnvioContratos({ok:false,texto:'Seleccione la UEN de Contratos.'});return;}
+    if(!destinoContratos.codServicio){setEnvioContratos({ok:false,texto:`Seleccione el concepto de facturación de la UEN ${destinoContratos.undnegocio}.`});return;}
     setEnviandoContratos(true);
     try{
       const res=await fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos`,{
@@ -20489,20 +20515,44 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                 {/* Módulo 2 del puente: mismos permisos que editar costos (el servidor los vuelve a exigir). */}
                 {puedeEditarCostosUI&&solicitudProceso?.id!=null&&(
                   <>
-                    {/* Datos que LiciColba no tiene y la oferta de Contratos exige (clave de la oferta y tipo de tarifa). */}
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginTop:8}}>
-                      <div><label style={lbl}>Empresa (código)</label><input style={inp} value={destinoContratos.empresa} maxLength={6} placeholder="Ej. 01" onChange={e=>cambiarDestinoContratos('empresa',e.target.value)}/></div>
-                      <div><label style={lbl}>UEN (código)</label><input style={inp} value={destinoContratos.undnegocio} maxLength={9} placeholder="Ej. BAQ" onChange={e=>cambiarDestinoContratos('undnegocio',e.target.value)}/></div>
-                      <div><label style={lbl}>Tipo de tarifa</label>
-                        <select style={inp} value={destinoContratos.tipoAdm} onChange={e=>cambiarDestinoContratos('tipoAdm',e.target.value)}>
-                          <option value="">Seleccione…</option><option value="A">A · Administración</option><option value="C">C · Admon. y costos asumidos</option>
-                        </select></div>
-                      <div><label style={lbl}>Origen del proceso</label>
-                        <select style={inp} value={destinoContratos.origenProceso} onChange={e=>cambiarDestinoContratos('origenProceso',e.target.value)}>
-                          <option value="">Seleccione…</option><option value="LIC">LIC · Licitación pública</option><option value="INV">INV · Invitación privada</option>
-                        </select></div>
-                      <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Concepto de facturación (código)</label><input style={inp} value={destinoContratos.codServicio} maxLength={3} placeholder="Código del concepto en Contratos" onChange={e=>cambiarDestinoContratos('codServicio',e.target.value)}/></div>
-                    </div>
+                    {/* Clave de la oferta en Contratos: empresa, tarifa y origen salen solos; la UEN se elige entre las de Contratos. */}
+                    {!ofertaEnviada&&solicitudProceso?.resultadoFinal==='Adjudicado'&&(errorDestinoContratos
+                      ?<div style={{marginTop:8,fontSize:11,fontWeight:600,color:RED,fontFamily:F,lineHeight:1.5}}>{errorDestinoContratos}</div>
+                      :!destinoLeidoContratos
+                        ?<div style={{marginTop:8,fontSize:11,color:'#94a3b8',fontFamily:F}}>Leyendo empresa y UEN de Contratos…</div>
+                        :(()=>{
+                          const uenSel=destinoLeidoContratos.uens.find(u=>u.codigo===destinoContratos.undnegocio);
+                          const tarifa=tipoTarifaContratos(adminTotal);
+                          const dato=(titulo:string,valor:string)=>(<div><div style={lbl}>{titulo}</div><div style={{fontSize:11.5,fontWeight:600,color:'#0f172a',fontFamily:F}}>{valor}</div></div>);
+                          return(<div style={{display:'grid',gap:8,marginTop:8}}>
+                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                              <div style={{gridColumn:'1 / -1'}}>{dato('Empresa en Contratos',`${destinoLeidoContratos.empresa.codigo} · ${destinoLeidoContratos.empresa.rsocial}`)}</div>
+                              {dato('Tipo de tarifa',tarifa==='C'?'C · Admon. y costos asumidos':'A · Administración')}
+                              {dato('Origen del proceso',destinoLeidoContratos.origenProceso==='LIC'?'LIC · Licitación pública':'INV · Invitación privada')}
+                            </div>
+                            <div>
+                              <div style={lbl}>UEN</div>
+                              {destinoLeidoContratos.uens.length===0
+                                ?<div style={{fontSize:11,fontWeight:600,color:RED,fontFamily:F}}>La empresa no tiene UEN con contador de ofertas en Contratos.</div>
+                                :<div role="radiogroup" aria-label="UEN de Contratos" style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                                  {destinoLeidoContratos.uens.map(u=>{const activa=u.codigo===destinoContratos.undnegocio;return(
+                                    <button key={u.codigo} type="button" role="radio" aria-checked={activa} onClick={()=>elegirUenContratos(u.codigo)}
+                                      style={{flex:'1 1 0',minWidth:56,padding:'7px 10px',borderRadius:6,border:`1.5px solid ${activa?NAVY:'#d0d5dd'}`,background:activa?NAVY:'white',color:activa?'white':'#0f172a',fontSize:11.5,fontWeight:700,cursor:'pointer',fontFamily:F}}>
+                                      {u.codigo}
+                                    </button>);})}
+                                </div>}
+                            </div>
+                            {uenSel&&(uenSel.conceptos.length===0
+                              ?<div style={{fontSize:11,fontWeight:600,color:RED,fontFamily:F}}>La UEN {uenSel.codigo} no tiene conceptos de facturación en Contratos.</div>
+                              :uenSel.conceptos.length===1
+                                ?dato('Concepto de facturación',`${uenSel.conceptos[0].codigo} · ${uenSel.conceptos[0].descripcion}`)
+                                :<div><label style={lbl}>Concepto de facturación</label>
+                                  <select style={inp} value={destinoContratos.codServicio} onChange={e=>setDestinoContratos(d=>({...d,codServicio:e.target.value}))}>
+                                    <option value="">Seleccione…</option>
+                                    {uenSel.conceptos.map(c=><option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}</option>)}
+                                  </select></div>)}
+                          </div>);
+                        })())}
                     {ofertaEnviada&&<div style={{marginTop:8,padding:'9px 12px',borderRadius:8,border:'1px solid #86efac',background:'#f0fdf4',color:'#15803d',fontSize:11.5,fontWeight:700,fontFamily:F,lineHeight:1.5}}>
                       Este proceso adjudicado ya se envió a Contratos{ofertaEnviada.numOferta!=null?` como la oferta ${ofertaEnviada.numOferta}${ofertaEnviada.empresa?` (empresa ${ofertaEnviada.empresa}, UEN ${ofertaEnviada.undnegocio??''})`:''}`:''}. Lo enviado queda pactado: cualquier cambio se hace en Contratos.
                     </div>}

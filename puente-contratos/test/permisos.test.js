@@ -11,8 +11,9 @@ describe('esquemaHastaModulo', () => {
     assert.deepEqual(Object.keys(esquemaHastaModulo(esquema, 4).tablas).sort(), ['fc_clientes', 'fc_conceptos', 'fc_contratos_tarifa_inicial', 'fc_control', 'fc_ofertas_adjudicadas']);
     assert.deepEqual(Object.keys(esquemaHastaModulo(esquema, 5).tablas).sort(), ['fc_clientes', 'fc_conceptos', 'fc_contratos_cargos_iniciales', 'fc_contratos_tarifa_inicial', 'fc_control', 'fc_horarios', 'fc_ofertas_adjudicadas']);
     const todas = Object.keys(esquemaHastaModulo(esquema, 99).tablas);
-    assert.ok(!todas.includes('fc_empresas') && !todas.includes('gl_undnegocios'));
-    assert.equal(todas.length, Object.keys(esquema.tablas).length - 2);
+    assert.ok(todas.includes('fc_empresas'), 'la empresa de la oferta se busca por nombre en fc_empresas');
+    assert.ok(!todas.includes('gl_undnegocios'));
+    assert.equal(todas.length, Object.keys(esquema.tablas).length - 1);
   });
 
   it('el módulo 6 suma la lista de precios de la oferta a lo del 5 y lo del 4', () => {
@@ -34,7 +35,7 @@ describe('sentenciasDePermisos', () => {
       "GRANT SELECT, INSERT ON `almacen`.`fc_contratos_tarifa_inicial` TO 'puente'@'%';",
       "GRANT SELECT, INSERT ON `almacen`.`fc_ofertas_adjudicadas` TO 'puente'@'%';",
       "GRANT SELECT (undnegocio, nit, sucursal, rsocial) ON `almacen`.`fc_clientes` TO 'puente'@'%';",
-      "GRANT SELECT (empresa, undnegocio, codcpto) ON `almacen`.`fc_conceptos` TO 'puente'@'%';",
+      "GRANT SELECT (empresa, undnegocio, codcpto, descrip, nombre) ON `almacen`.`fc_conceptos` TO 'puente'@'%';",
       "GRANT SELECT (empresa, undnegocio, num_oferta), UPDATE (num_oferta) ON `almacen`.`fc_control` TO 'puente'@'%';",
     ]);
   });
@@ -42,7 +43,7 @@ describe('sentenciasDePermisos', () => {
   it('módulo implementado (7): tarifa, cargos, oferta adjudicada, lista de precios, insumos, costos administrativos, equipos, no continuos y valores agregados, clientes, conceptos, contador y horarios', () => {
     assert.equal(MODULO_IMPLEMENTADO, 7);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 15);
+    assert.equal(sentencias.length, 16);
     for (const t of ['fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales']) {
       assert.ok(sentencias.includes(`GRANT SELECT, INSERT ON \`almacen\`.\`${t}\` TO 'puente'@'%';`), t);
     }
@@ -52,6 +53,7 @@ describe('sentenciasDePermisos', () => {
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_preciosventas_oferta` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT (id, empresa_c, unidad_negocio_c, codtipo_c, codstipo_c, coddtipo) ON `almacen`.`act_subtipos` TO 'puente'@'%';"), 'el «Tipo» de cada equipo');
+    assert.ok(sentencias.includes("GRANT SELECT (codigo, undnegocio, rsocial) ON `almacen`.`fc_empresas` TO 'puente'@'%';"), 'la empresa de la oferta, por su nombre');
   });
 
   it('nunca otorga DDL, ALL, GRANT OPTION ni nada global; fc_control solo el contador', () => {

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 // `server-only` (import 'server-only' en el módulo real) falla siempre fuera de un componente de servidor.
 vi.mock('server-only', () => ({}));
 
-import { CONTRATOS_POR_DEFECTO, enviarAContratos, leerConfigContratos } from './directo';
+import { CONTRATOS_POR_DEFECTO, consultarDestinoContratos, enviarAContratos, leerConfigContratos } from './directo';
 import type { PayloadContratosV1 } from './cliente';
 
 const payload = { version: 1 } as unknown as PayloadContratosV1;
@@ -59,5 +59,30 @@ describe('enviarAContratos', () => {
     const r = await enviarAContratos(payload, { PUENTE_CONTRATOS_URL: 'http://127.0.0.1:1' }, motor);
     expect(r).toEqual({ ok: false, tipo: 'NO_CONFIGURADO' }); // sin token el servicio puente queda apagado
     expect(motor.enviar).not.toHaveBeenCalled();
+  });
+});
+
+describe('consultarDestinoContratos', () => {
+  const destino = { empresa: { codigo: '01', rsocial: 'ASEO COLBA S.A.S.' }, uens: [{ codigo: 'BAQ', conceptos: [{ codigo: '460', descripcion: 'ASEO' }] }] };
+
+  it('devuelve la empresa y las UEN que lee el motor', async () => {
+    const motor = { destino: vi.fn().mockResolvedValue({ estado: 200, cuerpo: { ok: true, ...destino } }) };
+    expect(await consultarDestinoContratos('ASEOCOLBA', {}, motor)).toEqual({ ok: true, destino });
+    expect(motor.destino).toHaveBeenCalledWith('ASEOCOLBA');
+  });
+
+  it('una empresa que no está en Contratos o que coincide con varias no se adivina', async () => {
+    const sin = { destino: vi.fn().mockResolvedValue({ estado: 200, cuerpo: { ok: true, empresa: null, uens: [], error: 'SIN_EMPRESA', candidatas: [] } }) };
+    expect(await consultarDestinoContratos('OTRA', {}, sin)).toEqual({ ok: false, tipo: 'SIN_EMPRESA', candidatas: [] });
+    const varias = { destino: vi.fn().mockResolvedValue({ estado: 200, cuerpo: { ok: true, empresa: null, uens: [], error: 'EMPRESA_AMBIGUA', candidatas: ['01 A', '02 B'] } }) };
+    expect(await consultarDestinoContratos('COLBA', {}, varias)).toEqual({ ok: false, tipo: 'EMPRESA_AMBIGUA', candidatas: ['01 A', '02 B'] });
+  });
+
+  it('sin conexión o con el servicio por HTTP responde NO_DISPONIBLE', async () => {
+    const caida = { destino: vi.fn().mockResolvedValue({ estado: 503, cuerpo: { ok: false, error: 'BD_NO_DISPONIBLE', mensaje: 'No se pudo conectar con la base de datos de Contratos.' } }) };
+    expect(await consultarDestinoContratos('ASEOCOLBA', {}, caida)).toEqual({ ok: false, tipo: 'NO_DISPONIBLE', mensaje: 'No se pudo conectar con la base de datos de Contratos.' });
+    const motor = { destino: vi.fn() };
+    expect(await consultarDestinoContratos('ASEOCOLBA', { PUENTE_CONTRATOS_URL: 'http://x' }, motor)).toMatchObject({ ok: false, tipo: 'NO_DISPONIBLE' });
+    expect(motor.destino).not.toHaveBeenCalled();
   });
 });

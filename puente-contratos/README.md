@@ -157,7 +157,7 @@ La base de PRUEBA acordada es la copia de producción de la intranet: la base `a
    GRANT SELECT, INSERT ON `almacen`.`fc_contratos_tarifa_inicial` TO 'puente'@'%';
    GRANT INSERT ON `almacen`.`fc_contratos_cargos_iniciales` TO 'puente'@'%';
    GRANT SELECT (undnegocio, nit, sucursal, rsocial) ON `almacen`.`fc_clientes` TO 'puente'@'%';
-   GRANT SELECT (empresa, undnegocio, codcpto) ON `almacen`.`fc_conceptos` TO 'puente'@'%';
+   GRANT SELECT (empresa, undnegocio, codcpto, descrip, nombre) ON `almacen`.`fc_conceptos` TO 'puente'@'%';
    GRANT SELECT (empresa, undnegocio, num_oferta), UPDATE (num_oferta) ON `almacen`.`fc_control` TO 'puente'@'%';
    GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';
    ```
@@ -281,13 +281,14 @@ npm run permisos:generar -- --usuario puente --base almacen
 # GRANT SELECT, INSERT ON `almacen`.`fc_contratos_tarifa_inicial` TO 'puente'@'%';
 # GRANT INSERT ON `almacen`.`fc_contratos_cargos_iniciales` TO 'puente'@'%';
 # GRANT SELECT (undnegocio, nit, sucursal, rsocial) ON `almacen`.`fc_clientes` TO 'puente'@'%';
-# GRANT SELECT (empresa, undnegocio, codcpto) ON `almacen`.`fc_conceptos` TO 'puente'@'%';
+# GRANT SELECT (empresa, undnegocio, codcpto, descrip, nombre) ON `almacen`.`fc_conceptos` TO 'puente'@'%';
 # GRANT SELECT (empresa, undnegocio, num_oferta), UPDATE (num_oferta) ON `almacen`.`fc_control` TO 'puente'@'%';
 # GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';
 # GRANT SELECT, INSERT ON `almacen`.`fc_contratos_costos_admtivos_iniciales` TO 'puente'@'%';
 # GRANT SELECT, INSERT, DELETE ON `almacen`.`fc_elemxcont` TO 'puente'@'%';
 # GRANT SELECT (id, descripcion) ON `almacen`.`fc_conceptos_costos_admtivos` TO 'puente'@'%';
 # GRANT SELECT (id, empresa_c, unidad_negocio_c, codtipo_c, codstipo_c, coddtipo) ON `almacen`.`act_subtipos` TO 'puente'@'%';
+# GRANT SELECT (codigo, undnegocio, rsocial) ON `almacen`.`fc_empresas` TO 'puente'@'%';
 ```
 
 Sin DDL; DELETE solo en `fc_elemxcont` (MyISAM, no se revierte con la transacción: el puente borra sus propias filas si el envío falla); los cargos solo se insertan (el puente no los lee) y de `fc_control` solo el contador (la fila trae usuario y clave de conexión). `npm run test:mysql` crea un usuario con exactamente esos permisos y corre todo el módulo con él (incluido el arranque del servicio y su verificación de esquema); también comprueba que lo demás le está denegado.
