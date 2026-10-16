@@ -47,7 +47,7 @@ const minusculas = (objeto) => Object.fromEntries(Object.entries(objeto).map(([k
  * Columnas de más en la base NO son un problema, salvo en una tabla de escritura una columna OBLIGATORIA (NOT NULL, sin
  * valor por defecto ni auto_increment) que el puente no llena: el INSERT fallaría. El `id` lo pone la base
  * (auto_increment) o el puente (MAX(id) + 1 en la misma transacción).
- * Un `tipo` null en el contrato = tipo no verificado (columna conocida solo por nombre).
+ * Un `tipo` null en el contrato = tipo no verificado (columna conocida solo por nombre); un `nulable` null, igual.
  * En las TABLAS_ADAPTABLES (tarifa y cargos) solo es problema que falte una columna esencial: las demás que falten se
  * omiten al escribir, y un tipo o nulabilidad distintos no detienen nada (el modo estricto rechaza lo que no quepa).
  * @returns {{tabla: string, columna?: string, problema: string}[]}
@@ -74,7 +74,7 @@ export function compararEsquema(esperado, real) {
       }
       if (!rc) problemas.push({ tabla, columna, problema: 'La columna no existe.' });
       else if (c.tipo !== null && norm(rc.tipo) !== norm(c.tipo)) problemas.push({ tabla, columna, problema: `Tipo distinto: se esperaba ${c.tipo} y es ${rc.tipo}.` });
-      else if (rc.nulable !== c.nulable) problemas.push({ tabla, columna, problema: `Nulabilidad distinta: se esperaba ${c.nulable ? 'acepta NULL' : 'NOT NULL'}.` });
+      else if (c.nulable !== null && rc.nulable !== c.nulable) problemas.push({ tabla, columna, problema: `Nulabilidad distinta: se esperaba ${c.nulable ? 'acepta NULL' : 'NOT NULL'}.` });
     }
     if (t.uso === 'escritura') {
       const llenadas = new Set([...(adaptable ? adaptable.escritas : Object.keys(t.columnas)), 'id'].map((c) => c.toLowerCase()));
@@ -124,7 +124,7 @@ export function largoDeColumna(real, tabla, columna) {
 /** Otras tablas donde el puente inserta filas y cuyo id puede no ser auto_increment. */
 const TABLAS_CON_ID = ['fc_contratos_costos_admtivos_iniciales', 'fc_elemxcont', 'fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales'];
 /** Tablas que pueden no existir en la base (`opcional` en el contrato): si faltan, el puente no las escribe. */
-const TABLAS_OPCIONALES = ['fc_contratos_vlrs_agregs_iniciales'];
+const TABLAS_OPCIONALES = ['fc_contratos_vlrs_agregs_iniciales', 'act_subtipos'];
 
 const columnaReal = (real, tabla, columna) => Object.entries(real?.[tabla]?.columnas ?? {}).find(([n]) => n.toLowerCase() === columna)?.[1];
 const idManualDe = (real, tabla) => {

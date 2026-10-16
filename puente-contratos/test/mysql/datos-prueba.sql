@@ -15,6 +15,7 @@ DELETE FROM fc_control;
 DELETE FROM fc_conceptos;
 DELETE FROM fc_horarios;
 DELETE FROM fc_conceptos_costos_admtivos;
+DELETE FROM act_subtipos;
 
 INSERT INTO fc_clientes (undnegocio, nit, sucursal, rsocial, snbasertf) VALUES
   ('BAQ', '900123456-8', '00', 'CLIENTE DE PRUEBA S.A.S.', 'N');
@@ -38,3 +39,10 @@ INSERT INTO fc_conceptos_costos_admtivos (id, descripcion) VALUES
   (1, 'PÓLIZAS'), (2, 'IMPUESTOS'), (3, 'TRANSPORTE INSUMOS'), (4, 'SUPERVISIÓN - VISITAS'), (5, 'VIÁTICOS SUPERVISIÓN'),
   (6, 'PAPELERÍA Y OFICINAS'), (7, 'EXCEDENTE DE I.U.'), (8, 'PLANES DE DATOS'), (9, 'MANTENIMIENTO DE EQUIPOS'),
   (10, 'VALORES AGREGADOS CUANDO X OBLIGACION SE REQUIERA'), (11, 'OTROS');
+
+-- El mismo subtipo puede estar bajo varios «Tipos» (así viene en la base viva): el puente prefiere la UEN de la oferta.
+INSERT INTO act_subtipos (empresa_c, unidad_negocio_c, codtipo_c, codstipo_c, nombre_C, coddtipo) VALUES
+  ('01', '', '004', '096', 'ASPIRADORA INDUSTRIAL', '004'),
+  ('01', 'BAQ', '004', '096', 'ASPIRADORA INDUSTRIAL', '004'),
+  ('01', '', '004', '171', 'VARA TELESCOPICA', '018'),
+  ('01', '', '004', '171', 'VARA TELESCOPICA', '014');

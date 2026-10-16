@@ -566,6 +566,19 @@ CREATE TABLE `fc_conceptos_costos_admtivos` (
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+-- Catálogo de activos fijos: subtipos con su «Tipo» (coddtipo), para dtipo_equipo de la pestaña Equipos. Reducida a las
+-- columnas que el puente lee (la real tiene además las cuentas contables y la depreciación).
+CREATE TABLE `act_subtipos` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `empresa_c` char(6) DEFAULT '',
+  `unidad_negocio_c` char(9) DEFAULT '',
+  `codtipo_c` char(9) DEFAULT '',
+  `codstipo_c` char(9) DEFAULT '',
+  `nombre_C` char(150) DEFAULT '',
+  `coddtipo` char(9) DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 -- fc_control va reducida a lo que el puente usa: la real tiene 157 columnas, entre ellas usuario y clave de conexión.
 -- Una fila por (empresa, UEN); num_oferta guarda el ÚLTIMO número de oferta usado.
 CREATE TABLE `fc_control` (

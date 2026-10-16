@@ -23,7 +23,7 @@ import { ErrorNegocio } from './errores.js';
 import { digitoVerificacion } from './nit.js';
 import {
   AHORA, codigosDeNomina, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
-  planDeCostosAdministrativos, planDeEquipos, planDeInsumosOferta, planDeNoContinuos, planDeValoresAgregados, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
+  planDeCostosAdministrativos, planDeEquipos, dtiposDeEquipos, planDeInsumosOferta, planDeNoContinuos, planDeValoresAgregados, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from './oferta.js';
 
 const TABLA_TARIFA = 'fc_contratos_tarifa_inicial';
@@ -123,6 +123,26 @@ async function leerConceptosCostosAdmtivos(conexion) {
   return filas.map((f) => ({ id: Number(f.id), descripcion: texto(f.descripcion) }));
 }
 
+/** Catálogo de activos de Contratos: el «Tipo» (`coddtipo`) de cada subtipo de la empresa, para la pestaña Equipos. */
+const TABLA_SUBTIPOS_ACTIVO = 'act_subtipos';
+
+/**
+ * Filas de `act_subtipos` de la empresa para los grupos de los equipos de la oferta. Sin permiso o sin la tabla, la
+ * pestaña Equipos va sin «Tipo» (se completa en Contratos) y se avisa: no detiene el envío.
+ */
+async function leerSubtiposDeActivo(conexion, empresa, grupos) {
+  try {
+    const [filas] = await conexion.query(
+      `SELECT id, unidad_negocio_c AS uen, codtipo_c AS grupo, codstipo_c AS subtipo, coddtipo AS dtipo FROM ${TABLA_SUBTIPOS_ACTIVO} WHERE empresa_c = ? AND TRIM(codtipo_c) IN (?)`,
+      [empresa, grupos],
+    );
+    return { filas };
+  } catch (error) {
+    if (!ERRORES_DE_ACCESO.has(error?.errno)) throw error;
+    return { filas: [], aviso: `No se pudo leer ${TABLA_SUBTIPOS_ACTIVO} (código ${error.errno}): la pestaña Equipos va sin «Tipo».` };
+  }
+}
+
 /** Borra los insumos que este envío alcanzó a escribir en `fc_elemxcont` (MyISAM): solo los suyos, por número y marca. */
 async function borrarInsumosPropios(conexion, { empresa, undnegocio, numOferta, marca }) {
   await conexion.query(
@@ -219,6 +239,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
   const comoNoContinuo = { idManual: Boolean(idManualPorTabla[TABLA_NO_CONTINUOS]) };
   const comoValorAgregado = { idManual: Boolean(idManualPorTabla[TABLA_VALORES_AGREGADOS]) };
   const sinValoresAgregados = tablasAusentes.includes(TABLA_VALORES_AGREGADOS);
+  const sinSubtiposDeActivo = tablasAusentes.includes(TABLA_SUBTIPOS_ACTIVO);
   return {
     async escribir(datos, { huella }) {
       const solicitudId = datos.origen.solicitudId;
@@ -299,7 +320,14 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         errores.push(...planCostos.errores);
         const planInsumos = planDeInsumosOferta(datosDeContratos, { huella, cliente: clienteParaPlan });
         errores.push(...planInsumos.errores);
-        const planEquipos = planDeEquipos(datosDeContratos, { huella, cliente: clienteParaPlan });
+        let dtipos = null;
+        const gruposDeEquipos = [...new Set((datos.equipos ?? []).filter((e) => e.codigoGrupo && e.codigoSubtipo).flatMap((e) => { const g = String(e.codigoGrupo).trim(); return /^\d+$/.test(g) ? [g, g.padStart(3, '0')] : [g]; }))];
+        if (gruposDeEquipos.length > 0 && !sinSubtiposDeActivo) {
+          const subtipos = await leerSubtiposDeActivo(conexion, empresa, gruposDeEquipos);
+          if (subtipos.aviso) advertencias.push({ campo: 'equipos', mensaje: subtipos.aviso });
+          else dtipos = dtiposDeEquipos(subtipos.filas, undnegocio);
+        }
+        const planEquipos = planDeEquipos(datosDeContratos, { huella, cliente: clienteParaPlan, dtipos });
         const planNoContinuos = planDeNoContinuos(datosDeContratos, { huella, cliente: clienteParaPlan });
         const planValores = planDeValoresAgregados(datosDeContratos, { huella });
         errores.push(...planEquipos.errores, ...planNoContinuos.errores, ...planValores.errores);
@@ -320,7 +348,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
         const { filas: filasDeCostos } = planDeCostosAdministrativos(datosDeContratos, { numOferta, huella, cliente, catalogo: conceptosCostos });
         const { filas: filasDeInsumos } = planDeInsumosOferta(datosDeContratos, { numOferta, huella, cliente });
-        const { filas: filasDeEquipos } = planDeEquipos(datosDeContratos, { numOferta, huella, cliente });
+        const { filas: filasDeEquipos } = planDeEquipos(datosDeContratos, { numOferta, huella, cliente, dtipos });
         const { filas: filasDeNoContinuos } = planDeNoContinuos(datosDeContratos, { numOferta, huella, cliente });
         const filasDeValores = sinValoresAgregados ? [] : planDeValoresAgregados(datosDeContratos, { numOferta, huella }).filas;
         let insumosEscritos = false;
@@ -364,7 +392,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
             preciosOferta: filasDePrecios.map((f) => ({ codigo: f.codigo, vr_costo: f.vr_costo, valor: f.valor })),
             costosAdministrativos: filasDeCostos.map((f) => ({ id_cpto_costo: f.id_cpto_costo, valor: f.valor })),
             insumosOferta: filasDeInsumos.map((f) => ({ codele: f.codele, cantidad: f.cantidad, frecuencia: f.frecuencia, vlr_unitario: f.vlr_unitario })),
-            equipos: filasDeEquipos.map((f) => ({ descrip_equipo: f.descrip_equipo, tipo_equipo: f.tipo_equipo, subtipo_equipo: f.subtipo_equipo, cantidad: f.cantidad, valor: f.valor, frecuencia: f.frecuencia })),
+            equipos: filasDeEquipos.map((f) => ({ descrip_equipo: f.descrip_equipo, tipo_equipo: f.tipo_equipo, dtipo_equipo: f.dtipo_equipo, subtipo_equipo: f.subtipo_equipo, cantidad: f.cantidad, valor: f.valor, frecuencia: f.frecuencia })),
             serviciosNoContinuos: filasDeNoContinuos.map((f) => ({ actividad: f.actividad, frecuencia: f.frecuencia, valor: f.valor, vlr_mes: f.vlr_mes })),
             valoresAgregados: filasDeValores.map((f) => ({ tipo: f.tipo, valor: f.valor, frec_reinv: f.frec_reinv })),
             ...(Object.keys(omitir).length > 0 ? { columnasOmitidas: omitir } : {}),

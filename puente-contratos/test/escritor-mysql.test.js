@@ -43,6 +43,7 @@ function falso(respuestas = {}) {
     [/pc_add LIKE/, [[]]],
     [/FROM fc_clientes/, [[{ nit: '900123456-8  ', rsocial: 'CLIENTE DE PRUEBA S.A.S.' }]]],
     [/^SELECT empresa, undnegocio FROM fc_control/, [[{ empresa: '01', undnegocio: 'BAQ' }]]],
+    [/FROM act_subtipos/, [[{ id: 9, uen: 'MNA', grupo: '004', subtipo: '096', dtipo: '025' }, { id: 7, uen: '', grupo: '004', subtipo: '096', dtipo: '018' }]]],
     [/FROM fc_conceptos_costos_admtivos/, [[{ id: 1, descripcion: 'PÓLIZAS' }, { id: 2, descripcion: 'IMPUESTOS' }, { id: 6, descripcion: 'PAPELERÍA Y OFICINAS  ' }, { id: 11, descripcion: 'OTROS' }]]],
     [/FROM fc_conceptos/, [[{ empresa: '01', undnegocio: 'BAQ', codcpto: 'ASE' }]]],
     [/FROM fc_horarios/, [[{ codigo: '941' }]]],
@@ -523,7 +524,8 @@ describe('escritor MySQL — pestañas Equipos, Servs. No Continuos y Valores Ag
     assert.deepEqual([...orden].sort((a, b) => a - b), orden);
     assert.equal(f.de(/^INSERT INTO fc_contratos_equipos_iniciales/)[0].params[2], 937);
     assert.match(f.de(/^INSERT INTO fc_contratos_vlrs_agregs_iniciales/)[0].sql, /usuario, pc\) VALUES/);
-    assert.deepEqual(r.escrito.equipos.map((e) => e.descrip_equipo), ['Aspiradora']);
+    assert.deepEqual(r.escrito.equipos.map((e) => [e.descrip_equipo, e.tipo_equipo, e.dtipo_equipo, e.subtipo_equipo]), [['Aspiradora', '004', '018', '096']]);
+    assert.deepEqual(f.de(/FROM act_subtipos/)[0].params, ['01', ['004']]);
     assert.deepEqual(r.escrito.serviciosNoContinuos.map((e) => e.vlr_mes), [50]);
     assert.deepEqual(r.escrito.valoresAgregados.map((e) => e.valor), [1000]);
   });
@@ -533,6 +535,17 @@ describe('escritor MySQL — pestañas Equipos, Servs. No Continuos y Valores Ag
     const r = await escribir(f.pool, completa(), { tablasAusentes: ['fc_contratos_vlrs_agregs_iniciales'] });
     assert.ok(!f.hubo(/vlrs_agregs/) && f.hubo(/^INSERT INTO fc_contratos_equipos_iniciales/));
     assert.ok(r.advertencias.some((a) => a.campo === 'valoresAgregados'));
+  });
+
+  it('el «Tipo» del equipo: sin la tabla act_subtipos o sin permiso de lectura va vacío y se avisa, sin detener el envío', async () => {
+    const sinTabla = falso();
+    const r1 = await escribir(sinTabla.pool, completa(), { tablasAusentes: ['act_subtipos'] });
+    assert.ok(!sinTabla.hubo(/act_subtipos/));
+    assert.deepEqual(r1.escrito.equipos.map((e) => e.dtipo_equipo), ['']);
+    const sinPermiso = falso({ [/FROM act_subtipos/.source]: () => { throw Object.assign(new Error('SELECT command denied'), { errno: 1142 }); } });
+    const r2 = await escribir(sinPermiso.pool, completa());
+    assert.deepEqual(r2.escrito.equipos.map((e) => e.dtipo_equipo), ['']);
+    assert.ok(r2.advertencias.some((a) => a.campo === 'equipos' && /act_subtipos \(código 1142\)/.test(a.mensaje)));
   });
 
   it('si falla un no continuo se revierte TODO', async () => {

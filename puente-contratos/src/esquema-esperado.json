@@ -264,6 +264,14 @@
    "id": {"tipo": null, "nulable": false},
    "descripcion": {"tipo": null, "nulable": true}
   }},
+  "act_subtipos": {"motor": null, "uso": "lectura", "modulo": 7, "opcional": true, "columnas": {
+   "id": {"tipo": null, "nulable": null},
+   "empresa_c": {"tipo": null, "nulable": null},
+   "unidad_negocio_c": {"tipo": null, "nulable": null},
+   "codtipo_c": {"tipo": null, "nulable": null},
+   "codstipo_c": {"tipo": null, "nulable": null},
+   "coddtipo": {"tipo": null, "nulable": null}
+  }},
   "fc_contratos_equipos_iniciales": {"motor": "InnoDB", "uso": "escritura", "modulo": 7, "columnas": {
    "id": {"tipo": "int(18)", "nulable": false},
    "empresa": {"tipo": "char(2)", "nulable": true},
@@ -290,6 +298,7 @@
    "user_add": {"tipo": "varchar(12)", "nulable": true},
    "fadd": {"tipo": "datetime", "nulable": true},
    "pc_add": {"tipo": "varchar(60)", "nulable": true},
+   "dtipo_equipo": {"tipo": "char(3)", "nulable": true},
    "vlr_mes_mantenimiento": {"tipo": "int(15)", "nulable": true},
    "vlr_mes_otr_rubros": {"tipo": "int(15)", "nulable": true},
    "clase": {"tipo": "int(1)", "nulable": true},

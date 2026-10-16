@@ -399,9 +399,12 @@ const DESCRIPCION_EQUIPO_MAX = 50; // descrip_equipo varchar(50)
  * tarifa, sin A.I.U. (las ofertas a mano usan 0,82; se ajusta en Contratos si aplica).
  *
  * @param {object} datos contrato v1 ya validado
- * @param {{numOferta?: number | null, huella?: string, cliente?: {rsocial: string} | null}} contexto
+ * El «Tipo» intermedio (`dtipo_equipo`, entre Grupo y Subtipo) sale de `act_subtipos` (ver `dtiposDeEquipos`); sin
+ * `dtipos` (prueba sin base) queda vacío.
+ *
+ * @param {{numOferta?: number | null, huella?: string, cliente?: {rsocial: string} | null, dtipos?: Map<string, string> | null}} contexto
  */
-export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = null } = {}) {
+export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = null, dtipos = null } = {}) {
   const errores = [];
   const advertencias = [];
   const equipos = datos.equipos ?? [];
@@ -409,6 +412,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
   const { oferta, origen } = datos;
   const sinValor = [];
   const sinGrupo = [];
+  const sinTipo = [];
   const filas = [];
   equipos.forEach((e, i) => {
     const comprar = e.cantidadComprar ?? 0;
@@ -418,6 +422,8 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
       return;
     }
     if (!e.codigoGrupo || !e.codigoSubtipo) sinGrupo.push(e.descripcion || `#${i + 1}`);
+    const dtipo = e.codigoGrupo && e.codigoSubtipo ? (dtipos?.get(claveDeSubtipo(e.codigoGrupo, e.codigoSubtipo)) ?? '') : '';
+    if (dtipos && e.codigoGrupo && e.codigoSubtipo && !dtipo) sinTipo.push(e.descripcion || `#${i + 1}`);
     const precio = dosDecimales(e.valorUnitario ?? 0);
     filas.push({
       empresa: oferta.empresa,
@@ -444,6 +450,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
       user_add: USUARIO_PUENTE,
       fadd: AHORA,
       pc_add: marcaDeOrigen(origen.solicitudId, huella),
+      dtipo_equipo: dtipo,
       vlr_mes_mantenimiento: Math.round(mantenimiento),
       vlr_mes_otr_rubros: 0,
       clase: 1,
@@ -452,7 +459,43 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
   });
   if (sinValor.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Sin compra ni mantenimiento (no van a la pestaña Equipos): ${sinValor.join(', ')}.` });
   if (sinGrupo.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Sin grupo o subtipo del activo (se completan en Contratos): ${sinGrupo.join(', ')}.` });
+  if (sinTipo.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Subtipo sin «Tipo» en el catálogo de activos de Contratos (se completa en Contratos): ${sinTipo.join(', ')}.` });
   return { errores, advertencias, filas };
+}
+
+/** Un código de activo comparable: sin espacios y, si es numérico, a 3 dígitos («4» y «004» son el mismo grupo). */
+const codigoDeActivo = (codigo) => {
+  const t = String(codigo ?? '').trim();
+  return /^\d+$/.test(t) ? t.padStart(3, '0') : t;
+};
+export const claveDeSubtipo = (grupo, subtipo) => `${codigoDeActivo(grupo)}|${codigoDeActivo(subtipo)}`;
+const DTIPO_MAX = 3; // fc_contratos_equipos_iniciales.dtipo_equipo char(3)
+
+/**
+ * El «Tipo» (`act_dtipos`) de cada par Grupo + Subtipo, según `act_subtipos` (su columna `coddtipo`). El mismo subtipo
+ * puede estar repetido bajo varios tipos o UEN: se prefiere la fila de la UEN de la oferta, luego la sin UEN, y entre
+ * iguales la de menor id (todas son válidas para la pantalla, que muestra el subtipo dentro de ese tipo).
+ *
+ * @param {{id: number | string, uen: string, grupo: string, subtipo: string, dtipo: string}[]} filas de `act_subtipos` de la empresa
+ * @param {string} undnegocio UEN de la oferta
+ * @returns {Map<string, string>} clave `claveDeSubtipo(grupo, subtipo)` → código del tipo
+ */
+export function dtiposDeEquipos(filas, undnegocio) {
+  const uen = String(undnegocio ?? '').trim().toUpperCase();
+  const preferencia = (f) => {
+    const u = String(f.uen ?? '').trim().toUpperCase();
+    return u === uen ? 0 : u === '' ? 1 : 2;
+  };
+  const mejor = new Map();
+  for (const f of filas) {
+    const dtipo = String(f.dtipo ?? '').trim();
+    if (!dtipo || dtipo.length > DTIPO_MAX) continue;
+    const clave = claveDeSubtipo(f.grupo, f.subtipo);
+    const candidato = { dtipo, pref: preferencia(f), id: Number(f.id) || 0 };
+    const actual = mejor.get(clave);
+    if (!actual || candidato.pref < actual.pref || (candidato.pref === actual.pref && candidato.id < actual.id)) mejor.set(clave, candidato);
+  }
+  return new Map([...mejor].map(([clave, c]) => [clave, c.dtipo]));
 }
 
 /** Tipo de actividad de un no continuo en Contratos, según qué lleva: personal (REHUM), equipos (MAQUI) o ambos. */

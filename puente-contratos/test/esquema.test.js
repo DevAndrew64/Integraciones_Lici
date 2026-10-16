@@ -101,6 +101,11 @@ describe('compararEsquema — tablas de escritura', () => {
     assert.deepEqual(compararEsquema({ tablas: { fc_x: { ...esperadoOpcional.tablas.fc_x, opcional: undefined } } }, {}).map((p) => p.problema), ['La tabla no existe.']);
   });
 
+  it('un «nulable» null en el contrato no se verifica (tabla de consulta conocida solo por sus columnas)', () => {
+    const esperado = { tablas: { act_x: { motor: null, uso: 'lectura', columnas: { coddtipo: { tipo: null, nulable: null } } } } };
+    for (const nulable of [true, false]) assert.deepEqual(compararEsquema(esperado, { act_x: { motor: 'MyISAM', columnas: { coddtipo: { tipo: 'char(9)', nulable } } } }), []);
+  });
+
   it('opcionesDeEscritura: id manual si no es auto_increment, y los largos reales de user_add y pc_add', () => {
     const tabla = (id) => ({ fc_ofertas_adjudicadas: { motor: 'InnoDB', columnas: { id, user_add: { tipo: 'varchar(12)', nulable: true }, pc_add: { tipo: 'char(40)', nulable: true } } } });
     assert.deepEqual(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, autoIncremento: true })), {
@@ -110,7 +115,7 @@ describe('compararEsquema — tablas de escritura', () => {
         fc_contratos_equipos_iniciales: false, fc_contratos_no_continuos_iniciales: false, fc_contratos_vlrs_agregs_iniciales: false,
       },
       omitir: {},
-      tablasAusentes: ['fc_contratos_vlrs_agregs_iniciales'],
+      tablasAusentes: ['fc_contratos_vlrs_agregs_iniciales', 'act_subtipos'],
     });
     assert.equal(opcionesDeEscritura(tabla({ tipo: 'int(18)', nulable: false, obligatoria: true })).idManual, true);
   });
@@ -205,7 +210,8 @@ describe('esquema-esperado.json (copia de producción, solo estructura)', () => 
       'fc_contratos_cargos_iniciales', 'fc_contratos_costos_admtivos_iniciales', 'fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales',
       'fc_contratos_tarifa_inicial', 'fc_contratos_vlrs_agregs_iniciales', 'fc_elemxcont', 'fc_ofertas_adjudicadas', 'fc_preciosventas_oferta',
     ]);
-    assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['fc_clientes', 'fc_conceptos', 'fc_conceptos_costos_admtivos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
+    assert.deepEqual(Object.entries(real.tablas).filter(([, t]) => t.uso === 'lectura').map(([n]) => n).sort(), ['act_subtipos', 'fc_clientes', 'fc_conceptos', 'fc_conceptos_costos_admtivos', 'fc_empresas', 'fc_horarios', 'gl_undnegocios']);
+    assert.equal(real.tablas.act_subtipos.opcional, true, 'catálogo de activos: si falta, Equipos va sin «Tipo»');
     assert.deepEqual(real.tablas.fc_elemxcont.permisos, ['DELETE'], 'MyISAM: si el envío falla después de escribir sus insumos, los borra');
     assert.equal(real.tablas.fc_contratos_vlrs_agregs_iniciales.opcional, true, 'sin confirmar que exista en la base viva: si falta, no se escribe');
     assert.ok(!real.tablas.fc_contratos_servs_agregs_iniciales, 'la pestaña Valores Agregados lee vlrs_agregs (tipo, valor, reinversión), no servs_agregs');

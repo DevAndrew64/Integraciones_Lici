@@ -4,7 +4,7 @@ import { cargarEsquemaEsperado } from '../src/esquema.js';
 import {
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
   codigosDeNomina, conceptoDeCostoAdmtivo, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta,
-  planDeEquipos, planDeNoContinuos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, planDeValoresAgregados, TIPO_VALOR_AGREGADO, tipoDeActividad, USUARIO_PUENTE,
+  claveDeSubtipo, dtiposDeEquipos, planDeEquipos, planDeNoContinuos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, planDeValoresAgregados, TIPO_VALOR_AGREGADO, tipoDeActividad, USUARIO_PUENTE,
 } from '../src/oferta.js';
 import { validarContrato } from '../src/validar.js';
 
@@ -305,9 +305,16 @@ describe('planDeEquipos (pestaña Equipos)', () => {
       empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo_servicio: '', codmun: '', punto_entrega: '0000000000',
       nom_punto_entrega: 'CLIENTE DE PRUEBA S.A.S.', tipo_equipo: '004', subtipo_equipo: '096', codigo: '', descrip_equipo: 'Aspiradora industrial',
       precio_costo: 1190000, porc_vlr_compra: 1, cantidad: 1, frecuencia: 12, valor: 1190000, cant_facturar: 2, valor_inicial: 1190000,
-      user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: marcaDeOrigen(42, HUELLA), vlr_mes_mantenimiento: 23000, vlr_mes_otr_rubros: 0, clase: 1, valor_inicial_va: 0,
+      user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: marcaDeOrigen(42, HUELLA), dtipo_equipo: '', vlr_mes_mantenimiento: 23000, vlr_mes_otr_rubros: 0, clase: 1, valor_inicial_va: 0,
     });
     cabeEnLaTabla('fc_contratos_equipos_iniciales', filas[0]);
+  });
+
+  it('el «Tipo» (dtipo_equipo) sale del catálogo act_subtipos; si el subtipo no tiene tipo, va vacío y se avisa', () => {
+    const dtipos = dtiposDeEquipos([{ id: 1, uen: '', grupo: '004', subtipo: '096', dtipo: '018' }], 'BAQ');
+    const { advertencias, filas } = planDeEquipos(conEquipos([ASPIRADORA, { ...ASPIRADORA, codigoSubtipo: '097', descripcion: 'Escalera' }]), { dtipos });
+    assert.deepEqual(filas.map((f) => f.dtipo_equipo), ['018', '']);
+    assert.deepEqual(advertencias.map((a) => a.mensaje), ['Subtipo sin «Tipo» en el catálogo de activos de Contratos (se completa en Contratos): Escalera.']);
   });
 
   it('sin compra ni mantenimiento no va; sin grupo va y se avisa', () => {
@@ -320,6 +327,23 @@ describe('planDeEquipos (pestaña Equipos)', () => {
       'Sin compra ni mantenimiento (no van a la pestaña Equipos): Aspiradora industrial.',
       'Sin grupo o subtipo del activo (se completan en Contratos): Escalera.',
     ]);
+  });
+});
+
+describe('dtiposDeEquipos (Tipo del activo entre Grupo y Subtipo)', () => {
+  it('prefiere la fila de la UEN de la oferta, luego la sin UEN, luego la de menor id; ignora tipos vacíos', () => {
+    const filas = [
+      { id: 30, uen: 'MNA', grupo: '004', subtipo: '171', dtipo: '025' },
+      { id: 20, uen: '', grupo: '004', subtipo: '171', dtipo: '018' },
+      { id: 10, uen: '', grupo: '004', subtipo: '171', dtipo: '014' },
+      { id: 5, uen: 'BAQ', grupo: '004  ', subtipo: '172', dtipo: '   ' },
+      { id: 6, uen: '', grupo: '004', subtipo: '172', dtipo: '008' },
+      { id: 7, uen: 'BAQ', grupo: '005', subtipo: '002', dtipo: '029' },
+    ];
+    const dtipos = dtiposDeEquipos(filas, 'baq');
+    assert.deepEqual(Object.fromEntries(dtipos), { '004|171': '014', '004|172': '008', '005|002': '029' });
+    assert.equal(dtiposDeEquipos(filas, 'MNA').get('004|171'), '025');
+    assert.equal(dtipos.get(claveDeSubtipo('4', '172')), '008', 'códigos numéricos a 3 dígitos');
   });
 });
 

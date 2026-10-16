@@ -42,7 +42,7 @@ describe('sentenciasDePermisos', () => {
   it('módulo implementado (7): tarifa, cargos, oferta adjudicada, lista de precios, insumos, costos administrativos, equipos, no continuos y valores agregados, clientes, conceptos, contador y horarios', () => {
     assert.equal(MODULO_IMPLEMENTADO, 7);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 14);
+    assert.equal(sentencias.length, 15);
     for (const t of ['fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales']) {
       assert.ok(sentencias.includes(`GRANT SELECT, INSERT ON \`almacen\`.\`${t}\` TO 'puente'@'%';`), t);
     }
@@ -51,6 +51,7 @@ describe('sentenciasDePermisos', () => {
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_contratos_cargos_iniciales` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT, INSERT ON `almacen`.`fc_preciosventas_oferta` TO 'puente'@'%';"));
     assert.ok(sentencias.includes("GRANT SELECT (codigo) ON `almacen`.`fc_horarios` TO 'puente'@'%';"));
+    assert.ok(sentencias.includes("GRANT SELECT (id, empresa_c, unidad_negocio_c, codtipo_c, codstipo_c, coddtipo) ON `almacen`.`act_subtipos` TO 'puente'@'%';"), 'el «Tipo» de cada equipo');
   });
 
   it('nunca otorga DDL, ALL, GRANT OPTION ni nada global; fc_control solo el contador', () => {
