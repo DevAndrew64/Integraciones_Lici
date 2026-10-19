@@ -3,6 +3,7 @@ import esquemaEsperado from '../../../puente-contratos/src/esquema-esperado.json
 import { crearMotor } from '../../../puente-contratos/src/motor.js';
 import { enviarAlPuente, interpretarRespuesta, type PayloadContratosV1, type ResultadoPuente } from './cliente';
 import type { DestinoLeido } from './destino';
+import { leerVistaNomina, type VistaNomina } from './nomina';
 
 /**
  * Envío a Contratos desde LiciColba, sin servicio aparte: el servidor de LiciColba escribe directo en el MySQL de Contratos
@@ -104,4 +105,30 @@ export async function consultarDestinoContratos(nombreEmpresa: string, entorno: 
     return { ok: false, tipo, candidatas: Array.isArray(c.candidatas) ? c.candidatas.map(String) : [] };
   }
   return { ok: true, destino: { empresa: c.empresa as DestinoLeido['empresa'], uens: (c.uens ?? []) as DestinoLeido['uens'] } };
+}
+
+export type ResultadoCargosNomina = { ok: true; vista: VistaNomina } | { ok: false; mensaje: string };
+
+/**
+ * Vista previa de los cargos de la oferta contra la nómina de la UEN en Contratos: qué cargo de nómina toma cada uno y el
+ * catálogo para elegir los que no cruzan. Solo lee; funciona también en dry-run.
+ */
+export async function consultarCargosNomina(
+  pedido: { empresa: string; undnegocio: string; cargos: { nombre: string; codigoNomina: number | null }[]; baseNomina: string | null },
+  entorno: Entorno = process.env,
+  motor?: Pick<Motor, 'cargosNomina'>,
+): Promise<ResultadoCargosNomina> {
+  if (entorno.PUENTE_CONTRATOS_URL?.trim()) {
+    return { ok: false, mensaje: 'Con el servicio puente por HTTP no se puede revisar la nómina. Quite PUENTE_CONTRATOS_URL de .env.local.' };
+  }
+  let config: ConfigContratos;
+  try {
+    config = leerConfigContratos(entorno);
+  } catch (e) {
+    return { ok: false, mensaje: `La configuración de Contratos no es válida: ${(e as Error).message}` };
+  }
+  const { estado, cuerpo } = await (motor ?? motorPara(config)).cargosNomina(pedido);
+  const c = cuerpo as Record<string, unknown>;
+  const vista = estado === 200 && c.ok === true ? leerVistaNomina(c) : null;
+  return vista ? { ok: true, vista } : { ok: false, mensaje: String(c.mensaje ?? 'No se pudo leer la nómina en Contratos.') };
 }

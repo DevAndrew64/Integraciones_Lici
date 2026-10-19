@@ -91,6 +91,7 @@ import type { ExportacionManoObraDto, FichaManoObraExportDto, DetalleUnitarioExp
 import type { CargoPantallaDto, GruposCargoDto } from '@/lib/contratos-puente/cargos';
 import { conceptoAutomatico, tipoTarifaContratos, uenSugerida, type UenContratos } from '@/lib/contratos-puente/destino';
 import { horasDeProgramacion } from '@/lib/contratos-puente/horas-cargo';
+import { aplicarEleccionNomina, cargosParaVista, cargosSinNomina, claveCargo, ELECCION_VACIA, leerEleccionNomina, leerVistaNomina, type EleccionNomina, type VistaNomina } from '@/lib/contratos-puente/nomina';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { calcularMinutosSemanaDistribucion, calcularTotalSemanalCargo, evaluarProgramacionSemanal, puedeGuardarProgramacion as puedeGuardarProgramacionLib } from '@/lib/costos-mano-obra/horarios/distribucion-semanal';
 import { materializarFechasProgramadas } from '@/lib/costos-mano-obra/horarios/materializar-fechas-programadas';
@@ -14738,10 +14739,12 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     if(errorDestinoContratos){setEnvioContratos({ok:false,texto:errorDestinoContratos});return;}
     if(!destinoContratos.undnegocio){setEnvioContratos({ok:false,texto:'Seleccione la UEN de Contratos.'});return;}
     if(!destinoContratos.codServicio){setEnvioContratos({ok:false,texto:`Seleccione el concepto de facturación de la UEN ${destinoContratos.undnegocio}.`});return;}
+    if(leyendoNomina){setEnvioContratos({ok:false,texto:'Espere a que termine la revisión de los cargos en la nómina.'});return;}
+    if(cargosPendientesNomina.length>0){setEnvioContratos({ok:false,texto:`Elija en «Cargos en nómina» el cargo que corresponde a: ${cargosPendientesNomina.join(', ')}.`});return;}
     setEnviandoContratos(true);
     try{
       const res=await fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos`,{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:construirCostosPantallaDto(),contratos:destinoContratos,cargos:construirCargosContratosDto()}),
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:construirCostosPantallaDto(),contratos:{...destinoContratos,baseNomina:vistaNomina?.base??eleccionNomina.baseNomina},cargos:aplicarEleccionNomina(construirCargosContratosDto(),eleccionNomina)}),
       });
       const d=await res.json().catch(()=>({}));
       setEnvioContratos({ok:res.ok,texto:String(d.mensaje||(res.ok?'Datos enviados a Contratos.':'No se pudo enviar a Contratos.'))});
@@ -15408,6 +15411,54 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     }),
     [resultadosTurnantesConOtrosCostos,factorAgregadoTurnanteHorasReales],
   );
+  // Cargos en nómina (Enviar a Contratos): Contratos muestra cada cargo de la oferta por su código en la nómina de la UEN.
+  // El puente lo cruza por el nombre; antes de enviar se ve qué cargo de nómina toma cada uno y se eligen los que no cruzan.
+  // La elección se recuerda en este navegador por costeo y UEN.
+  const cargosOfertaParaNomina=React.useMemo(
+    ()=>construirCargosContratosDto().map(c=>({nombre:c.nombre,cantidad:c.cantidad})),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lineasExtra,cargosTurnantes,resultadosLineasExtraConOtrosCostos,resultadosTurnantesConOtrosCostosParaAgregado],
+  );
+  const claveEleccionNomina=costoEstructuraIdActual&&destinoContratos.undnegocio?`contratosNomina:${costoEstructuraIdActual}:${destinoContratos.undnegocio}`:null;
+  const [eleccionNomina,setEleccionNomina]=useState<EleccionNomina>(ELECCION_VACIA);
+  useEffect(()=>{
+    let guardada:EleccionNomina=ELECCION_VACIA;
+    if(claveEleccionNomina){try{guardada=leerEleccionNomina(JSON.parse(window.localStorage.getItem(claveEleccionNomina)??'null'));}catch{/* sin almacenamiento local */}}
+    setEleccionNomina(guardada);
+  },[claveEleccionNomina]);
+  function guardarEleccionNomina(nueva:EleccionNomina){
+    setEleccionNomina(nueva);
+    if(claveEleccionNomina){try{window.localStorage.setItem(claveEleccionNomina,JSON.stringify(nueva));}catch{/* sin almacenamiento local */}}
+  }
+  const [vistaNomina,setVistaNomina]=useState<VistaNomina|null>(null);
+  const [errorVistaNomina,setErrorVistaNomina]=useState<string|null>(null);
+  const [leyendoNomina,setLeyendoNomina]=useState(false);
+  const pedidoVistaNomina=JSON.stringify({undnegocio:destinoContratos.undnegocio,baseNomina:eleccionNomina.baseNomina,cargos:cargosParaVista(cargosOfertaParaNomina,eleccionNomina)});
+  const panelNominaVisible=!!(costoEstructuraIdActual&&solicitudProceso?.id&&solicitudProceso.resultadoFinal==='Adjudicado'&&!ofertaEnviada&&destinoLeidoContratos&&destinoContratos.undnegocio);
+  useEffect(()=>{
+    setErrorVistaNomina(null);
+    const pedido=JSON.parse(pedidoVistaNomina) as {undnegocio:string;baseNomina:string|null;cargos:{nombre:string;codigoNomina:number|null}[]};
+    if(!panelNominaVisible||pedido.cargos.length===0){setVistaNomina(null);return;}
+    let vigente=true;
+    setLeyendoNomina(true);
+    // Espera a que se deje de editar antes de consultar Contratos.
+    const espera=window.setTimeout(()=>{
+      fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos/cargos-nomina`,{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso?.id,...pedido}),
+      })
+        .then(async r=>({ok:r.ok,d:await r.json().catch(()=>({}))}))
+        .then(({ok,d})=>{
+          if(!vigente)return;
+          const vista=ok&&d?.ok?leerVistaNomina(d):null;
+          setVistaNomina(vista);
+          if(!vista)setErrorVistaNomina(String(d?.mensaje||'No se pudo revisar los cargos en la nómina de Contratos.'));
+        })
+        .catch(()=>{if(vigente){setVistaNomina(null);setErrorVistaNomina('No se pudo conectar para revisar los cargos en la nómina de Contratos.');}})
+        .finally(()=>{if(vigente)setLeyendoNomina(false);});
+    },400);
+    return()=>{vigente=false;window.clearTimeout(espera);};
+  },[pedidoVistaNomina,panelNominaVisible,costoEstructuraIdActual,solicitudProceso?.id]);
+  const cargosPendientesNomina=cargosSinNomina(vistaNomina);
   // Misma corrección que arriba, pero sobre la forma `ResultadoFinancieroMensualLinea`
   // completa (con desgloses) — necesaria porque `agregadoTurnantesMensual`
   // (Resultado preliminar) se construye con `agregarResultadosFinancierosMensuales`,
@@ -20556,6 +20607,40 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                                     <option value="">Seleccione…</option>
                                     {uenSel.conceptos.map(c=><option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}{c.veces?` (${c.veces} tarifa${c.veces===1?'':'s'})`:''}</option>)}
                                   </select></div>)}
+                            {uenSel&&cargosOfertaParaNomina.some(c=>c.cantidad>0)&&(
+                              <div>
+                                <div style={lbl}>Cargos en nómina{vistaNomina?` · ${vistaNomina.base}`:''}</div>
+                                {errorVistaNomina
+                                  ?<div style={{fontSize:11,fontWeight:600,color:RED,fontFamily:F,lineHeight:1.5}}>{errorVistaNomina}</div>
+                                  :!vistaNomina
+                                    ?<div style={{fontSize:11,color:'#94a3b8',fontFamily:F}}>Revisando los cargos en la nómina de Contratos…</div>
+                                    :<div style={{display:'grid',gap:6}}>
+                                      {vistaNomina.bases.length>1&&(
+                                        <select style={inp} value={vistaNomina.base} title="Nómina de donde se toman los códigos de cargo"
+                                          onChange={e=>guardarEleccionNomina({baseNomina:e.target.value,codigos:{}})}>
+                                          {vistaNomina.bases.map(b=><option key={b} value={b}>Nómina {b}</option>)}
+                                        </select>)}
+                                      {vistaNomina.cargos.map(c=>{
+                                        const clave=claveCargo(c.nombre);
+                                        const exacto=c.estado==='exacto';
+                                        const falta=c.codigo===null;
+                                        const color=falta?RED:exacto||c.estado==='elegido'?'#16a34a':'#b45309';
+                                        const vistos=new Set(c.parecidos.map(p=>p.codigo));
+                                        return(<div key={clave} style={{display:'grid',gap:3,padding:'6px 8px',borderRadius:6,border:`1px solid ${falta?'#fecaca':'#e5e7eb'}`,background:falta?'#fef2f2':'white'}}>
+                                          <div style={{fontSize:11.5,fontWeight:700,color:'#0f172a',fontFamily:F}}><span style={{color}}>{falta?'✗':exacto||c.estado==='elegido'?'✓':'≈'}</span> {c.nombre}</div>
+                                          {exacto
+                                            ?<div style={{fontSize:10.5,color:'#475569',fontFamily:F}}>Nómina: {c.nombreNomina} ({c.codigo})</div>
+                                            :<select style={inp} value={c.codigo??''} aria-label={`Cargo de nómina para ${c.nombre}`}
+                                              onChange={e=>{const v=Number(e.target.value);const codigos={...eleccionNomina.codigos};if(v>0)codigos[clave]=v;else delete codigos[clave];guardarEleccionNomina({baseNomina:vistaNomina.base,codigos});}}>
+                                              <option value="">{falta?'Elija el cargo de nómina…':'Tomar por nombre'}</option>
+                                              {c.parecidos.length>0&&<optgroup label="Más parecidos">{c.parecidos.map(p=><option key={`p${p.codigo}`} value={p.codigo}>{p.nombre} ({p.codigo})</option>)}</optgroup>}
+                                              <optgroup label="Todos los cargos de la nómina">{vistaNomina.catalogo.filter(o=>!vistos.has(o.codigo)).map(o=><option key={o.codigo} value={o.codigo}>{o.nombre} ({o.codigo})</option>)}</optgroup>
+                                            </select>}
+                                          {falta&&<div style={{fontSize:10.5,color:RED,fontFamily:F,lineHeight:1.4}}>No está con ese nombre en la nómina. Elija el que le corresponde o pida a Nómina que lo cree.</div>}
+                                        </div>);
+                                      })}
+                                    </div>}
+                              </div>)}
                           </div>);
                         })())}
                     {ofertaEnviada&&<div style={{marginTop:8,padding:'9px 12px',borderRadius:8,border:'1px solid #86efac',background:'#f0fdf4',color:'#15803d',fontSize:11.5,fontWeight:700,fontFamily:F,lineHeight:1.5}}>

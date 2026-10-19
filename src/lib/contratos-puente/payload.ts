@@ -235,6 +235,8 @@ export function armarPayloadContratos(d: {
   equipos?: EquipoPayload[] | null;
   serviciosNoContinuos?: ServicioNoContinuoPayload[] | null;
   valoresAgregados?: ValorAgregadoPayload[] | null;
+  /** Base de nómina de donde salen los códigos de cargo (la de la vista previa); sin ella el puente elige. */
+  baseNomina?: string | null;
 }): PayloadContratosV1 {
   const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos, costosAdministrativos, equipos, serviciosNoContinuos, valoresAgregados } = d;
   const aiu = porcentajeAIU(r?.porcentajeIU);
@@ -256,6 +258,7 @@ export function armarPayloadContratos(d: {
       origenProceso: texto(dest?.origenProceso),
       codServicio: texto(dest?.codServicio),
       descripcionServicio: texto(dest?.descripcionServicio),
+      ...(texto(d.baseNomina) ? { baseNomina: texto(d.baseNomina)! } : {}),
     },
     tarifa: {
       manoObra: conAIU(t?.manoObra),

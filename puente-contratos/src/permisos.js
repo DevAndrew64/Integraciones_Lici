@@ -9,6 +9,7 @@
  * - Solo las tablas de los módulos ya implementados (`modulo` ≤ `hastaModulo`).
  */
 import { esquemaHastaModulo } from './esquema.js';
+import { BASES_DE_NOMINA } from './nomina.js';
 
 const IDENTIFICADOR = /^[A-Za-z0-9_.%-]+$/;
 
@@ -27,7 +28,15 @@ export function sentenciasDePermisos(esquema, { usuario, base, host = '%', hasta
   for (const [nombre, valor] of Object.entries({ usuario, base, host })) {
     if (typeof valor !== 'string' || !IDENTIFICADOR.test(valor)) throw new RangeError(`«${nombre}» no es un identificador válido.`);
   }
-  return Object.entries(esquemaHastaModulo(esquema, hastaModulo).tablas).map(
+  const deTablas = Object.entries(esquemaHastaModulo(esquema, hastaModulo).tablas).map(
     ([nombre, tabla]) => `GRANT ${clausulasDeTabla(tabla).join(', ')} ON \`${base}\`.\`${nombre}\` TO '${usuario}'@'${host}';`,
   );
+  if (hastaModulo < 5) return deTablas;
+  // Módulo 5 (cargos): el código de cada cargo sale de la nómina de la UEN. `gl_undnegocios` dice cuál es la base de
+  // nómina y `<base>.cargos` trae los códigos (se lee completa: sus columnas cambian de una nómina a otra).
+  return [
+    ...deTablas,
+    `GRANT SELECT (codigo, empresa, dbnomina) ON \`${base}\`.\`gl_undnegocios\` TO '${usuario}'@'${host}';`,
+    ...BASES_DE_NOMINA.map((nomina) => `GRANT SELECT ON \`${nomina}\`.\`cargos\` TO '${usuario}'@'${host}';`),
+  ];
 }

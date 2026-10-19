@@ -20,9 +20,10 @@
  * lo que se lee de `fc_control` es la fila completa: solo se cuenta y se actualiza `num_oferta` (la fila trae credenciales).
  */
 import { ErrorNegocio } from './errores.js';
+import { elegirNomina, leerCargosDeNomina } from './nomina.js';
 import { digitoVerificacion } from './nit.js';
 import {
-  AHORA, codigosDeNomina, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
+  AHORA, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
   planDeCostosAdministrativos, planDeEquipos, dtiposDeEquipos, planDeInsumosOferta, planDeNoContinuos, planDeValoresAgregados, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from './oferta.js';
 
@@ -44,6 +45,8 @@ const ERRORES_DE_DATO = new Set([1048, 1264, 1265, 1292, 1364, 1366, 1406]);
 const ERRORES_DE_CONEXION = new Set(['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET', 'PROTOCOL_CONNECTION_LOST', 'ER_CON_COUNT_ERROR']);
 
 const texto = (valor) => String(valor ?? '').trim();
+/** Sin permiso sobre la tabla o que no existe: se informa, no es un fallo interno. */
+const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1143, 1146]);
 
 function traducirError(error) {
   if (error instanceof ErrorNegocio) return error;
@@ -149,76 +152,6 @@ async function borrarInsumosPropios(conexion, { empresa, undnegocio, numOferta, 
     `DELETE FROM ${TABLA_INSUMOS_OFERTA} WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? AND user_add = ? AND pc_add = ?`,
     [empresa, undnegocio, numOferta, USUARIO_PUENTE, marca],
   );
-}
-
-/** Un nombre de base de datos que se puede poner en el SQL tal cual (viene de `gl_undnegocios`, no del usuario, pero igual se valida). */
-const NOMBRE_DE_BASE = /^[A-Za-z0-9_]{1,64}$/;
-/** Sin permiso sobre la base o la tabla, o que no existen: se informa como dato a corregir, no como fallo interno. */
-const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1146]);
-
-/**
- * Bases de nómina por empresa confirmadas por Contratos (2026-10-19), en orden de preferencia: Tempocolba (02) usa
- * `nominatmb` (quincenal) y `nominatmb2` (mensual); Transcolba (03) usa `nominatr`. Aseocolba (01) sigue con
- * `gl_undnegocios`, que para ella está bien. Vigicolba está en otra base de datos y no se envía.
- */
-const NOMINAS_DE_EMPRESA = Object.freeze({ '02': ['nominatmb', 'nominatmb2'], '03': ['nominatr'] });
-
-/**
- * Las tablas `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
- * `nominamn`), en el mismo servidor de Contratos. Devuelve las bases leídas, en el orden de `gl_undnegocios`, o el error.
- *
- * - Tempocolba y Transcolba usan las nóminas que confirmó Contratos (`NOMINAS_DE_EMPRESA`), no las de `gl_undnegocios`
- *   (allí Tempocolba tiene `NOMINATMB`/`nominatmbe` y Transcolba la base vacía).
- * - Las demás: manda la fila de la empresa. Si la empresa no tiene fila para la UEN, se usa la de la UEN en otra empresa.
- * - Una fila de la empresa con `dbnomina` vacío (Transcolba en BAQ) es que esa UEN no tiene nómina: no se adivina otra.
- * - Con varias bases (Tempocolba en BAQ: `NOMINATMB` y `nominatmbe`, las dos existen) se leen todas las que existen con
- *   tabla `cargos`; quien llama usa la primera donde están todos los cargos de la oferta (`elegirNomina`).
- */
-async function leerCargosDeNomina(conexion, empresa, undnegocio) {
-  const [unidades] = await conexion.query('SELECT empresa, dbnomina FROM gl_undnegocios WHERE codigo = ?', [undnegocio]);
-  const propias = unidades.filter((u) => texto(u.empresa) === texto(empresa));
-  const elegidas = propias.length > 0 ? propias : unidades;
-  let bases = NOMINAS_DE_EMPRESA[texto(empresa)] ?? [...new Set(elegidas.map((u) => texto(u.dbnomina)).filter((b) => NOMBRE_DE_BASE.test(b)))];
-  const sinBase = `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina)`;
-  if (bases.length === 0) return { error: `${sinBase}. Avise a Contratos.` };
-  if (bases.length > 1) {
-    const [existentes] = await conexion.query(
-      "SELECT TABLE_SCHEMA AS base FROM information_schema.TABLES WHERE TABLE_NAME = 'cargos' AND TABLE_SCHEMA IN (?)",
-      [bases],
-    );
-    // Se compara sin mayúsculas (en Windows MySQL guarda los nombres en minúsculas) y se usa el nombre real de la base.
-    const reales = existentes.map((e) => texto(e.base)).filter((b) => NOMBRE_DE_BASE.test(b));
-    const enOrden = bases.flatMap((b) => reales.filter((r) => r.toLowerCase() === b.toLowerCase()).slice(0, 1));
-    if (enOrden.length === 0) return { error: `${sinBase}: ninguna de ${bases.join(', ')} tiene tabla cargos visible para el usuario de la conexión. Avise a Contratos.` };
-    bases = [...new Set(enOrden)];
-  }
-  const leidas = [];
-  for (const base of bases) {
-    try {
-      const [filas] = await conexion.query(`SELECT * FROM \`${base}\`.cargos`);
-      leidas.push({ base, filas });
-    } catch (error) {
-      if (!ERRORES_DE_ACCESO.has(error?.errno)) throw error;
-      return { error: `No se pudo leer ${base}.cargos para tomar el código de nómina de los cargos (código ${error.errno}). El usuario de la conexión necesita permiso de lectura (SELECT) sobre ${base}.cargos.` };
-    }
-  }
-  return { bases: leidas };
-}
-
-/**
- * De las bases de nómina leídas, la primera donde están TODOS los cargos de la oferta. Si ninguna los tiene todos, los errores
- * de la primera. Si hay varias bases, avisa cuál se usó.
- */
-function elegirNomina(cargos, bases, contexto) {
-  const cruces = bases.map((b) => ({ base: b.base, ...codigosDeNomina(cargos, b.filas, { ...contexto, base: b.base }) }));
-  const elegido = cruces.find((c) => c.errores.length === 0) ?? cruces[0];
-  if (bases.length > 1 && elegido.errores.length === 0) {
-    elegido.advertencias.push({
-      campo: 'cargos',
-      mensaje: `La UEN ${contexto.undnegocio} de la empresa ${contexto.empresa} tiene varias bases de nómina (${bases.map((b) => b.base).join(', ')}): los códigos de cargo se tomaron de ${elegido.base}.`,
-    });
-  }
-  return elegido;
 }
 
 /** Reserva el siguiente número de oferta de (empresa, UEN). El UPDATE es atómico: dos reservas simultáneas nunca reciben el mismo número. */
@@ -349,7 +282,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
           const nomina = await leerCargosDeNomina(conexion, empresa, undnegocio);
           if (nomina.error) errores.push({ campo: 'cargos', mensaje: nomina.error });
           else {
-            const cruce = elegirNomina(cargos, nomina.bases, { empresa, undnegocio });
+            const cruce = elegirNomina(cargos, nomina.bases, { empresa, undnegocio }, datos.oferta?.baseNomina ?? null);
             errores.push(...cruce.errores);
             advertencias.push(...cruce.advertencias);
             codigosNomina = cruce.codigos;

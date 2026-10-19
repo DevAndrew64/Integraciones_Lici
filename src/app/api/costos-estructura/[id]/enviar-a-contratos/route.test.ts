@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoPuente } from '@/lib/contratos-puente/cliente';
 
-const mocks = vi.hoisted(() => ({ enviar: vi.fn(), auditoria: vi.fn(), destino: vi.fn() }));
+const mocks = vi.hoisted(() => ({ enviar: vi.fn(), auditoria: vi.fn(), destino: vi.fn(), nomina: vi.fn() }));
 
 vi.mock('server-only', () => ({}));
 
@@ -22,6 +22,7 @@ vi.mock('@/lib/audit', () => ({ auditFromRequest: (...a: unknown[]) => { mocks.a
 vi.mock('@/lib/contratos-puente/directo', () => ({
   enviarAContratos: (...a: unknown[]) => mocks.enviar(...a),
   consultarDestinoContratos: (...a: unknown[]) => mocks.destino(...a),
+  consultarCargosNomina: (...a: unknown[]) => mocks.nomina(...a),
 }));
 
 type Solicitud = {
@@ -142,6 +143,17 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       { nombre: 'ASEADOR', cantidad: 4, horasSemana: 48, jornada: 8, salario: 1423500, riesgo: 1, valorUnitario: 2285000, valorTotal: 9140000, codigoHorario: '941', grupoDotacionMasculina: null, grupoDotacionFemenina: null, grupoEpp: null, grupoExamen: null, grupoCurso: null },
       { nombre: 'Turnante — bloque integrado de 42h', cantidad: 1, horasSemana: 42, jornada: 0, salario: 1423500, riesgo: 2, valorUnitario: 3000000, valorTotal: 3000000, codigoHorario: null, grupoDotacionMasculina: null, grupoDotacionFemenina: null, grupoEpp: null, grupoExamen: null, grupoCurso: null },
     ]);
+  });
+
+  it('el cargo de nómina elegido en la pantalla y la base de la vista previa viajan al puente', async () => {
+    const [aseador, turnante] = CARGOS();
+    await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: [{ ...aseador, codigoNomina: 99 }, turnante], contratos: { ...DESTINO, baseNomina: 'nominabq' } });
+    const enviado = mocks.enviar.mock.calls[0][0];
+    expect(enviado.cargos.map((c: { codigoNomina?: number }) => c.codigoNomina)).toEqual([99, undefined]);
+    expect(enviado.oferta.baseNomina).toBe('nominabq');
+    // Una base con caracteres raros no viaja (el puente igual la compararía con las de la UEN).
+    await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: CARGOS(), contratos: { ...DESTINO, baseNomina: 'x`; DROP' } });
+    expect('baseNomina' in mocks.enviar.mock.calls[1][0].oferta).toBe(false);
   });
 
   it('cargos que no suman la Mano de Obra del panel: 400 y no se envía nada a Contratos', async () => {
@@ -359,6 +371,40 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       expect((await consultar(0)).res.status).toBe(400);
       sesionActual = null;
       expect((await consultar()).res.status).toBe(401);
+    });
+  });
+
+  describe('POST cargos-nomina: vista previa de los cargos contra la nómina de la UEN', () => {
+    const VISTA = { base: 'nominabq', bases: ['nominabq'], cargos: [{ nombre: 'Jefe', estado: 'falta', codigo: null, nombreNomina: null, parecidos: [] }], catalogo: [{ codigo: 99, nombre: 'ASEADOR' }] };
+    const revisar = async (body: unknown) => {
+      const { POST } = await import('./cargos-nomina/route');
+      const res = await POST(new NextRequest('http://localhost/api/costos-estructura/1/enviar-a-contratos/cargos-nomina', { method: 'POST', body: JSON.stringify(body) }));
+      return { res, json: (await res.json()) as Record<string, unknown> };
+    };
+    beforeEach(() => { mocks.nomina.mockReset().mockResolvedValue({ ok: true, vista: VISTA }); });
+
+    it('la empresa sale del perfil de la solicitud (no de la pantalla) y responde la vista', async () => {
+      const { res, json } = await revisar({ solicitudId: 7, undnegocio: 'baq', empresa: '99', cargos: [{ nombre: 'Jefe', codigoNomina: 5 }, { nombre: 'Aseador', codigoNomina: 'x' }] });
+      expect(res.status).toBe(200);
+      expect(json).toEqual({ ok: true, ...VISTA });
+      expect(mocks.nomina).toHaveBeenCalledWith({ empresa: '01', undnegocio: 'BAQ', baseNomina: null, cargos: [{ nombre: 'Jefe', codigoNomina: 5 }, { nombre: 'Aseador', codigoNomina: null }] });
+    });
+
+    it('una UEN que no es de la empresa en Contratos: 422 sin consultar la nómina', async () => {
+      const { res } = await revisar({ solicitudId: 7, undnegocio: 'ZZZ', cargos: [] });
+      expect(res.status).toBe(422);
+      expect(mocks.nomina).not.toHaveBeenCalled();
+    });
+
+    it('sin nómina en Contratos: 503 con el mensaje; exige la solicitud, la UEN y el permiso', async () => {
+      mocks.nomina.mockResolvedValueOnce({ ok: false, mensaje: 'Contratos no tiene una base de nómina…' });
+      const { res, json } = await revisar({ solicitudId: 7, undnegocio: 'BAQ', cargos: [{ nombre: 'Jefe' }] });
+      expect(res.status).toBe(503);
+      expect(json.mensaje).toBe('Contratos no tiene una base de nómina…');
+      expect((await revisar({ undnegocio: 'BAQ', cargos: [] })).res.status).toBe(400);
+      expect((await revisar({ solicitudId: 7, cargos: [] })).res.status).toBe(400);
+      sesionActual = null;
+      expect((await revisar({ solicitudId: 7, undnegocio: 'BAQ', cargos: [] })).res.status).toBe(401);
     });
   });
 

@@ -14,6 +14,7 @@ import { cargarEsquemaEsperado, esquemaHastaModulo, opcionesDeEscritura, verific
 import { MODULO_IMPLEMENTADO } from '../src/modulos.js';
 import { crearPool, SQL_MODE_ESTRICTO } from '../src/mysql.js';
 import { sentenciasDePermisos } from '../src/permisos.js';
+import { vistaDeNomina } from '../src/nomina.js';
 import { huella, validarContrato } from '../src/validar.js';
 
 const env = process.env;
@@ -241,6 +242,15 @@ const CLAVE_MINIMO = 'prueba-minimo-sin-valor';
 const CLAVE_RAIZ = env.PUENTE_TEST_MYSQL_ROOT_PASSWORD;
 const saltarModulo4 = saltar || (CLAVE_RAIZ ? false : 'sin PUENTE_TEST_MYSQL_ROOT_PASSWORD (npm run test:mysql la define)');
 
+/** `<base>.cargos` de prueba: [código, nombre, empresa?, UEN?]. */
+const NOMINAS_DE_PRUEBA = {
+  nominabq: [[99, 'ASEADOR'], [426, 'TURNANTE'], [104, 'SUPERVISOR', '01', 'BAQ'], [339, 'SUPERVISOR']],
+  nominamn: [[112, 'UJIER']],
+  nominatmb: [[3, 'JEFE DE FACTURACION'], [41, 'AUXILIAR DE CARTERA'], [43, 'SERVICIOS GENERALES']],
+  nominatmb2: [[7, 'AUXILIAR DE NOMINA']],
+  nominatr: [[5, 'CONDUCTOR']],
+};
+
 /** El contrato v1 completo de una solicitud; `cambios` reemplaza campos sección por sección. */
 function armar(solicitudId, cambios = {}) {
   const base = {
@@ -275,13 +285,25 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
   };
   const fallo = (promesa) => promesa.then(() => assert.fail('debía fallar'), (e) => e);
   const limpiar = async () => {
-    for (const tabla of [PRECIOS, OFERTAS, 'fc_clientes', 'fc_control', 'fc_conceptos', 'fc_horarios']) await admin.query(`DELETE FROM ${tabla}`);
+    for (const tabla of [PRECIOS, OFERTAS, 'fc_clientes', 'fc_control', 'fc_conceptos', 'fc_horarios', 'gl_undnegocios', 'fc_contratos_cargos_iniciales', 'fc_contratos_tarifa_inicial']) await admin.query(`DELETE FROM ${tabla}`);
   };
 
   before(async () => {
     admin = crearPool(config);
     raiz = crearPool({ ...config, user: 'root', password: CLAVE_RAIZ });
     // MySQL 5.5: GRANT USAGE crea el usuario si no existe; luego se le quita todo y se le dan SOLO los permisos generados.
+    // Las bases de nómina viven en el mismo servidor que almacen (como en Bq-srvdatosgc): cada una con su tabla cargos.
+    // nominamn no tiene empresa ni UEN; nominatmb no tiene «JEFE FACTURACION Y CARTERA» (como en Tempocolba real).
+    for (const [base, filas] of Object.entries(NOMINAS_DE_PRUEBA)) {
+      await raiz.query(`CREATE DATABASE IF NOT EXISTS \`${base}\` CHARACTER SET latin1`);
+      await raiz.query(`DROP TABLE IF EXISTS \`${base}\`.cargos`);
+      const conUen = base !== 'nominamn';
+      await raiz.query(`CREATE TABLE \`${base}\`.cargos (id int(11) NOT NULL AUTO_INCREMENT, ${conUen ? "empresa char(2) DEFAULT '', undnegocio char(3) DEFAULT '', " : ''}codigo int(4) DEFAULT NULL, codigo2 int(4) DEFAULT NULL, nombre char(${conUen ? 50 : 30}) DEFAULT '', PRIMARY KEY (id)) ENGINE=MyISAM DEFAULT CHARSET=latin1`);
+      for (const [codigo, nombre, empresa = '', uen = ''] of filas) {
+        if (conUen) await raiz.query(`INSERT INTO \`${base}\`.cargos (empresa, undnegocio, codigo, codigo2, nombre) VALUES (?, ?, ?, ?, ?)`, [empresa, uen, codigo, codigo, nombre]);
+        else await raiz.query(`INSERT INTO \`${base}\`.cargos (codigo, codigo2, nombre) VALUES (?, ?, ?)`, [codigo, codigo, nombre]);
+      }
+    }
     await raiz.query("GRANT USAGE ON *.* TO 'puente_min'@'%' IDENTIFIED BY ?", [CLAVE_MINIMO]);
     await raiz.query("REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'puente_min'@'%'");
     for (const sentencia of sentenciasDePermisos(cargarEsquemaEsperado(), { usuario: 'puente_min', base: config.database, hastaModulo: MODULO_IMPLEMENTADO })) await raiz.query(sentencia);
@@ -301,6 +323,13 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     await admin.query('INSERT INTO fc_control (empresa, undnegocio, num_oferta) VALUES ?', [[['01', 'BAQ', 936], ['01', 'BOG', 219], ['02', 'BAQ', 7], ['03', 'XXX', 1], ['03', 'XXX', 1]]]);
     await admin.query('INSERT INTO fc_conceptos (empresa, undnegocio, codcpto) VALUES ?', [[['01', 'BAQ', 'ASE'], ['01', 'BOG', 'ASE'], ['02', 'BAQ', 'VIG']]]);
     await admin.query('INSERT INTO fc_horarios (codigo, horario, snactivo) VALUES ?', [[['941', 'LUN-VIE 6-14', 1], ['942', 'LUN-SAB 14-22', 1]]]);
+    await admin.query('DELETE FROM fc_conceptos_costos_admtivos');
+    await admin.query("INSERT INTO fc_conceptos_costos_admtivos (id, descripcion) VALUES (1, 'POLIZAS'), (2, 'IMPUESTOS'), (9, 'OTROS')");
+    // Como en Contratos: Tempocolba con NOMINATMB/nominatmbe y Transcolba sin base (el puente usa las confirmadas por Sistemas).
+    await admin.query('INSERT INTO gl_undnegocios (codigo, nombre, empresa, dbnomina) VALUES ?', [[
+      ['BAQ', 'BARRANQUILLA', '01', 'nominabq'], ['BOG', 'BOGOTA', '01', 'nominabq'], ['MIN', 'MINA', '01', 'nominamn'],
+      ['BAQ', 'BARRANQUILLA', '02', 'NOMINATMB'], ['BAQ', 'BARRANQUILLA', '02', 'nominatmbe'], ['BAQ', 'BARRANQUILLA', '03', ''],
+    ]]);
   });
   after(async () => {
     await limpiar();
@@ -384,12 +413,12 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     assert.equal(await contador('01', 'BAQ'), antes + 1, 'solo se gastó un número');
   });
 
-  it('si el contador iba por detrás de lo ya usado, salta ese número y avisa cuál', async () => {
+  it('si el contador iba por detrás de lo ya usado (ofertas digitadas a mano), sigue después de la mayor', async () => {
     const antes = await contador('01', 'BOG');
     await admin.query(`INSERT INTO ${OFERTAS} (empresa, undnegocio, num_oferta, nit) VALUES ('01', 'BOG', ?, '111-1')`, [antes + 1]);
     const r = await enviar(4001, { oferta: { undnegocio: 'BOG' } });
     assert.equal(r.escrito.numOferta, antes + 2);
-    assert.deepEqual(r.escrito.numerosSaltados, [antes + 1]);
+    assert.deepEqual(r.escrito.numerosSaltados, [], 'no choca: toma el siguiente a la mayor de una vez');
     assert.equal(await contador('01', 'BOG'), antes + 2);
   });
 
@@ -414,7 +443,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
   it('el NIT guardado con espacios se encuentra por su base, se escribe como está en Contratos y la razón social viaja en latin1 sin perderse', async () => {
     const r = await enviar(7001, { cliente: { nit: '800197268', razonSocial: 'Otro nombre del cliente' } });
     assert.equal(r.escrito.cliente.nit, '800197268-4');
-    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cliente.razonSocial'], 'la razón social de LiciColba difiere: se avisa y se usa la de Contratos');
+    assert.deepEqual(r.advertencias.map((a) => a.campo).filter((c) => c !== 'insumos'), ['cliente.razonSocial'], 'la razón social de LiciColba difiere: se avisa y se usa la de Contratos');
     const [f] = await filasDe(7001);
     assert.equal(f.nit, '800197268-4');
     assert.equal(f.rsocial, 'Ñandú “Premium” S.A.S.');
@@ -437,17 +466,60 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     assert.deepEqual({ empresa: f.empresa, undnegocio: f.undnegocio }, { empresa: '01', undnegocio: 'BAQ' });
   });
 
-  it('el archivo de contrato de LiciColba (el JSON que arma su código) se escribe tal cual, sin advertencias', async () => {
+  it('el archivo de contrato de LiciColba (el JSON que arma su código) se escribe tal cual, con los cargos de la nómina', async () => {
     const archivo = JSON.parse(readFileSync(new URL('./fixtures/payload-licicolba.json', import.meta.url), 'utf8'));
     const r = validarContrato(archivo, { paraEscribir: true });
     assert.equal(r.ok, true, JSON.stringify(r.errores));
     const antes = await contador('01', 'BAQ');
-    const escrito = await escritor.escribir(r.datos, { huella: huella(r.datos) });
-    assert.deepEqual(escrito.advertencias, []);
+    const escrito = await escritor.escribir(r.datos, { huella: huella(r.datos) }).catch((e) => assert.fail(JSON.stringify(e.extra ?? e.message)));
+    // Los cargos cruzan con la nómina sin avisos (los demás avisos son de catálogos que la base de prueba no tiene).
+    assert.deepEqual(escrito.advertencias.filter((a) => a.campo.startsWith('cargos')), []);
     assert.equal(escrito.escrito.numOferta, antes + 1);
     const [oferta] = await filasDe(archivo.origen.solicitudId);
     assert.deepEqual([oferta.vlr_manoobra, oferta.vlr_impuestos], [13111200, 5400]);
     assert.equal((await preciosDe('BAQ', antes + 1)).length, archivo.insumos.length);
+  });
+
+  it('Tempocolba: un cargo que no está en la nómina se ve antes (también en modo prueba), se elige el de nómina y se escribe ese código', async () => {
+    await admin.query("INSERT INTO fc_clientes (undnegocio, nit, sucursal, rsocial, snbasertf) VALUES ('BAQ', '900555111-0', '00', 'CLIENTE TEMPOCOLBA', 'N')");
+    const linea = (nombre, extra = {}) => ({ nombre, cantidad: 1, horasSemana: 47, jornada: 8, salario: 2000000, riesgo: 1, valorUnitario: 3000000, valorTotal: 3000000, ...extra });
+    const cambios = (cargos, oferta = {}) => ({
+      cliente: { nit: '900555111', razonSocial: 'Cliente Tempocolba' },
+      oferta: { empresa: '02', undnegocio: 'BAQ', codServicio: 'VIG', ...oferta },
+      tarifa: { manoObra: 6000000, insumos: 0, maquinaria: 0, administrativos: 0, valorAgregado: 0, serviciosNoContinuos: 0 },
+      insumos: [],
+      cargos,
+    });
+    // 1. La vista previa (solo lectura, con el usuario mínimo) dice cuál falta y sugiere los parecidos.
+    const vista = await vistaDeNomina(minimo, { empresa: '02', undnegocio: 'BAQ', cargos: [{ nombre: 'Jefe facturación y cartera' }, { nombre: 'Servicio general' }] });
+    assert.equal(vista.ok, true, vista.mensaje);
+    assert.equal(vista.base, 'nominatmb');
+    assert.deepEqual(vista.bases, ['nominatmb', 'nominatmb2']);
+    assert.deepEqual(vista.cargos.map((c) => [c.estado, c.codigo]), [['falta', null], ['palabras', 43]]);
+    assert.ok(vista.cargos[0].parecidos.some((p) => p.codigo === 3), JSON.stringify(vista.cargos[0].parecidos));
+    // 2. Sin elegir, el envío no escribe nada y el error dice dónde elegir.
+    const antes = await contador('02', 'BAQ');
+    const error = await fallo(enviar(9101, cambios([linea('Jefe facturación y cartera'), linea('Servicio general')])));
+    assert.ok(error.extra?.errores, String(error.stack));
+    assert.match(error.extra.errores.map((e) => e.mensaje).join(' '), /«Jefe facturación y cartera» no existe en la nómina de la UEN BAQ \(nominatmb\.cargos\).*JEFE DE FACTURACION.*Elija en «Enviar a Contratos»/);
+    assert.equal(await contador('02', 'BAQ'), antes, 'ningún número reservado');
+    // 3. Con el cargo de nómina elegido (y la base de la vista), se escribe ese código.
+    const r = await enviar(9101, cambios([linea('Jefe facturación y cartera', { codigoNomina: 3 }), linea('Servicio general')], { baseNomina: 'nominatmb' }));
+    assert.equal(r.escrito.numOferta, antes + 1);
+    const [cargos] = await admin.query('SELECT cargo FROM fc_contratos_cargos_iniciales WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? ORDER BY id', ['02', 'BAQ', antes + 1]);
+    assert.deepEqual(cargos.map((c) => Number(c.cargo)), [3, 43]);
+    // 4. Un código elegido que no está en la base se rechaza (nunca se escribe un cargo que Contratos no encuentra).
+    const malo = await fallo(enviar(9102, cambios([linea('Jefe facturación y cartera', { codigoNomina: 777 })])));
+    assert.match(malo.extra.errores[0].mensaje, /código de nómina 777/);
+  });
+
+  it('Aseocolba lee la nómina de gl_undnegocios y Transcolba usa nominatr, con el usuario mínimo', async () => {
+    const baq = await vistaDeNomina(minimo, { empresa: '01', undnegocio: 'BAQ', cargos: [{ nombre: 'Aseador' }, { nombre: 'Supervisor' }] });
+    assert.deepEqual([baq.base, baq.cargos.map((c) => c.codigo)], ['nominabq', [99, 339]]);
+    const mina = await vistaDeNomina(minimo, { empresa: '01', undnegocio: 'MIN', cargos: [{ nombre: 'Ujier' }] });
+    assert.deepEqual([mina.base, mina.cargos[0].codigo], ['nominamn', 112]);
+    const trans = await vistaDeNomina(minimo, { empresa: '03', undnegocio: 'BAQ', cargos: [{ nombre: 'Conductor' }] });
+    assert.deepEqual([trans.base, trans.cargos[0].codigo], ['nominatr', 5]);
   });
 
   it('un envío sin insumos crea solo la oferta adjudicada', async () => {
@@ -529,7 +601,8 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     assert.deepEqual((await verificarEsquema(minimo, esquemaHastaModulo(esperado, MODULO_IMPLEMENTADO))).problemas, []);
     const completo = await verificarEsquema(minimo, esperado);
     assert.equal(completo.ok, false);
-    assert.ok(completo.problemas.some((p) => p.tabla === 'gl_undnegocios' && p.problema === 'La tabla no existe.'));
+    // gl_undnegocios no es de un módulo: el usuario mínimo solo ve sus columnas codigo, empresa y dbnomina.
+    assert.ok(completo.problemas.length > 0 && completo.problemas.every((p) => p.tabla === 'gl_undnegocios'), JSON.stringify(completo.problemas));
   });
 
   it('el servicio completo (proceso aparte, modo escritura, usuario mínimo): /health ok, escribe, reenvío 409 y 422 sin oferta', async () => {
@@ -545,7 +618,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       assert.equal(creada.status, 200, JSON.stringify(j));
       assert.equal(j.modo, 'escritura');
       assert.equal(j.escrito.numOferta, antes + 1);
-      assert.deepEqual(j.advertencias, []);
+      assert.deepEqual(j.advertencias.map((a) => a.campo), ['cargos', 'insumos'], 'sin cargos y con insumos solo de lista de precios');
       assert.deepEqual(j.noEscrito.map((n) => n.campo), ['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion']);
       assert.equal(j.escrito.preciosOferta.length, 2);
 

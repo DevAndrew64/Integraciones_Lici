@@ -40,6 +40,9 @@ const ESQUEMA = {
     origenProceso: { tipo: 'opcion', opciones: ['LIC', 'INV'], escribe: true }, // LIC = licitación pública, INV = invitación privada
     codServicio: { tipo: 'codigo', max: 3, escribe: true }, // concepto de facturación (fc_conceptos.codcpto)
     descripcionServicio: { tipo: 'texto', max: 254 },
+    // Base de nómina de donde salen los códigos de cargo, si la UEN tiene varias (Tempocolba: nominatmb o nominatmb2). La
+    // elige la pantalla con la vista previa de cargos; sin ella, el puente usa la primera que tiene todos los cargos.
+    baseNomina: { tipo: 'texto', max: 64, silencioso: true },
   },
   // Módulo 4 — los seis valores de «Operación del Contrato»: con el A.I.U. incluido, antes de IVA, en pesos enteros
   // (los calcula LiciColba: son los de la hoja «Contratos» del Excel de costos).
@@ -59,13 +62,14 @@ const ESQUEMA = {
  */
 const LISTAS = {
   // Módulo 5 — la mano de obra de la oferta: una fila por línea de cargo (cargo + horario). Los valores van SIN A.I.U. ni IVA
-  // (así los guarda Contratos: el A.I.U. se aplica en la tarifa). El código del cargo no viaja: el puente lo toma de la
-  // nómina de la UEN por el nombre.
+  // (así los guarda Contratos: el A.I.U. se aplica en la tarifa). El código del cargo lo toma el puente de la nómina de la UEN
+  // por el nombre, salvo que quien envía haya elegido el cargo de nómina en la vista previa (`codigoNomina`).
   cargos: {
     max: 300,
     aviso: 'Sin cargos: la oferta se crea sin mano de obra y se completa en Contratos.',
     campos: {
       nombre: { tipo: 'texto', max: 100, requerido: true },
+      codigoNomina: { tipo: 'entero', min: 1, max: 99_999_999, silencioso: true }, // <base de nómina>.cargos.codigo
       cantidad: { tipo: 'entero', min: 1, max: 99999, requerido: true }, // personas
       horasSemana: { tipo: 'entero', min: 1, max: 168, escribe: true },
       jornada: { tipo: 'numero', min: 0, max: 24, escribe: true }, // horas por día

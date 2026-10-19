@@ -35,6 +35,8 @@ export interface CargoPantallaDto {
   esTurnante: boolean;
   /** Ausente en pantallas anteriores a este dato: equivale a «sin grupos». */
   grupos?: GruposCargoDto;
+  /** Código del cargo en la nómina de la UEN, si quien envía lo eligió (si no, el puente lo cruza por el nombre). */
+  codigoNomina?: number | null;
 }
 
 /** Forma que recibe el puente (`cargos[]` del contrato v1). */
@@ -54,6 +56,8 @@ export interface CargoPayload {
   grupoEpp: string | null;
   grupoExamen: string | null;
   grupoCurso: string | null;
+  /** Solo si quien envía eligió el cargo de nómina (`<base de nómina>.cargos.codigo`). */
+  codigoNomina?: number;
 }
 
 /** Formato de cada código de grupo en Contratos (columnas dotm char(4), dotf char(4), epp, examen y cod_grupo_curso char(5)). */
@@ -135,6 +139,9 @@ export function validarCargosPantalla(valor: unknown, totalManoObra: number): Re
     if (typeof c.arlKey !== 'string') errores.push(`cargos[${i}].arlKey debe ser texto.`);
     if (typeof c.codigoHorario !== 'string') errores.push(`cargos[${i}].codigoHorario debe ser texto.`);
     if (typeof c.esTurnante !== 'boolean') errores.push(`cargos[${i}].esTurnante debe ser verdadero o falso.`);
+    if (c.codigoNomina !== undefined && c.codigoNomina !== null && !(Number.isInteger(c.codigoNomina) && (c.codigoNomina as number) > 0)) {
+      errores.push(`cargos[${i}].codigoNomina debe ser un entero positivo o null.`);
+    }
     if (c.grupos !== undefined) {
       const g = c.grupos;
       const bien = esObjeto(g) && (Object.keys(FORMATO_GRUPO) as (keyof GruposCargoDto)[]).every((t) => Array.isArray(g[t]) && (g[t] as unknown[]).every((x) => typeof x === 'string'));
@@ -179,6 +186,7 @@ export function cargosParaPuente(cargos: CargoPantallaDto[]): CargoPayload[] {
         grupoEpp: grupoUnico(c.grupos?.epp, 'epp'),
         grupoExamen: grupoUnico(c.grupos?.examenes, 'examenes'),
         grupoCurso: grupoUnico(c.grupos?.cursos, 'cursos'),
+        ...(typeof c.codigoNomina === 'number' ? { codigoNomina: c.codigoNomina } : {}),
       };
     });
 }

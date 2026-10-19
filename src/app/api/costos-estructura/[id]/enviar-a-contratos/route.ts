@@ -12,6 +12,7 @@ import { enviarAContratos } from '@/lib/contratos-puente/directo';
 import { tipoTarifaContratos, validarEleccion } from '@/lib/contratos-puente/destino';
 import { destinoDeSolicitud } from '@/lib/contratos-puente/destino-solicitud';
 import { nitVerificado } from '@/lib/solicitudes/nit-entidad';
+import { baseNominaValida } from '@/lib/contratos-puente/nomina';
 import {
   armarPayloadContratos, costosAdministrativosParaPuente, describirCampo, describirError, equiposParaPuente, etiquetaCampo, insumosParaPuente, leerDestino,
   serviciosNoContinuosParaPuente, valoresAgregadosParaPuente,
@@ -117,6 +118,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       equipos: equiposParaPuente((body?.costosDto as CostosPantallaDto).maquinaria.filas),
       serviciosNoContinuos: serviciosNoContinuosParaPuente((body?.costosDto as CostosPantallaDto).serviciosNoContinuos),
       valoresAgregados: valoresAgregadosParaPuente((body?.costosDto as CostosPantallaDto).valoresAgregados),
+      // La base de nómina de la vista previa de cargos (el puente comprueba que sea de la UEN).
+      baseNomina: cargos && cargos.length > 0 ? baseNominaValida((body?.contratos as Record<string, unknown> | undefined)?.baseNomina) : null,
     });
     const r = await enviarAContratos(payload);
 

@@ -27,6 +27,8 @@ export interface PayloadContratosV1 {
     origenProceso: string | null;
     codServicio: string | null;
     descripcionServicio: string | null;
+    /** Base de nómina de los códigos de cargo, si la UEN tiene varias (la que mostró la vista previa de cargos). */
+    baseNomina?: string;
   };
   tarifa: {
     manoObra: number | null;

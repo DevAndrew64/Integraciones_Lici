@@ -43,7 +43,11 @@ describe('sentenciasDePermisos', () => {
   it('módulo implementado (7): tarifa, cargos, oferta adjudicada, lista de precios, insumos, costos administrativos, equipos, no continuos y valores agregados, clientes, conceptos, contador y horarios', () => {
     assert.equal(MODULO_IMPLEMENTADO, 7);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
-    assert.equal(sentencias.length, 16);
+    assert.equal(sentencias.length, 22);
+    assert.ok(sentencias.includes("GRANT SELECT (codigo, empresa, dbnomina) ON `almacen`.`gl_undnegocios` TO 'puente'@'%';"), 'qué nómina tiene cada UEN');
+    for (const nomina of ['nominabq', 'nominamn', 'nominatmb', 'nominatmb2', 'nominatr']) {
+      assert.ok(sentencias.includes(`GRANT SELECT ON \`${nomina}\`.\`cargos\` TO 'puente'@'%';`), `códigos de cargo de ${nomina}`);
+    }
     for (const t of ['fc_contratos_equipos_iniciales', 'fc_contratos_no_continuos_iniciales', 'fc_contratos_vlrs_agregs_iniciales']) {
       assert.ok(sentencias.includes(`GRANT SELECT, INSERT ON \`almacen\`.\`${t}\` TO 'puente'@'%';`), t);
     }
@@ -60,7 +64,8 @@ describe('sentenciasDePermisos', () => {
     for (const modulo of [4, 5, 6, 7]) {
       for (const sentencia of sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: modulo })) {
         assert.doesNotMatch(sentencia, /\b(ALL|DROP|ALTER|CREATE|INDEX|REFERENCES|GRANT OPTION|SUPER|FILE)\b|\*\.\*/i, sentencia);
-        assert.match(sentencia, /^GRANT .+ ON `almacen`\.`\w+` TO 'puente'@'%';$/);
+        // Fuera de almacen, solo la tabla cargos de las bases de nómina y solo lectura.
+        assert.match(sentencia, /^GRANT .+ ON `almacen`\.`\w+` TO 'puente'@'%';$|^GRANT SELECT ON `nomina\w+`\.`cargos` TO 'puente'@'%';$/);
       }
     }
     const control = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: 4 }).find((s) => s.includes('`fc_control`'));

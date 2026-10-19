@@ -725,50 +725,84 @@ function cargosParecidos(nombre, candidatas) {
  * @param {{empresa: string, undnegocio: string, base: string}} contexto
  * @returns {{codigos: (number | null)[], errores: {campo: string, mensaje: string}[], advertencias: {campo: string, mensaje: string}[]}}
  */
-export function codigosDeNomina(cargos, filasNomina, { empresa, undnegocio, base }) {
+export function codigosDeNomina(cargos, filasNomina, contexto) {
+  const { undnegocio, base } = contexto;
   const errores = [];
   const advertencias = [];
+  const detalle = cruceDeCargos(cargos, filasNomina, contexto);
+  const codigos = detalle.map((d, i) => {
+    const campo = `cargos[${i}].nombre`;
+    const nombre = String(cargos[i].nombre ?? '').trim();
+    if (d.como === 'sin-nombre') {
+      errores.push({ campo, mensaje: `La línea ${i + 1} de cargos no tiene nombre de cargo.` });
+      return null;
+    }
+    if (d.como === 'codigo-inexistente') {
+      errores.push({ campo: `cargos[${i}].codigoNomina`, mensaje: `El código de nómina ${cargos[i].codigoNomina} elegido para «${nombre}» no está en ${base}.cargos. Elija otro cargo de nómina y vuelva a enviar.` });
+      return null;
+    }
+    if (d.como === 'falta') {
+      const sugerencia = d.parecidos.length > 0 ? ` Los más parecidos en nómina: ${d.parecidos.map((f) => `«${f.nombre}» (${f.codigo})`).join(', ')}.` : '';
+      errores.push({ campo, mensaje: `El cargo «${nombre}» no existe en la nómina de la UEN ${undnegocio} (${base}.cargos).${sugerencia} Elija en «Enviar a Contratos» el cargo de nómina que le corresponde, o pida a Nómina que lo cree, y vuelva a enviar.` });
+      return null;
+    }
+    if (d.como === 'palabras') {
+      advertencias.push({ campo, mensaje: `El cargo «${nombre}» se tomó como «${d.nombreNomina}» de ${base}.cargos.` });
+    }
+    if (d.repetidos.length > 1) {
+      advertencias.push({ campo, mensaje: `En ${base}.cargos hay varios cargos «${nombre}» (códigos ${d.repetidos.join(', ')}): se escribió el ${d.codigo}. Revíselo en Contratos.` });
+    }
+    return d.codigo;
+  });
+  return { codigos, errores, advertencias };
+}
+
+/** Las filas de `<base>.cargos` que sirven para la oferta: con código y nombre, sin empresa/UEN o de la misma empresa y UEN. */
+export function catalogoDeNomina(filasNomina, { empresa, undnegocio }) {
   const mayus = (v) => String(v ?? '').trim().toUpperCase();
-  const candidatas = filasNomina
+  return filasNomina
     .map((f) => ({ codigo: Number(f.codigo), nombre: String(f.nombre ?? '').trim(), empresa: mayus(f.empresa), undnegocio: mayus(f.undnegocio) }))
     .filter((f) => Number.isInteger(f.codigo) && f.codigo > 0 && f.nombre)
     .filter((f) => (!f.empresa || f.empresa === mayus(empresa)) && (!f.undnegocio || f.undnegocio === mayus(undnegocio)))
     .map((f) => ({ ...f, clave: comparable(f.nombre) }));
+}
 
-  const codigos = cargos.map((c, i) => {
-    const campo = `cargos[${i}].nombre`;
-    const nombre = comparable(c.nombre ?? '');
-    if (!nombre) {
-      errores.push({ campo, mensaje: `La línea ${i + 1} de cargos no tiene nombre de cargo.` });
-      return null;
+/**
+ * Cómo cruza cada línea de cargo con la nómina, sin decidir errores (lo usan el envío y la vista previa de LiciColba):
+ * - `elegido`: LiciColba mandó el código de nómina (`codigoNomina`, elegido por quien envía) y existe.
+ * - `exacto`: mismo nombre (sin tildes, mayúsculas ni espacios repetidos), o el nombre cortado a 30 caracteres de
+ *   `nominamn`, o el turnante automático = TURNANTE.
+ * - `palabras`: mismas palabras sin artículos ni preposiciones, en cualquier orden y sin plurales.
+ * - `falta` (con hasta 3 `parecidos`), `codigo-inexistente` o `sin-nombre`.
+ * Con varios códigos para el mismo nombre se usa el general (sin UEN) de menor código; `repetidos` los lista.
+ *
+ * @returns {{como: string, codigo: number | null, nombreNomina: string | null, repetidos: number[], parecidos: {codigo: number, nombre: string}[]}[]}
+ */
+export function cruceDeCargos(cargos, filasNomina, contexto) {
+  const candidatas = catalogoDeNomina(filasNomina, contexto);
+  const resultado = (como, opciones = [], parecidos = []) => {
+    if (opciones.length === 0) return { como, codigo: null, nombreNomina: null, repetidos: [], parecidos };
+    const generales = opciones.filter((f) => !f.undnegocio);
+    const codigo = Math.min(...(generales.length > 0 ? generales : opciones).map((f) => f.codigo));
+    const repetidos = [...new Set(opciones.map((f) => f.codigo))].sort((a, b) => a - b);
+    return { como, codigo, nombreNomina: opciones.find((f) => f.codigo === codigo).nombre, repetidos, parecidos };
+  };
+  return cargos.map((c) => {
+    if (c.codigoNomina !== null && c.codigoNomina !== undefined) {
+      const f = candidatas.find((x) => x.codigo === Number(c.codigoNomina));
+      return f ? { como: 'elegido', codigo: f.codigo, nombreNomina: f.nombre, repetidos: [], parecidos: [] } : resultado('codigo-inexistente');
     }
+    const nombre = comparable(c.nombre ?? '');
+    if (!nombre) return resultado('sin-nombre');
     let opciones = candidatas.filter((f) => f.clave === nombre);
     if (opciones.length === 0) opciones = candidatas.filter((f) => f.nombre.length >= LARGO_NOMBRE_CORTADO && nombre.startsWith(f.clave));
     if (opciones.length === 0 && nombre.startsWith('TURNANTE')) opciones = candidatas.filter((f) => f.clave === 'TURNANTE');
-    if (opciones.length === 0) {
-      // Mismas palabras sin contar artículos ni preposiciones, en cualquier orden y sin plurales («JEFE FACTURACION Y
-      // CARTERA» = «JEFE DE FACTURACION Y CARTERA»): es el mismo cargo; se usa y se avisa con el nombre de nómina.
-      const palabras = palabrasDeCargo(nombre);
-      opciones = candidatas.filter((f) => palabrasDeCargo(f.clave) === palabras);
-      if (opciones.length > 0) {
-        advertencias.push({ campo, mensaje: `El cargo «${String(c.nombre).trim()}» se tomó como «${opciones[0].nombre}» de ${base}.cargos.` });
-      }
-    }
-    if (opciones.length === 0) {
-      const parecidos = cargosParecidos(nombre, candidatas);
-      const sugerencia = parecidos.length > 0 ? ` Los más parecidos en nómina: ${parecidos.map((f) => `«${f.nombre}» (${f.codigo})`).join(', ')}.` : '';
-      errores.push({ campo, mensaje: `El cargo «${String(c.nombre).trim()}» no existe en la nómina de la UEN ${undnegocio} (${base}.cargos).${sugerencia} Use el nombre del cargo como está en nómina o pida a Nómina que lo cree, y vuelva a enviar.` });
-      return null;
-    }
-    const generales = opciones.filter((f) => !f.undnegocio);
-    const todos = [...new Set(opciones.map((f) => f.codigo))].sort((a, b) => a - b);
-    const elegido = Math.min(...(generales.length > 0 ? generales : opciones).map((f) => f.codigo));
-    if (todos.length > 1) {
-      advertencias.push({ campo, mensaje: `En ${base}.cargos hay varios cargos «${String(c.nombre).trim()}» (códigos ${todos.join(', ')}): se escribió el ${elegido}. Revíselo en Contratos.` });
-    }
-    return elegido;
+    if (opciones.length > 0) return resultado('exacto', opciones);
+    const palabras = palabrasDeCargo(nombre);
+    opciones = candidatas.filter((f) => palabrasDeCargo(f.clave) === palabras);
+    if (opciones.length > 0) return resultado('palabras', opciones);
+    return resultado('falta', [], cargosParecidos(nombre, candidatas).map((f) => ({ codigo: f.codigo, nombre: f.nombre })));
   });
-  return { codigos, errores, advertencias };
 }
 
 /**
