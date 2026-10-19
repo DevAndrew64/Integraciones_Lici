@@ -473,6 +473,23 @@ describe('codigosDeNomina', () => {
     assert.deepEqual(r.codigos, [112, 77]);
     assert.deepEqual(r.errores, []);
   });
+
+  it('mismo cargo con otras palabras vacías, otro orden o plural: se usa y se avisa; si no está, sugiere los parecidos', () => {
+    const TMB = [
+      { empresa: '', undnegocio: '', codigo: 41, nombre: 'JEFE DE FACTURACION Y CARTERA' },
+      { empresa: '', undnegocio: '', codigo: 42, nombre: 'AUXILIAR DE CARTERA' },
+      { empresa: '', undnegocio: '', codigo: 43, nombre: 'SERVICIOS GENERALES' },
+    ];
+    const ctx = { empresa: '02', undnegocio: 'BAQ', base: 'nominatmb' };
+    const r = codigosDeNomina([{ nombre: 'Jefe facturación y cartera' }, { nombre: 'Servicio General' }], TMB, ctx);
+    assert.deepEqual(r.codigos, [41, 43]);
+    assert.deepEqual(r.errores, []);
+    assert.match(r.advertencias[0].mensaje, /se tomó como «JEFE DE FACTURACION Y CARTERA» de nominatmb\.cargos/);
+    const falta = codigosDeNomina([{ nombre: 'Auxiliar de cartera y cobro' }], TMB, ctx);
+    assert.deepEqual(falta.codigos, [null]);
+    assert.match(falta.errores[0].mensaje, /Los más parecidos en nómina: «AUXILIAR DE CARTERA» \(42\)/);
+    assert.ok(!/SERVICIOS GENERALES/.test(falta.errores[0].mensaje));
+  });
 });
 
 describe('planDeCargos', () => {

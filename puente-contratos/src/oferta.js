@@ -679,13 +679,43 @@ const pesos = (n) => Math.round(n).toLocaleString('es-CO');
 /** Desde este largo, el nombre de nómina puede venir cortado (`nominamn.cargos.nombre` es char(30)). */
 const LARGO_NOMBRE_CORTADO = 30;
 
+/** Palabras que no distinguen un cargo de otro. */
+const PALABRAS_VACIAS = new Set(['DE', 'DEL', 'LA', 'LAS', 'EL', 'LOS', 'Y', 'E', 'EN', 'A', 'AL', 'PARA', 'POR', 'CON']);
+
+/** Las palabras de un nombre de cargo ya `comparable`, sin vacías ni plurales, ordenadas: su «huella» para cruzar. */
+export function palabrasDeCargo(clave) {
+  return [...new Set(clave.split(' ')
+    .filter((p) => p && !PALABRAS_VACIAS.has(p))
+    .map((p) => (p.length > 4 && p.endsWith('ES') ? p.slice(0, -2) : p.length > 3 && p.endsWith('S') ? p.slice(0, -1) : p)))]
+    .sort().join(' ');
+}
+
+/** Hasta 3 cargos de nómina parecidos (pares de letras en común, Sørensen-Dice ≥ 0,5), del más al menos parecido. */
+function cargosParecidos(nombre, candidatas) {
+  const pares = (t) => { const r = new Set(); for (let i = 0; i < t.length - 1; i += 1) r.add(t.slice(i, i + 2)); return r; };
+  const buscado = pares(palabrasDeCargo(nombre).replace(/ /g, ''));
+  const vistos = new Set();
+  return candidatas
+    .map((f) => {
+      const otro = pares(palabrasDeCargo(f.clave).replace(/ /g, ''));
+      const comunes = [...buscado].filter((p) => otro.has(p)).length;
+      return { ...f, puntaje: (2 * comunes) / ((buscado.size + otro.size) || 1) };
+    })
+    .filter((f) => f.puntaje >= 0.5)
+    .sort((a, b) => b.puntaje - a.puntaje || a.codigo - b.codigo)
+    .filter((f) => (vistos.has(f.clave) ? false : vistos.add(f.clave)))
+    .slice(0, 3);
+}
+
 /**
  * Código de nómina de cada línea de cargo. Contratos muestra el cargo de la oferta buscando su código en la tabla `cargos`
  * de la base de nómina de la UEN (`gl_undnegocios.dbnomina`: `nominabq` en Barranquilla, `nominamn` en la mina), así que el
  * código escrito debe ser ese, no un número propio de LiciColba.
  *
  * - Se cruza por nombre (sin tildes, mayúsculas ni espacios repetidos). Un nombre de nómina cortado (30 caracteres) sirve
- *   si el de LiciColba empieza igual. El turnante automático de LiciColba («Turnante — …») es el cargo TURNANTE.
+ *   si el de LiciColba empieza igual. El turnante automático de LiciColba («Turnante — …») es el cargo TURNANTE. Si no,
+ *   sirve el que tiene las mismas palabras sin artículos ni preposiciones, en otro orden o en plural (se avisa).
+ * - Si no está, el error sugiere los 3 cargos de nómina más parecidos.
  * - Solo cuentan las filas sin empresa/UEN o de la misma empresa y UEN de la oferta (`nominamn.cargos` no tiene esas columnas).
  *   Se prefieren las generales (sin UEN), que son los cargos operativos; las de la UEN son el personal de la sede.
  * - Si hay varios códigos con el mismo nombre se usa el menor y se avisa. Si no hay ninguno, es un error: no se escribe.
@@ -716,7 +746,18 @@ export function codigosDeNomina(cargos, filasNomina, { empresa, undnegocio, base
     if (opciones.length === 0) opciones = candidatas.filter((f) => f.nombre.length >= LARGO_NOMBRE_CORTADO && nombre.startsWith(f.clave));
     if (opciones.length === 0 && nombre.startsWith('TURNANTE')) opciones = candidatas.filter((f) => f.clave === 'TURNANTE');
     if (opciones.length === 0) {
-      errores.push({ campo, mensaje: `El cargo «${String(c.nombre).trim()}» no existe en la nómina de la UEN ${undnegocio} (${base}.cargos). Use el nombre del cargo como está en nómina o pida a Nómina que lo cree, y vuelva a enviar.` });
+      // Mismas palabras sin contar artículos ni preposiciones, en cualquier orden y sin plurales («JEFE FACTURACION Y
+      // CARTERA» = «JEFE DE FACTURACION Y CARTERA»): es el mismo cargo; se usa y se avisa con el nombre de nómina.
+      const palabras = palabrasDeCargo(nombre);
+      opciones = candidatas.filter((f) => palabrasDeCargo(f.clave) === palabras);
+      if (opciones.length > 0) {
+        advertencias.push({ campo, mensaje: `El cargo «${String(c.nombre).trim()}» se tomó como «${opciones[0].nombre}» de ${base}.cargos.` });
+      }
+    }
+    if (opciones.length === 0) {
+      const parecidos = cargosParecidos(nombre, candidatas);
+      const sugerencia = parecidos.length > 0 ? ` Los más parecidos en nómina: ${parecidos.map((f) => `«${f.nombre}» (${f.codigo})`).join(', ')}.` : '';
+      errores.push({ campo, mensaje: `El cargo «${String(c.nombre).trim()}» no existe en la nómina de la UEN ${undnegocio} (${base}.cargos).${sugerencia} Use el nombre del cargo como está en nómina o pida a Nómina que lo cree, y vuelva a enviar.` });
       return null;
     }
     const generales = opciones.filter((f) => !f.undnegocio);
