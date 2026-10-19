@@ -141,6 +141,10 @@ export interface ServicioNoContinuoPayload {
   otrosCostos: number;
   valorServicio: number;
   valorMensual: number;
+  /** Días, horas por jornada y operarios de cada servicio (null si el servicio no los dice: se digitan en Contratos). */
+  diasServicio: number | null;
+  horasServicio: number | null;
+  operarios: number | null;
 }
 
 /** Fila de la pestaña Valores Agregados de Contratos: valor mensual sin A.I.U., frecuencia y, en reinversiones, su tipo y porcentaje. */
@@ -161,6 +165,7 @@ const codigoCorto = (v: string | null | undefined, max: number) => {
   return new RegExp(`^[A-Za-z0-9]{1,${max}}$`).test(t) ? t : null;
 };
 const positivo = (v: number | undefined | null) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+const enteroHasta = (v: number | null | undefined, max: number) => (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= max ? v : null);
 const frecuenciaValida = (v: number | null | undefined) => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 15 ? v : null);
 
 /** Las máquinas de la pantalla que van a la pestaña Equipos (sin las de Valor agregado, que van a su pestaña). */
@@ -196,6 +201,9 @@ export function serviciosNoContinuosParaPuente(servicios: ServicioNoContinuoPant
         otrosCostos: positivo(s.otrosCostos),
         valorServicio: positivo(s.valorServicio),
         valorMensual: positivo(s.valorMensual),
+        diasServicio: enteroHasta(s.diasServicio, 999),
+        horasServicio: positivo(s.horasServicio) > 0 && positivo(s.horasServicio) <= 24 ? Math.round(positivo(s.horasServicio) * 100) / 100 : null,
+        operarios: enteroHasta(s.operarios, 9999),
       };
     });
 }

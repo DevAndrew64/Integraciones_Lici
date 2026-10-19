@@ -71,9 +71,12 @@ describe('destino de la oferta en Contratos', () => {
       },
     };
     const d = await leerDestino(conexion, 'ASEOCOLBA');
+    const usos = sentencias.find((s) => /FROM fc_contratos_tarifa_inicial/.test(s.sql));
+    assert.match(usos.sql, /COALESCE\(user_add, ''\) <> \?/, 'los envíos de LiciColba no cuentan para sugerir el concepto');
+    assert.deepEqual(usos.params, ['01', 'LICICOLBA']);
     assert.deepEqual(d, { empresa: { codigo: '01', rsocial: 'ASEOCOLBA S.A.' }, uens: [{ codigo: 'BAQ', conceptos: [{ codigo: '460', descripcion: 'ASEO', veces: 2 }] }] });
     assert.ok(sentencias.every((s) => /^SELECT /.test(s.sql)));
-    assert.deepEqual(sentencias.slice(1).map((s) => s.params), [['01'], ['01'], ['01']]);
+    assert.deepEqual(sentencias.slice(1).map((s) => s.params), [['01'], ['01'], ['01', 'LICICOLBA']]);
     const sin = await leerDestino(conexion, 'TRANSCOLBA');
     assert.deepEqual([sin.empresa, sin.error, sentencias.length], [null, 'SIN_EMPRESA', 5]);
   });

@@ -207,7 +207,7 @@ import {
   calcularValorMensualOtroCostoServicio, calcularTotalOtrosCostosServicio,
   calcularCostoInternoCargoManualServicio, calcularTotalCostoInternoCargosManualesServicio,
   calcularTotalesServicioNoContinuo, calcularTotalServiciosNoContinuos,
-  crearServicioNoContinuoVacio, servicioNoContinuoTieneDatos, serviciosNoContinuosTienenDatos,
+  crearServicioNoContinuoVacio, servicioNoContinuoTieneDatos, serviciosNoContinuosTienenDatos, duracionServicioNoContinuo,
   claveOpcionServicioNoContinuo, tarifasServicio, sugerirFrecuenciaServicioCodigo,
   crearEquipoEspecializadoDesdeCatalogo, crearEquipoEspecializadoManual, calcularValorTotalEquipoEspecializado,
   calcularTotalEquiposEspecializadosServicio, claveEquipoEspecializado,
@@ -14541,6 +14541,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
           insumos:t.insumos,equipos:t.maquinariaEquipos,otrosCostos:t.otrosCostos,
           valorServicio:t.subtotalAntesFrecuencia,valorMensual:t.total,
           valorAgregado:esRecursoValorAgregado(srv),
+          ...duracionServicioNoContinuo(srv),
         };
       }),
       valoresAgregados:filasConsolidadasValorAgregado.map(f=>{

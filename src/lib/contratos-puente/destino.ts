@@ -58,9 +58,16 @@ export function uenSugerida(preferida: string | null | undefined, uens: readonly
   return uens.length === 1 ? uens[0].codigo : null;
 }
 
-/** El concepto que va solo: el único de la UEN. Con varios, quien envía elige; sin ninguno, no se puede enviar. */
+/**
+ * El concepto que se marca de entrada: el único de la UEN o, con varios, el que más usan las tarifas hechas a mano en esa
+ * UEN (Contratos los manda del más usado al menos usado; en Aseocolba BAQ, el 452 «LIMPIEZA DE INMUEBLES»). Quien envía
+ * puede cambiarlo. Si ninguno se ha usado, quien envía elige; sin ninguno, no se puede enviar.
+ */
 export function conceptoAutomatico(uen: UenContratos | undefined): string | null {
-  return uen && uen.conceptos.length === 1 ? uen.conceptos[0].codigo : null;
+  if (!uen || uen.conceptos.length === 0) return null;
+  if (uen.conceptos.length === 1) return uen.conceptos[0].codigo;
+  const masUsado = uen.conceptos.reduce<UenContratos['conceptos'][number] | null>((mejor, c) => ((c.veces ?? 0) > (mejor?.veces ?? 0) ? c : mejor), null);
+  return masUsado ? masUsado.codigo : null;
 }
 
 /**

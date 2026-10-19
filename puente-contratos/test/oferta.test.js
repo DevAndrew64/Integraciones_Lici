@@ -37,7 +37,7 @@ describe('planDeTarifa', () => {
   it('escribe las 30 columnas del INSERT de cmdGrabar.Click más «tipo» (F, como las ofertas a mano), en su orden, y los 4 componentes históricos', () => {
     const { fila, errores } = planDeTarifa(datos(), { cliente: CLIENTE, numOferta: 937, huella: HUELLA });
     assert.deepEqual(errores, []);
-    assert.deepEqual(Object.keys(fila), [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS]);
+    assert.deepEqual(Object.keys(fila), [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS, 'sector_economico']);
     assert.equal(COLUMNAS_TARIFA_VFP.length, 31);
   });
 
@@ -53,9 +53,16 @@ describe('planDeTarifa', () => {
         aiu: '0.1232', aiu_examenes: 0, aiu_dotacion: 0,
         exa_medico_vta: 0, venta_dotacion: 0, dot_epp_factur: 0, costos_reembol: 0, aplica_dotacion: 0, aplica_examen: 0, aplica_curso: 0, curso_vta: 0,
         origen_proceso: 'LIC', user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: 'LICICOLBA:42:ab12cd34ef56',
-        tar_insumos: 1000000, tar_maquinaria: 500000, tar_otros: 700000, tar_nocontinuos: 250000,
+        tar_insumos: 1000000, tar_maquinaria: 500000, tar_otros: 700000, tar_nocontinuos: 250000, sector_economico: '',
       },
     );
+  });
+
+  it('«Sector Econom.»: el que elige LiciColba o, si no, el del historial del cliente (lo lleva toda tarifa a mano)', () => {
+    assert.equal(planDeTarifa(datos(), { cliente: CLIENTE, huella: HUELLA, sectorEconomico: 'Comercial' }).fila.sector_economico, 'Comercial');
+    const elegido = datos();
+    elegido.oferta.sectorEconomico = 'Sanitario';
+    assert.equal(planDeTarifa(elegido, { cliente: CLIENTE, huella: HUELLA, sectorEconomico: 'Comercial' }).fila.sector_economico, 'Sanitario');
   });
 
   it('la tarifa es la suma de los seis componentes (así está en el 99,7 % de las filas de producción)', () => {
@@ -96,7 +103,7 @@ describe('planDeTarifa', () => {
 
   it('no escribe columnas que el formulario no escribe ni toca las del contrato', () => {
     const { fila } = planDeTarifa(datos(), { cliente: CLIENTE, huella: HUELLA });
-    for (const prohibida of ['tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'sector_economico', 'personas', 'id_oferta_adjudicada', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
+    for (const prohibida of ['tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'personas', 'id_oferta_adjudicada', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
       assert.ok(!(prohibida in fila), prohibida);
     }
   });
@@ -348,7 +355,7 @@ describe('dtiposDeEquipos (Tipo del activo entre Grupo y Subtipo)', () => {
 });
 
 describe('planDeNoContinuos (pestaña Servs. No Continuos)', () => {
-  const BRIGADA = { actividad: 14, uen: 'BAQ', descripcion: 'Brigada de aseo', frecuencia: 3, manoObra: 116969, insumos: 61439, equipos: 35266, otrosCostos: 0, valorServicio: 213674, valorMensual: 71224.67 };
+  const BRIGADA = { actividad: 14, uen: 'BAQ', descripcion: 'Brigada de aseo', frecuencia: 3, manoObra: 116969, insumos: 61439, equipos: 35266, otrosCostos: 0, valorServicio: 213674, valorMensual: 71224.67, diasServicio: 1, horasServicio: 6, operarios: 2 };
   const conServicios = (servicios) => datos((e) => (e.serviciosNoContinuos = servicios));
 
   it('una fila por servicio: actividad y UEN del catálogo, frecuencia, costo de cada servicio por rubro y valor mensual (VM)', () => {
@@ -360,7 +367,21 @@ describe('planDeNoContinuos (pestaña Servs. No Continuos)', () => {
       [14, 'BAQ', 'BAQ', 'AMBOS', 3, 'VM', 213674, 71225, 116969, 61439, 35266, 0, 4, 1, 1],
     );
     assert.equal(f.descrip_servicio, 'Brigada de aseo');
+    // Duración que manda LiciColba y punto vacío, como las ofertas a mano; la ciudad la pone el municipio de la UEN.
+    assert.deepEqual(
+      [f.cant_max_dias_servicio, f.dias_habiles, f.cant_max_hrs_servicio, f.horas_jornada, f.oper_fijos, f.punto_entrega, f.ciudad],
+      [1, 1, 6, 6, 2, '', ''],
+    );
+    assert.deepEqual([conMunicipio(filas, '08001')[0].ciudad, conMunicipio(filas, '08001')[0].codmun], ['08001', '08001']);
     cabeEnLaTabla('fc_contratos_no_continuos_iniciales', filas[0]);
+  });
+
+  it('sin duración en LiciColba: 1 día, horas y operarios en 0 y aviso de las horas (no se inventan)', () => {
+    const { advertencias, filas } = planDeNoContinuos(conServicios([{ ...BRIGADA, diasServicio: null, horasServicio: null, operarios: null }]), { numOferta: 937, huella: HUELLA, cliente: CLIENTE });
+    assert.deepEqual([filas[0].cant_max_dias_servicio, filas[0].dias_habiles, filas[0].cant_max_hrs_servicio, filas[0].horas_jornada, filas[0].oper_fijos], [1, 1, 0, 0, 0]);
+    assert.deepEqual(advertencias.map((a) => a.mensaje), ['Sin horas por servicio (las tarifas del servicio no las dicen; se digitan en Contratos): Brigada de aseo.']);
+    const horasSueltas = planDeNoContinuos(conServicios([{ ...BRIGADA, horasServicio: 7.5 }]), { numOferta: 937, huella: HUELLA, cliente: CLIENTE });
+    assert.deepEqual([horasSueltas.filas[0].cant_max_hrs_servicio, horasSueltas.filas[0].horas_jornada], [8, 7.5]);
   });
 
   it('tipo de actividad según lo que lleva; sin código del catálogo va y se avisa; sin valor no va', () => {

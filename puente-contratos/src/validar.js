@@ -43,6 +43,8 @@ const ESQUEMA = {
     // Base de nómina de donde salen los códigos de cargo, si la UEN tiene varias (Tempocolba: nominatmb o nominatmb2). La
     // elige la pantalla con la vista previa de cargos; sin ella, el puente usa la primera que tiene todos los cargos.
     baseNomina: { tipo: 'texto', max: 64, silencioso: true },
+    // «Sector Econom.» de la tarifa (char(20)). Si no llega, el puente toma el que más usan las tarifas del cliente.
+    sectorEconomico: { tipo: 'texto', max: 20, silencioso: true },
   },
   // Módulo 4 — los seis valores de «Operación del Contrato»: con el A.I.U. incluido, antes de IVA, en pesos enteros
   // (los calcula LiciColba: son los de la hoja «Contratos» del Excel de costos).
@@ -144,6 +146,10 @@ const LISTAS = {
       otrosCostos: { tipo: 'monto', max: 999_999_999_999, silencioso: true },
       valorServicio: { tipo: 'monto', max: 999_999_999_999, requerido: true }, // valor decimal(18,0)
       valorMensual: { tipo: 'monto', max: 999_999_999, requerido: true }, // vlr_mes int(12)
+      // Duración de cada servicio, de sus tarifas y cargos en LiciColba (null si el servicio no lo dice).
+      diasServicio: { tipo: 'entero', min: 0, max: 999, silencioso: true }, // cant_max_dias_servicio y dias_habiles int(10)
+      horasServicio: { tipo: 'numero', min: 0, max: 24, silencioso: true }, // horas_jornada decimal(10,7) y cant_max_hrs_servicio
+      operarios: { tipo: 'entero', min: 0, max: 9999, silencioso: true }, // oper_fijos
     },
   },
   // Pestaña Valores Agregados (`fc_contratos_vlrs_agregs_iniciales`): cada fila de la pestaña Valor Agregado de LiciColba con

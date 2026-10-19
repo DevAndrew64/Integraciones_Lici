@@ -38,10 +38,13 @@ describe('destino de la oferta en Contratos', () => {
     expect(uenSugerida(null, [destino.uens[1]])).toBe('BOG');
   });
 
-  it('concepto automático solo cuando la UEN tiene uno', () => {
+  it('concepto automático: el único de la UEN o el más usado en las tarifas a mano; sin usos, se elige', () => {
     expect(conceptoAutomatico(destino.uens[1])).toBe('470');
     expect(conceptoAutomatico(destino.uens[0])).toBeNull();
     expect(conceptoAutomatico(undefined)).toBeNull();
+    expect(conceptoAutomatico(destino.uens[2])).toBeNull();
+    const baq = { codigo: 'BAQ', conceptos: [{ codigo: '458', descripcion: 'REINTEGRO OTROS COSTOS', veces: 1 }, { codigo: '452', descripcion: 'LIMPIEZA DE INMUEBLES', veces: 896 }, { codigo: '454', descripcion: 'X', veces: 146 }] };
+    expect(conceptoAutomatico(baq)).toBe('452');
   });
 
   it('valida la UEN y el concepto contra Contratos', () => {

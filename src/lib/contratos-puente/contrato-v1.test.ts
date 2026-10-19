@@ -52,7 +52,7 @@ function payload() {
     }]),
     serviciosNoContinuos: serviciosNoContinuosParaPuente([{
       codigo: '14', uen: 'BAQ', descripcion: 'Brigada de aseo', frecuencia: 3, manoObra: 116969, insumos: 61439, equipos: 35266, otrosCostos: 0,
-      valorServicio: 213674, valorMensual: 71224.67, valorAgregado: false,
+      valorServicio: 213674, valorMensual: 71224.67, valorAgregado: false, diasServicio: 1, horasServicio: 7, operarios: 1,
     }]),
     valoresAgregados: valoresAgregadosParaPuente([
       { tipo: 'REINVERSION', descripcion: 'Reinversión anual', valorMensual: 291666.67, frecuencia: 12, tipoReinversion: 'VALOR', porcentaje: null },

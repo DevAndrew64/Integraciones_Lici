@@ -412,6 +412,30 @@ export function tarifasServicio(servicio: ServicioNoContinuo): TarifaServicioAse
   return servicio.tarifa ? [servicio.tarifa] : [];
 }
 
+/** Horas de una jornada según la modalidad de la tarifa (null si la modalidad no las fija). */
+const HORAS_DE_MODALIDAD: Partial<Record<TarifaServicioAseocolba['modalidad'], number>> = { JORNADA_6H: 6, JORNADA_4H: 4 };
+
+/**
+ * Duración de un servicio no continuo para la pestaña «Servs. No Continuos» de Contratos (días, horas por jornada y
+ * operarios), sacada de sus tarifas y sus cargos manuales. Lo que el servicio no dice va en null: nunca se inventa.
+ * - operarios: personas de las tarifas + cantidad de los cargos manuales;
+ * - días: el mayor de los días de las tarifas y de los cargos manuales;
+ * - horas: las de las tarifas por hora, o 6/4 en las jornadas de 6 y 4 horas (la mayor).
+ */
+export function duracionServicioNoContinuo(servicio: ServicioNoContinuo): { diasServicio: number | null; horasServicio: number | null; operarios: number | null } {
+  const tarifas = tarifasServicio(servicio);
+  const manuales = servicio.cargosManuales ?? [];
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+  const operarios = tarifas.reduce((s, t) => s + num(t.cantidadPersonas), 0) + manuales.reduce((s, c) => s + num(c.cantidad), 0);
+  const dias = Math.max(0, ...tarifas.map((t) => num(t.cantidadDias)), ...manuales.map((c) => num(c.dias)));
+  const horas = Math.max(0, ...tarifas.map((t) => (t.modalidad === 'HORA' ? num(t.cantidadHoras) : HORAS_DE_MODALIDAD[t.modalidad] ?? 0)));
+  return {
+    diasServicio: dias > 0 ? Math.round(dias) : null,
+    horasServicio: horas > 0 ? horas : null,
+    operarios: operarios > 0 ? Math.round(operarios) : null,
+  };
+}
+
 export interface DatosServiciosNoContinuos {
   servicios: ServicioNoContinuo[];
 }

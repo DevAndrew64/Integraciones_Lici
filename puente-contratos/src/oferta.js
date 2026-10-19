@@ -36,6 +36,9 @@ export const COLUMNAS_TARIFA_VFP = [
  */
 export const COLUMNAS_TARIFA_HISTORICAS = ['tar_insumos', 'tar_maquinaria', 'tar_otros', 'tar_nocontinuos'];
 
+/** «Sector Econom.» de la pantalla: lo llevan todas las tarifas digitadas a mano (Comercial, Industrial, Sanitario…). */
+export const COLUMNAS_TARIFA_PANTALLA = ['sector_economico'];
+
 /**
  * Marca de origen que queda en `pc_add` (el equipo que creó el registro). Identifica la fila como creada por LiciColba y
  * permite reconocer un reenvío de la misma solicitud sin tocar la estructura de Contratos: «LICICOLBA:42:3fa9c21b07de».
@@ -76,7 +79,7 @@ const aEntero = (valor) => (valor === null || valor === undefined ? 0 : valor);
  *   `cliente` es el de Contratos (NIT tal como está guardado); `numOferta` null = aún no reservado (modo prueba)
  * @returns {{errores: {campo: string, mensaje: string}[], fila: Record<string, unknown> | null}}
  */
-export function planDeTarifa(datos, { cliente, numOferta = null, huella = '' }) {
+export function planDeTarifa(datos, { cliente, numOferta = null, huella = '', sectorEconomico = '' }) {
   const errores = [];
   const { oferta, tarifa: t, contrato, origen } = datos;
   const aiu = contrato.porcentajeAIU;
@@ -127,6 +130,7 @@ export function planDeTarifa(datos, { cliente, numOferta = null, huella = '' }) 
     tar_maquinaria: t.maquinaria,
     tar_otros: t.valorAgregado,
     tar_nocontinuos: t.serviciosNoContinuos,
+    sector_economico: recortar(oferta.sectorEconomico || sectorEconomico, 20),
   };
   return { errores, fila };
 }
@@ -533,6 +537,7 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
   if (servicios.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
   const { oferta, origen, contrato } = datos;
   const sinCatalogo = [];
+  const sinHoras = [];
   const filas = [];
   servicios.forEach((s, i) => {
     if (!(s.valorMensual > 0)) return;
@@ -542,6 +547,9 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
     const equipos = Math.round(s.equipos ?? 0);
     const otros = Math.round(s.otrosCostos ?? 0);
     const meses = s.frecuencia >= 1 && s.frecuencia <= 12 ? s.frecuencia : null;
+    const dias = s.diasServicio > 0 ? s.diasServicio : 1;
+    const horas = s.horasServicio ?? 0;
+    if (!(horas > 0)) sinHoras.push(s.descripcion || `#${i + 1}`);
     filas.push({
       empresa: oferta.empresa,
       undnegocio: oferta.undnegocio,
@@ -555,7 +563,7 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
       tipo: 1,
       clase: 1,
       frecuencia: s.frecuencia,
-      punto_entrega: PUNTO_SIN_SEDE,
+      punto_entrega: '', // las ofertas a mano lo dejan vacío en esta pestaña
       nombre_punto: recortar(cliente?.rsocial, NOMBRE_PUNTO_MAX),
       codmun: '',
       descrip_servicio: recortar(s.descripcion, 250),
@@ -568,6 +576,13 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
       vlr_costos: otros,
       cant_servs_mes: 1,
       cant_servs_contrato: meses && contrato?.plazoMeses ? Math.max(1, Math.floor(contrato.plazoMeses / meses)) : 0,
+      // Duración de cada servicio, como la digitan a mano: días (1 si no se sabe), horas por jornada y operarios.
+      cant_max_dias_servicio: dias,
+      dias_habiles: dias,
+      cant_max_hrs_servicio: horas > 0 ? Math.round(horas) : 0,
+      horas_jornada: horas > 0 ? horas : 0,
+      oper_fijos: s.operarios > 0 ? s.operarios : 0,
+      ciudad: '',
       uen_punto: s.uen ?? '',
       user_add: USUARIO_PUENTE,
       fadd: AHORA,
@@ -575,6 +590,7 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
     });
   });
   if (sinCatalogo.length > 0) advertencias.push({ campo: 'serviciosNoContinuos', mensaje: `Sin código del catálogo de no continuos (la actividad se elige en Contratos): ${sinCatalogo.join(', ')}.` });
+  if (sinHoras.length > 0) advertencias.push({ campo: 'serviciosNoContinuos', mensaje: `Sin horas por servicio (las tarifas del servicio no las dicen; se digitan en Contratos): ${sinHoras.join(', ')}.` });
   return { errores, advertencias, filas };
 }
 
@@ -654,7 +670,7 @@ export const TIPO_CARGO = 'F';
  */
 export const TABLAS_ADAPTABLES = {
   fc_contratos_tarifa_inicial: {
-    escritas: [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS],
+    escritas: [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS, ...COLUMNAS_TARIFA_PANTALLA],
     esenciales: ['empresa', 'undnegocio', 'num_oferta', 'nit', 'rsocial', 'codservicio', 'tarifa', 'tar_manoobra', 'tar_impuestos', 'aiu', 'pc_add'],
   },
   fc_contratos_cargos_iniciales: {
@@ -666,7 +682,7 @@ export const TABLAS_ADAPTABLES = {
 /** Qué dato de LiciColba se pierde si la base no tiene la columna (para avisarlo en «no escrito»). */
 const CAMPO_DE_COLUMNA = {
   aiu: 'contrato.porcentajeAIU', tipo_adm: 'oferta.tipoAdm', origen_proceso: 'oferta.origenProceso', codservicio: 'oferta.codServicio',
-  descripcion: 'oferta.descripcionServicio',
+  descripcion: 'oferta.descripcionServicio', sector_economico: 'oferta.sectorEconomico',
 };
 
 /** Sin la columna en la base: una entrada «no escrito» por dato de LiciColba que no quedó guardado. */
@@ -838,7 +854,11 @@ export function cruceDeCargos(cargos, filasNomina, contexto) {
  */
 export function conMunicipio(filas, codmun) {
   if (!codmun) return filas;
-  return filas.map((f) => (f && 'codmun' in f && !f.codmun ? { ...f, codmun } : f));
+  return filas.map((f) => {
+    if (!f) return f;
+    const llenas = Object.fromEntries(['codmun', 'ciudad'].filter((c) => c in f && !f[c]).map((c) => [c, codmun]));
+    return Object.keys(llenas).length > 0 ? { ...f, ...llenas } : f;
+  });
 }
 
 /**

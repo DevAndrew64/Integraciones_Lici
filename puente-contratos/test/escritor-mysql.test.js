@@ -42,6 +42,7 @@ function falso(respuestas = {}) {
     [/RELEASE_LOCK/, [[{ ok: 1 }]]],
     [/pc_add LIKE/, [[]]],
     [/FROM fc_clientes/, [[{ nit: '900123456-8  ', rsocial: 'CLIENTE DE PRUEBA S.A.S.' }]]],
+    [/AS sector, COUNT/, [[{ sector: 'Comercial', veces: 7, ultima: null }]]],
     [/^SELECT empresa, undnegocio FROM fc_control/, [[{ empresa: '01', undnegocio: 'BAQ' }]]],
     [/FROM act_subtipos/, [[{ id: 9, uen: 'MNA', grupo: '004', subtipo: '096', dtipo: '025' }, { id: 7, uen: '', grupo: '004', subtipo: '096', dtipo: '018' }]]],
     [/FROM fc_conceptos_costos_admtivos/, [[{ id: 1, descripcion: 'PÓLIZAS' }, { id: 2, descripcion: 'IMPUESTOS' }, { id: 6, descripcion: 'PAPELERÍA Y OFICINAS  ' }, { id: 11, descripcion: 'OTROS' }]]],
@@ -160,9 +161,12 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     await escribir(f.pool);
     const insert = f.de(/^INSERT INTO fc_contratos_tarifa_inicial/)[0];
     assert.match(insert.sql, /^INSERT INTO fc_contratos_tarifa_inicial \(empresa, undnegocio, num_oferta, ncontrato, nit, rsocial,/);
-    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos\) VALUES \(/);
+    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos, sector_economico\) VALUES \(/);
     assert.equal((insert.sql.match(/\?/g) ?? []).length, insert.params.length);
-    assert.equal(insert.params.length, 34, '35 columnas menos fadd, que es NOW()');
+    assert.equal(insert.params.length, 35, '36 columnas menos fadd, que es NOW()');
+    assert.equal(insert.params.at(-1), 'Comercial', 'el sector que más llevan las tarifas a mano del cliente');
+    const sector = f.de(/AS sector, COUNT/)[0];
+    assert.deepEqual(sector.params, ['900123456', 'LICICOLBA'], 'por la base del NIT y sin contar los envíos de LiciColba');
     assert.ok(insert.params.includes('LICICOLBA:42:ab12cd34ef56'));
     assert.ok(insert.params.includes('0.1232'), 'el A.I.U. viaja como texto decimal exacto');
     assert.ok(!insert.params.includes(undefined));

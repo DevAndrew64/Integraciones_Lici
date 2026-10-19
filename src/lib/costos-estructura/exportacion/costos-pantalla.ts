@@ -124,6 +124,10 @@ export interface ServicioNoContinuoPantallaDto {
   /** Lo que vale por mes: lo que suma en el total de Servicios no continuos. */
   valorMensual: number;
   valorAgregado: boolean;
+  /** Duración de cada servicio, de sus tarifas y cargos (`duracionServicioNoContinuo`); null si el servicio no la dice. */
+  diasServicio?: number | null;
+  horasServicio?: number | null;
+  operarios?: number | null;
 }
 
 /** Una fila de la pestaña Valor Agregado (para «Enviar a Contratos»): ya mensualizada, sin A.I.U. */

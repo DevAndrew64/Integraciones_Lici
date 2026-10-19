@@ -102,6 +102,26 @@ async function buscarCliente(conexion, nitBase, undnegocio) {
   return filas.length === 0 ? null : { nit: texto(filas[0].nit), rsocial: texto(filas[0].rsocial) };
 }
 
+/**
+ * «Sector Econom.» del cliente: el que más llevan sus tarifas hechas en Contratos (no hay otra tabla que lo guarde). Sin
+ * historial, o si no se puede leer, vacío: se digita en Contratos.
+ */
+async function leerSectorDeCliente(conexion, nitBase) {
+  try {
+    const [filas] = await conexion.query(
+      `SELECT TRIM(sector_economico) AS sector, COUNT(*) AS veces, MAX(fadd) AS ultima FROM ${TABLA_TARIFA}
+        WHERE REPLACE(REPLACE(SUBSTRING_INDEX(TRIM(nit), '-', 1), '.', ''), ' ', '') = ?
+          AND TRIM(COALESCE(sector_economico, '')) NOT IN ('', '0') AND COALESCE(user_add, '') <> ?
+        GROUP BY TRIM(sector_economico) ORDER BY veces DESC, ultima DESC LIMIT 1`,
+      [nitBase, USUARIO_PUENTE],
+    );
+    return filas.length > 0 ? texto(filas[0].sector) : '';
+  } catch (error) {
+    if (error?.errno === 1054 || error?.errno === 1142 || error?.errno === 1143) return '';
+    throw error;
+  }
+}
+
 /** Filas del contador de (empresa, UEN): solo esas dos columnas, tal como están escritas en Contratos (la fila trae credenciales). */
 async function leerContadores(conexion, empresa, undnegocio) {
   const [filas] = await conexion.query('SELECT empresa, undnegocio FROM fc_control WHERE empresa = ? AND undnegocio = ?', [empresa, undnegocio]);
@@ -334,12 +354,16 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
           advertencias.push({ campo: 'valoresAgregados', mensaje: `Esta base de Contratos no tiene la tabla ${TABLA_VALORES_AGREGADOS}: los valores agregados no se escribieron (sí van en el total de la tarifa).` });
         }
 
+        const sectorEconomico = datos.oferta.sectorEconomico ? '' : await leerSectorDeCliente(conexion, datos.cliente.nit);
+        if (!datos.oferta.sectorEconomico && !sectorEconomico) {
+          advertencias.push({ campo: 'oferta.sectorEconomico', mensaje: 'El cliente no tiene tarifas anteriores con sector económico: complete «Sector Econom.» en Contratos.' });
+        }
         const codmun = await leerMunicipioDeUen(conexion, empresa, undnegocio);
         if (!codmun) advertencias.push({ campo: 'oferta.undnegocio', mensaje: `La UEN ${undnegocio} no tiene municipio en Contratos (gl_undnegocios.codmun): la ciudad se digita en Contratos.` });
 
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
-        const { fila: filaTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella });
+        const { fila: filaTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico });
         const filasDeCargos = conMunicipio(planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina }).filas, codmun);
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });

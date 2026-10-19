@@ -4,6 +4,8 @@
  * envía solo elige la UEN (y el concepto, si la UEN tiene varios).
  */
 
+import { USUARIO_PUENTE } from './oferta.js';
+
 const texto = (valor) => String(valor ?? '').trim();
 
 /** «Aseo Colba S.A.S.» y «ASEOCOLBA» comparan igual: sin tildes, sin espacios ni signos, en mayúsculas. */
@@ -86,8 +88,10 @@ export async function leerDestino(conexion, nombreEmpresa) {
   const [contadores] = await conexion.query('SELECT empresa, undnegocio FROM fc_control WHERE empresa = ?', [empresa.codigo]);
   const [conceptos] = await conexion.query('SELECT empresa, undnegocio, codcpto, descrip, nombre FROM fc_conceptos WHERE empresa = ?', [empresa.codigo]);
   const [usos] = await conexion.query(
-    'SELECT undnegocio, codservicio, COUNT(*) AS veces FROM fc_contratos_tarifa_inicial WHERE empresa = ? GROUP BY undnegocio, codservicio',
-    [empresa.codigo],
+    // Solo las tarifas hechas en Contratos: un envío de prueba con otro concepto no debe cambiar el que se sugiere.
+    `SELECT undnegocio, codservicio, COUNT(*) AS veces FROM fc_contratos_tarifa_inicial
+      WHERE empresa = ? AND COALESCE(user_add, '') <> ? GROUP BY undnegocio, codservicio`,
+    [empresa.codigo, USUARIO_PUENTE],
   );
   return { empresa, uens: uensDeEmpresa(empresa.codigo, { contadores, conceptos, usos }) };
 }

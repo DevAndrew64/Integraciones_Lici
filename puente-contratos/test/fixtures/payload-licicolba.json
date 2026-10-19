@@ -118,7 +118,10 @@
       "equipos": 35266,
       "otrosCostos": 0,
       "valorServicio": 213674,
-      "valorMensual": 71224.67
+      "valorMensual": 71224.67,
+      "diasServicio": 1,
+      "horasServicio": 7,
+      "operarios": 1
     }
   ],
   "valoresAgregados": [

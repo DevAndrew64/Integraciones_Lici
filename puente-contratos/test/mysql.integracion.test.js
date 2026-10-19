@@ -319,6 +319,12 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       ['BAQ', '860034313-7', '00', 'CASA MATRIZ BARRANQUILLA', 'N'],
       ['BOG', '860034313-7', '00', 'SEDE BOGOTA', 'N'],
     ]]);
+    // Historial del cliente 900123456 en otra empresa: dos tarifas a mano «Comercial» y tres de LiciColba «Industrial»
+    // (estas no cuentan). Sirve para el «Sector Econom.»; no toca la numeración de 01/BAQ.
+    await admin.query('INSERT INTO fc_contratos_tarifa_inicial (empresa, undnegocio, num_oferta, nit, sector_economico, user_add) VALUES ?', [[
+      ['09', 'ZZZ', 1, '900123456-8', 'Comercial', 'OSCAR'], ['09', 'ZZZ', 2, '900.123.456-8', 'Comercial ', 'OSCAR'],
+      ['09', 'ZZZ', 3, '900123456-8', 'Industrial', 'LICICOLBA'], ['09', 'ZZZ', 4, '900123456-8', 'Industrial', 'LICICOLBA'], ['09', 'ZZZ', 5, '900123456-8', 'Industrial', 'LICICOLBA'],
+    ]]);
     // Una fila por (empresa, UEN); num_oferta = el ÚLTIMO número usado. (03, XXX) está duplicada a propósito.
     await admin.query('INSERT INTO fc_control (empresa, undnegocio, num_oferta) VALUES ?', [[['01', 'BAQ', 936], ['01', 'BOG', 219], ['02', 'BAQ', 7], ['03', 'XXX', 1], ['03', 'XXX', 1]]]);
     await admin.query('INSERT INTO fc_conceptos (empresa, undnegocio, codcpto) VALUES ?', [[['01', 'BAQ', 'ASE'], ['01', 'BOG', 'ASE'], ['02', 'BAQ', 'VIG']]]);
@@ -360,6 +366,8 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       },
     );
     assert.match(f.pc_add, /^LICICOLBA:1001:[0-9a-f]{12}$/);
+    const [[tarifa]] = await admin.query('SELECT sector_economico FROM fc_contratos_tarifa_inicial WHERE pc_add = ?', [f.pc_add]);
+    assert.equal(tarifa.sector_economico, 'Comercial', 'el sector que más llevan las tarifas a mano del cliente (las de LiciColba no cuentan)');
     const [[reciente]] = await admin.query(`SELECT TIMESTAMPDIFF(SECOND, fadd, NOW()) AS seg FROM ${OFERTAS} WHERE id = ?`, [f.id]);
     assert.ok(Number(reciente.seg) >= 0 && Number(reciente.seg) < 60, 'fadd lo pone el servidor con NOW()');
   });
@@ -443,7 +451,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
   it('el NIT guardado con espacios se encuentra por su base, se escribe como está en Contratos y la razón social viaja en latin1 sin perderse', async () => {
     const r = await enviar(7001, { cliente: { nit: '800197268', razonSocial: 'Otro nombre del cliente' } });
     assert.equal(r.escrito.cliente.nit, '800197268-4');
-    assert.deepEqual(r.advertencias.map((a) => a.campo).filter((c) => c !== 'insumos'), ['cliente.razonSocial'], 'la razón social de LiciColba difiere: se avisa y se usa la de Contratos');
+    assert.deepEqual(r.advertencias.map((a) => a.campo).filter((c) => c !== 'insumos' && c !== 'oferta.sectorEconomico'), ['cliente.razonSocial'], 'la razón social de LiciColba difiere: se avisa y se usa la de Contratos');
     const [f] = await filasDe(7001);
     assert.equal(f.nit, '800197268-4');
     assert.equal(f.rsocial, 'Ñandú “Premium” S.A.S.');
@@ -478,6 +486,12 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     const [oferta] = await filasDe(archivo.origen.solicitudId);
     assert.deepEqual([oferta.vlr_manoobra, oferta.vlr_impuestos], [13111200, 5400]);
     assert.equal((await preciosDe('BAQ', antes + 1)).length, archivo.insumos.length);
+    // Servs. No Continuos con la duración de LiciColba y la ciudad de la UEN, como las ofertas a mano.
+    const [[nc]] = await admin.query(
+      'SELECT cant_max_dias_servicio, dias_habiles, cant_max_hrs_servicio, horas_jornada, oper_fijos, ciudad, codmun, punto_entrega FROM fc_contratos_no_continuos_iniciales WHERE empresa = ? AND undnegocio = ? AND num_oferta = ?',
+      ['01', 'BAQ', antes + 1],
+    );
+    assert.deepEqual({ ...nc }, { cant_max_dias_servicio: 1, dias_habiles: 1, cant_max_hrs_servicio: 7, horas_jornada: '7.0000000', oper_fijos: '1', ciudad: '08001', codmun: '08001', punto_entrega: '' });
   });
 
   it('Tempocolba: un cargo que no está en la nómina se ve antes (también en modo prueba), se elige el de nómina y se escribe ese código', async () => {
