@@ -157,13 +157,13 @@ const NOMBRE_DE_BASE = /^[A-Za-z0-9_]{1,64}$/;
 const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1146]);
 
 /**
- * La tabla `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
- * `nominamn`), en el mismo servidor de Contratos. Devuelve sus filas o el error que impide escribir los cargos.
+ * Las tablas `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
+ * `nominamn`), en el mismo servidor de Contratos. Devuelve las bases leídas, en el orden de `gl_undnegocios`, o el error.
  *
  * - Manda la fila de la empresa. Si la empresa no tiene fila para la UEN, se usa la de la UEN en otra empresa.
  * - Una fila de la empresa con `dbnomina` vacío (Transcolba en BAQ) es que esa UEN no tiene nómina: no se adivina otra.
- * - Si quedan varias bases (Tempocolba en BAQ: `NOMINATMB` y `nominatmbe`), se usa la única que de verdad existe en el
- *   servidor con su tabla `cargos`; si existen varias o ninguna, no se escribe y se dice cuáles son.
+ * - Con varias bases (Tempocolba en BAQ: `NOMINATMB` y `nominatmbe`, las dos existen) se leen todas las que existen con
+ *   tabla `cargos`; quien llama usa la primera donde están todos los cargos de la oferta (`elegirNomina`).
  */
 async function leerCargosDeNomina(conexion, empresa, undnegocio) {
   const [unidades] = await conexion.query('SELECT empresa, dbnomina FROM gl_undnegocios WHERE codigo = ?', [undnegocio]);
@@ -178,21 +178,38 @@ async function leerCargosDeNomina(conexion, empresa, undnegocio) {
       [bases],
     );
     // Se compara sin mayúsculas (en Windows MySQL guarda los nombres en minúsculas) y se usa el nombre real de la base.
-    const reales = [...new Set(existentes.map((e) => texto(e.base)).filter((b) => NOMBRE_DE_BASE.test(b) && bases.some((x) => x.toLowerCase() === b.toLowerCase())))];
-    if (reales.length !== 1) {
-      const porque = reales.length > 1 ? `existen varias: ${reales.join(', ')}` : `ninguna de ${bases.join(', ')} tiene tabla cargos visible para el usuario de la conexión`;
-      return { error: `${sinBase}: ${porque}. Avise a Contratos.` };
+    const reales = existentes.map((e) => texto(e.base)).filter((b) => NOMBRE_DE_BASE.test(b));
+    const enOrden = bases.flatMap((b) => reales.filter((r) => r.toLowerCase() === b.toLowerCase()).slice(0, 1));
+    if (enOrden.length === 0) return { error: `${sinBase}: ninguna de ${bases.join(', ')} tiene tabla cargos visible para el usuario de la conexión. Avise a Contratos.` };
+    bases = [...new Set(enOrden)];
+  }
+  const leidas = [];
+  for (const base of bases) {
+    try {
+      const [filas] = await conexion.query(`SELECT * FROM \`${base}\`.cargos`);
+      leidas.push({ base, filas });
+    } catch (error) {
+      if (!ERRORES_DE_ACCESO.has(error?.errno)) throw error;
+      return { error: `No se pudo leer ${base}.cargos para tomar el código de nómina de los cargos (código ${error.errno}). El usuario de la conexión necesita permiso de lectura (SELECT) sobre ${base}.cargos.` };
     }
-    bases = reales;
   }
-  const base = bases[0];
-  try {
-    const [filas] = await conexion.query(`SELECT * FROM \`${base}\`.cargos`);
-    return { base, filas };
-  } catch (error) {
-    if (!ERRORES_DE_ACCESO.has(error?.errno)) throw error;
-    return { base, error: `No se pudo leer ${base}.cargos para tomar el código de nómina de los cargos (código ${error.errno}). El usuario de la conexión necesita permiso de lectura (SELECT) sobre ${base}.cargos.` };
+  return { bases: leidas };
+}
+
+/**
+ * De las bases de nómina leídas, la primera donde están TODOS los cargos de la oferta. Si ninguna los tiene todos, los errores
+ * de la primera. Si hay varias bases, avisa cuál se usó.
+ */
+function elegirNomina(cargos, bases, contexto) {
+  const cruces = bases.map((b) => ({ base: b.base, ...codigosDeNomina(cargos, b.filas, { ...contexto, base: b.base }) }));
+  const elegido = cruces.find((c) => c.errores.length === 0) ?? cruces[0];
+  if (bases.length > 1 && elegido.errores.length === 0) {
+    elegido.advertencias.push({
+      campo: 'cargos',
+      mensaje: `La UEN ${contexto.undnegocio} de la empresa ${contexto.empresa} tiene varias bases de nómina (${bases.map((b) => b.base).join(', ')}): los códigos de cargo se tomaron de ${elegido.base}.`,
+    });
   }
+  return elegido;
 }
 
 /** Reserva el siguiente número de oferta de (empresa, UEN). El UPDATE es atómico: dos reservas simultáneas nunca reciben el mismo número. */
@@ -323,7 +340,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
           const nomina = await leerCargosDeNomina(conexion, empresa, undnegocio);
           if (nomina.error) errores.push({ campo: 'cargos', mensaje: nomina.error });
           else {
-            const cruce = codigosDeNomina(cargos, nomina.filas, { empresa, undnegocio, base: nomina.base });
+            const cruce = elegirNomina(cargos, nomina.bases, { empresa, undnegocio });
             errores.push(...cruce.errores);
             advertencias.push(...cruce.advertencias);
             codigosNomina = cruce.codigos;

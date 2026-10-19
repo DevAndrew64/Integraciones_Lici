@@ -50,6 +50,7 @@ function falso(respuestas = {}) {
     [/FROM gl_undnegocios/, [[{ dbnomina: 'nominabq  ' }]]],
     [/FROM information_schema\.TABLES WHERE TABLE_NAME = 'cargos'/, [[]]],
     [/FROM `nominabq`\.cargos/, [NOMINA()]],
+    [/FROM `nomina\w+`\.cargos/, [[]]],
     [/AS mayor$/, [[{ mayor: 0 }]]],
     [/^UPDATE fc_control/, [{ affectedRows: 1 }]],
     [/LAST_INSERT_ID\(\) AS numero/, [[{ numero: '937' }]]],
@@ -260,7 +261,7 @@ describe('escritor MySQL — cargos', () => {
     assert.ok(!f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/));
   });
 
-  it('la base de nómina: manda la fila de la empresa; si no tiene, la de la UEN; con varias, la única que existe en el servidor', async () => {
+  it('la base de nómina: manda la fila de la empresa; si no tiene, la de la UEN; con varias, la primera que tiene todos los cargos', async () => {
     const tempocolba = (unidades, existentes = []) => falso({
       [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[{ empresa: '02', undnegocio: 'BAQ' }]],
       [/FROM gl_undnegocios/.source]: [unidades],
@@ -271,14 +272,17 @@ describe('escritor MySQL — cargos', () => {
     const otra = tempocolba([{ empresa: '01', dbnomina: 'nominabq' }]);
     await enviar(otra);
     assert.ok(otra.hubo(/FROM `nominabq`\.cargos/) && !otra.hubo(/information_schema/));
-    // Dos bases para 02/BAQ (como en Contratos): se usa la que existe; la de Aseocolba no cuenta.
-    const dos = tempocolba([{ empresa: '01', dbnomina: 'nominabq' }, { empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }], ['nominabq', 'nominatmbe']);
-    await enviar(dos).catch(() => {}); // la prueba solo sirve nominabq.cargos
-    assert.deepEqual(dos.de(/information_schema/)[0].params, [['NOMINATMB', 'nominatmbe']]);
-    assert.ok(dos.hubo(/FROM `nominatmbe`\.cargos/));
-    // Las dos existen, o ninguna: no adivina.
-    const ambas = await rechaza(enviar(tempocolba([{ empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }], ['NOMINATMB', 'nominatmbe'])), 422, 'DATOS_INVALIDOS');
-    assert.match(ambas.extra.errores[0].mensaje, /existen varias: NOMINATMB, nominatmbe/);
+    // Dos bases para 02/BAQ y existen las dos (como en Contratos): la primera no tiene los cargos, la segunda sí → la segunda.
+    const dos = tempocolba([{ empresa: '01', dbnomina: 'otra' }, { empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominabq' }], ['nominatmb', 'nominabq']);
+    const r = await enviar(dos);
+    assert.deepEqual(dos.de(/information_schema/)[0].params, [['NOMINATMB', 'nominabq']]);
+    assert.ok(dos.hubo(/FROM `nominatmb`\.cargos/), 'usa el nombre real que da el servidor');
+    assert.equal(r.escrito.numOferta, 937);
+    assert.ok(r.advertencias.some((a) => /varias bases de nómina \(nominatmb, nominabq\): los códigos de cargo se tomaron de nominabq/.test(a.mensaje)));
+    // Ninguna tiene todos los cargos: los errores de la primera.
+    const sinCargos = await rechaza(enviar(tempocolba([{ empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }], ['nominatmb', 'nominatmbe'])), 422, 'DATOS_INVALIDOS');
+    assert.match(sinCargos.extra.errores[0].mensaje, /no existe en la nómina de la UEN BAQ \(nominatmb\.cargos\)/);
+    // Ninguna existe en el servidor.
     const ninguna = await rechaza(enviar(tempocolba([{ empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }])), 422, 'DATOS_INVALIDOS');
     assert.match(ninguna.extra.errores[0].mensaje, /ninguna de NOMINATMB, nominatmbe tiene tabla cargos/);
     // La empresa tiene fila pero sin base (Transcolba en BAQ): no toma la de otra empresa.
