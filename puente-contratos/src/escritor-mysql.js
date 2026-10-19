@@ -23,7 +23,7 @@ import { ErrorNegocio } from './errores.js';
 import { elegirNomina, leerCargosDeNomina } from './nomina.js';
 import { digitoVerificacion } from './nit.js';
 import {
-  AHORA, comparable, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
+  AHORA, comparable, conMunicipio, describirFila, marcaDeOrigen, marcaQueCabe, noEscritoEnLaOferta, noEscritoPorColumnasAusentes, patronDeSolicitud, planDeCargos,
   planDeCostosAdministrativos, planDeEquipos, dtiposDeEquipos, planDeInsumosOferta, planDeNoContinuos, planDeValoresAgregados, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, USUARIO_PUENTE,
 } from './oferta.js';
 
@@ -152,6 +152,22 @@ async function borrarInsumosPropios(conexion, { empresa, undnegocio, numOferta, 
     `DELETE FROM ${TABLA_INSUMOS_OFERTA} WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? AND user_add = ? AND pc_add = ?`,
     [empresa, undnegocio, numOferta, USUARIO_PUENTE, marca],
   );
+}
+
+/**
+ * Municipio de la UEN (`gl_undnegocios.codmun`): el de la fila de la empresa, o el de la UEN en otra empresa. Sin permiso o
+ * sin la columna, vacío (se avisa y la ciudad se digita en Contratos).
+ */
+async function leerMunicipioDeUen(conexion, empresa, undnegocio) {
+  try {
+    const [filas] = await conexion.query('SELECT empresa, codmun FROM gl_undnegocios WHERE codigo = ?', [undnegocio]);
+    const validas = filas.filter((f) => /^\d{5}$/.test(texto(f.codmun)));
+    const propia = validas.find((f) => texto(f.empresa) === texto(empresa)) ?? validas[0];
+    return propia ? texto(propia.codmun) : '';
+  } catch (error) {
+    if (!ERRORES_DE_ACCESO.has(error?.errno) && error?.errno !== 1054) throw error;
+    return '';
+  }
 }
 
 /** Reserva el siguiente número de oferta de (empresa, UEN). El UPDATE es atómico: dos reservas simultáneas nunca reciben el mismo número. */
@@ -318,16 +334,19 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
           advertencias.push({ campo: 'valoresAgregados', mensaje: `Esta base de Contratos no tiene la tabla ${TABLA_VALORES_AGREGADOS}: los valores agregados no se escribieron (sí van en el total de la tarifa).` });
         }
 
+        const codmun = await leerMunicipioDeUen(conexion, empresa, undnegocio);
+        if (!codmun) advertencias.push({ campo: 'oferta.undnegocio', mensaje: `La UEN ${undnegocio} no tiene municipio en Contratos (gl_undnegocios.codmun): la ciudad se digita en Contratos.` });
+
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
         const { fila: filaTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella });
-        const { filas: filasDeCargos } = planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina });
+        const filasDeCargos = conMunicipio(planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina }).filas, codmun);
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
-        const { filas: filasDeCostos } = planDeCostosAdministrativos(datosDeContratos, { numOferta, huella, cliente, catalogo: conceptosCostos });
-        const { filas: filasDeInsumos } = planDeInsumosOferta(datosDeContratos, { numOferta, huella, cliente });
-        const { filas: filasDeEquipos } = planDeEquipos(datosDeContratos, { numOferta, huella, cliente, dtipos });
-        const { filas: filasDeNoContinuos } = planDeNoContinuos(datosDeContratos, { numOferta, huella, cliente });
+        const filasDeCostos = conMunicipio(planDeCostosAdministrativos(datosDeContratos, { numOferta, huella, cliente, catalogo: conceptosCostos }).filas, codmun);
+        const filasDeInsumos = conMunicipio(planDeInsumosOferta(datosDeContratos, { numOferta, huella, cliente }).filas, codmun);
+        const filasDeEquipos = conMunicipio(planDeEquipos(datosDeContratos, { numOferta, huella, cliente, dtipos }).filas, codmun);
+        const filasDeNoContinuos = conMunicipio(planDeNoContinuos(datosDeContratos, { numOferta, huella, cliente }).filas, codmun);
         const filasDeValores = sinValoresAgregados ? [] : planDeValoresAgregados(datosDeContratos, { numOferta, huella }).filas;
         let insumosEscritos = false;
         await conexion.beginTransaction();

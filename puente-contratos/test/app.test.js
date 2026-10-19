@@ -46,6 +46,8 @@ after(() => {
   servidor.close();
 });
 
+/** El aviso de cargos sin horario se prueba aparte (planDeCargos); aquí se mira el resto. */
+const sinAvisoDeHorario = (lista) => lista.filter((a) => !/^Sin horario de Contratos/.test(a.mensaje));
 describe('autenticación', () => {
   it('/health responde sin token y no revela datos', async () => {
     const r = await fetch(`${base}/health`);
@@ -77,7 +79,7 @@ describe('POST /contratos (modo prueba)', () => {
     assert.equal(j.escribiria.cliente.nitCompleto, '900123456-8', 'Contratos guarda el NIT como base-DV; el DV lo calcula el puente');
     assert.equal(j.escribiria.contrato.valorMensual, 5000000);
     assert.match(j.huella, /^[0-9a-f]{64}$/);
-    assert.deepEqual(j.advertencias, []);
+    assert.deepEqual(sinAvisoDeHorario(j.advertencias), []);
   });
 
   it('muestra la fila de la oferta adjudicada que escribiría, en pesos enteros y sin reservar número', async () => {
@@ -94,7 +96,7 @@ describe('POST /contratos (modo prueba)', () => {
       [...['contrato.objeto', 'contrato.valorMensual', 'contrato.plazoMeses', 'cliente.direccion'], 'cargos'],
       'lo que no tiene destino en la base de Contratos se informa, no se pierde en silencio',
     );
-    assert.deepEqual(j.advertencias, []);
+    assert.deepEqual(sinAvisoDeHorario(j.advertencias), []);
     assert.deepEqual([j.escribiria.tarifaInicial.num_oferta, j.escribiria.tarifaInicial.aiu, j.escribiria.tarifaInicial.origen_proceso], [null, '0.1232', 'LIC']);
     assert.deepEqual(j.escribiria.cargosIniciales.map((c) => [c.cargo, c.item, c.nom_cargo, c.codhorario ?? null]), [[null, 1, 'Aseador', '941'], [null, 2, 'Supervisor', null]]);
   });
@@ -141,7 +143,7 @@ describe('POST /contratos (modo prueba)', () => {
     const j = await (await post(c)).json();
     assert.equal(j.ok, true);
     assert.equal(j.escribiria.cliente.direccion, null);
-    assert.deepEqual(j.advertencias.map((a) => a.campo).sort(), ['cliente.direccion', 'contrato.plazoMeses']);
+    assert.deepEqual(sinAvisoDeHorario(j.advertencias).map((a) => a.campo).sort(), ['cliente.direccion', 'contrato.plazoMeses']);
   });
 
   it('devuelve TODOS los errores a la vez (422), cada uno con su campo', async () => {
@@ -317,7 +319,7 @@ describe('contrato con LiciColba (archivo compartido con sus pruebas)', () => {
   it('el modo prueba lo acepta completo: la oferta adjudicada, sin advertencias; los cargos se informan como no escritos', async () => {
     const j = await (await post(archivo())).json();
     assert.equal(j.ok, true, JSON.stringify(j));
-    assert.deepEqual(j.advertencias, []);
+    assert.deepEqual(sinAvisoDeHorario(j.advertencias), []);
     assert.equal(j.escribiria.ofertaAdjudicada.vlr_manoobra, 13111200);
     assert.ok(j.noEscrito.some((n) => n.campo === 'cargos'));
   });

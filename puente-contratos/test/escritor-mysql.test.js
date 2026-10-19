@@ -47,7 +47,7 @@ function falso(respuestas = {}) {
     [/FROM fc_conceptos_costos_admtivos/, [[{ id: 1, descripcion: 'PÓLIZAS' }, { id: 2, descripcion: 'IMPUESTOS' }, { id: 6, descripcion: 'PAPELERÍA Y OFICINAS  ' }, { id: 11, descripcion: 'OTROS' }]]],
     [/FROM fc_conceptos/, [[{ empresa: '01', undnegocio: 'BAQ', codcpto: 'ASE' }]]],
     [/FROM fc_horarios/, [[{ codigo: '941' }]]],
-    [/FROM gl_undnegocios/, [[{ dbnomina: 'nominabq  ' }]]],
+    [/FROM gl_undnegocios/, [[{ empresa: '01', dbnomina: 'nominabq  ', codmun: '08001' }]]],
     [/FROM information_schema\.TABLES WHERE TABLE_NAME = 'cargos'/, [[]]],
     [/FROM `nominabq`\.cargos/, [NOMINA()]],
     [/FROM `nomina\w+`\.cargos/, [[]]],
@@ -107,6 +107,8 @@ const CARGOS = () => [
 /** 52.500.000 sin A.I.U. son 58.968.000 con el 12,32 %. */
 const conCargos = (cambiar = () => {}) => datos((e) => { e.tarifa.manoObra = 58968000; e.cargos = CARGOS(); cambiar(e); });
 
+/** El aviso de cargos sin horario se prueba aparte (planDeCargos); aquí se mira el resto. */
+const sinAvisoDeHorario = (lista) => lista.filter((a) => !/^Sin horario de Contratos/.test(a.mensaje));
 describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y precios)', () => {
   it('reserva el número y escribe la tarifa y la oferta adjudicada; devuelve lo escrito', async () => {
     const f = falso();
@@ -160,7 +162,7 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     assert.match(insert.sql, /^INSERT INTO fc_contratos_tarifa_inicial \(empresa, undnegocio, num_oferta, ncontrato, nit, rsocial,/);
     assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos\) VALUES \(/);
     assert.equal((insert.sql.match(/\?/g) ?? []).length, insert.params.length);
-    assert.equal(insert.params.length, 33, '34 columnas menos fadd, que es NOW()');
+    assert.equal(insert.params.length, 34, '35 columnas menos fadd, que es NOW()');
     assert.ok(insert.params.includes('LICICOLBA:42:ab12cd34ef56'));
     assert.ok(insert.params.includes('0.1232'), 'el A.I.U. viaja como texto decimal exacto');
     assert.ok(!insert.params.includes(undefined));
@@ -242,7 +244,7 @@ describe('escritor MySQL — cargos', () => {
       { item: 2, cargo: 99, nombre: 'Aseador', cantidad: 2 },
       { item: 3, cargo: 339, nombre: 'Supervisor', cantidad: 1 },
     ]);
-    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cargos[2].nombre'], 'SUPERVISOR está en la sede (104) y en los generales (339)');
+    assert.deepEqual(sinAvisoDeHorario(r.advertencias).map((a) => a.campo), ['cargos[2].nombre'], 'SUPERVISOR está en la sede (104) y en los generales (339)');
   });
 
   it('el código de cargo es el de la nómina de la UEN: la base sale de gl_undnegocios y se lee antes de reservar el número', async () => {
@@ -250,7 +252,7 @@ describe('escritor MySQL — cargos', () => {
     const r = await escribir(f.pool, conCargos());
     assert.deepEqual(f.de(/FROM gl_undnegocios/)[0].params, ['BAQ']);
     assert.ok(f.indice(/FROM `nominabq`\.cargos/) < f.indice(/^UPDATE fc_control/));
-    assert.match(r.advertencias[0].mensaje, /nominabq\.cargos .*códigos 104, 339.*se escribió el 339/);
+    assert.match(sinAvisoDeHorario(r.advertencias)[0].mensaje, /nominabq\.cargos .*códigos 104, 339.*se escribió el 339/);
   });
 
   it('un cargo que no está en la nómina de la UEN (o solo en la de otra) es un error por línea y no reserva número', async () => {
@@ -370,7 +372,7 @@ describe('escritor MySQL — cargos', () => {
 
   it('avisa si los cargos no suman lo que equivale la mano de obra, pero escribe', async () => {
     const r = await escribir(falso().pool, conCargos((e) => { e.tarifa.manoObra = 70000000; e.cargos[2].nombre = 'Turnante — bloque integrado de 42h'; }));
-    assert.deepEqual(r.advertencias.map((a) => a.campo), ['cargos']);
+    assert.deepEqual(sinAvisoDeHorario(r.advertencias).map((a) => a.campo), ['cargos']);
     assert.equal(r.escrito.cargos[2].cargo, 426, 'el turnante automático de LiciColba es el cargo TURNANTE');
     assert.equal(r.escrito.cargos.length, 3);
   });
@@ -378,7 +380,7 @@ describe('escritor MySQL — cargos', () => {
   it('sin cargos ni siquiera consulta fc_horarios ni toca la tabla de cargos', async () => {
     const f = falso();
     const r = await escribir(f.pool, datos());
-    assert.ok(!f.hubo(/cargos_iniciales/) && !f.hubo(/FROM fc_horarios/) && !f.hubo(/gl_undnegocios|\.cargos/));
+    assert.ok(!f.hubo(/cargos_iniciales/) && !f.hubo(/FROM fc_horarios/) && !f.hubo(/dbnomina|\.cargos/));
     assert.deepEqual(r.escrito.cargos, []);
   });
 });
@@ -525,10 +527,19 @@ describe('escritor MySQL — pestañas Costos Admtivos e Insumos de la Oferta In
     await escribir(f.pool, completa());
     const [costo] = f.de(/^INSERT INTO fc_contratos_costos_admtivos_iniciales/);
     assert.equal(costo.sql, 'INSERT INTO fc_contratos_costos_admtivos_iniciales (empresa, undnegocio, num_oferta, ncontrato, consec, concepto, punto_entrega, nombre_punto, codmun, id_cpto_costo, valor, user_add, fadd, pc_add) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)');
-    assert.deepEqual(costo.params.slice(0, 11), ['01', 'BAQ', 937, '', 1, 'ASE', '0000000000', 'CLIENTE DE PRUEBA S.A.S.', '', 1, 2500]);
+    assert.deepEqual(costo.params.slice(0, 11), ['01', 'BAQ', 937, '', 1, 'ASE', '0000000000', 'CLIENTE DE PRUEBA S.A.S.', '08001', 1, 2500], 'codmun = municipio de la UEN (gl_undnegocios)');
     assert.match(costo.params.at(-1), /^LICICOLBA:42:/);
     const [insumo] = f.de(/^INSERT INTO fc_elemxcont/);
     assert.deepEqual(insumo.params.slice(0, 12), ['01', 'BAQ', '900123456-8', '', 'F', '18111', 3, 2, 11900, 0, 937, 1]);
+    assert.ok(insumo.params.includes('08001'), 'el insumo también lleva el municipio');
+  });
+
+  it('sin municipio de la UEN en Contratos, la ciudad va vacía y se avisa (no bloquea)', async () => {
+    const f = falso({ [/FROM gl_undnegocios/.source]: [[{ empresa: '01', dbnomina: 'nominabq', codmun: '' }]] });
+    const r = await escribir(f.pool, completa());
+    assert.ok(r.advertencias.some((a) => /no tiene municipio/.test(a.mensaje)));
+    const [costo] = f.de(/^INSERT INTO fc_contratos_costos_admtivos_iniciales/);
+    assert.equal(costo.params[8], '');
   });
 
   it('sin costos administrativos no consulta el catálogo ni toca la tabla', async () => {

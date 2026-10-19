@@ -326,9 +326,9 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     await admin.query('DELETE FROM fc_conceptos_costos_admtivos');
     await admin.query("INSERT INTO fc_conceptos_costos_admtivos (id, descripcion) VALUES (1, 'POLIZAS'), (2, 'IMPUESTOS'), (9, 'OTROS')");
     // Como en Contratos: Tempocolba con NOMINATMB/nominatmbe y Transcolba sin base (el puente usa las confirmadas por Sistemas).
-    await admin.query('INSERT INTO gl_undnegocios (codigo, nombre, empresa, dbnomina) VALUES ?', [[
-      ['BAQ', 'BARRANQUILLA', '01', 'nominabq'], ['BOG', 'BOGOTA', '01', 'nominabq'], ['MIN', 'MINA', '01', 'nominamn'],
-      ['BAQ', 'BARRANQUILLA', '02', 'NOMINATMB'], ['BAQ', 'BARRANQUILLA', '02', 'nominatmbe'], ['BAQ', 'BARRANQUILLA', '03', ''],
+    await admin.query('INSERT INTO gl_undnegocios (codigo, nombre, empresa, dbnomina, codmun) VALUES ?', [[
+      ['BAQ', 'BARRANQUILLA', '01', 'nominabq', '08001'], ['BOG', 'BOGOTA', '01', 'nominabq', '11001'], ['MIN', 'MINA', '01', 'nominamn', ''],
+      ['BAQ', 'BARRANQUILLA', '02', 'NOMINATMB', '08001'], ['BAQ', 'BARRANQUILLA', '02', 'nominatmbe', '08001'], ['BAQ', 'BARRANQUILLA', '03', '', '08001'],
     ]]);
   });
   after(async () => {
@@ -506,8 +506,12 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     // 3. Con el cargo de nómina elegido (y la base de la vista), se escribe ese código.
     const r = await enviar(9101, cambios([linea('Jefe facturación y cartera', { codigoNomina: 3 }), linea('Servicio general')], { baseNomina: 'nominatmb' }));
     assert.equal(r.escrito.numOferta, antes + 1);
-    const [cargos] = await admin.query('SELECT cargo FROM fc_contratos_cargos_iniciales WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? ORDER BY id', ['02', 'BAQ', antes + 1]);
+    const [cargos] = await admin.query('SELECT cargo, codmun FROM fc_contratos_cargos_iniciales WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? ORDER BY id', ['02', 'BAQ', antes + 1]);
     assert.deepEqual(cargos.map((c) => Number(c.cargo)), [3, 43]);
+    // Como las ofertas a mano: cada cargo lleva el municipio de la UEN (gl_undnegocios.codmun).
+    assert.deepEqual(cargos.map((c) => c.codmun), ['08001', '08001']);
+    const [tarifa] = await admin.query('SELECT tipo FROM fc_contratos_tarifa_inicial WHERE empresa = ? AND undnegocio = ? AND num_oferta = ?', ['02', 'BAQ', antes + 1]);
+    assert.deepEqual(tarifa.map((t) => t.tipo), ['F']);
     // 4. Un código elegido que no está en la base se rechaza (nunca se escribe un cargo que Contratos no encuentra).
     const malo = await fallo(enviar(9102, cambios([linea('Jefe facturación y cartera', { codigoNomina: 777 })])));
     assert.match(malo.extra.errores[0].mensaje, /código de nómina 777/);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { cargarEsquemaEsperado } from '../src/esquema.js';
-import {
+import { jornadaDeCargo, conMunicipio,
   AHORA, aiuComoFraccion, comparable, COLUMNA_CARGO_HORARIO, COLUMNAS_CARGO_PANTALLA, COLUMNAS_CARGO_VFP, COLUMNAS_TARIFA_HISTORICAS, COLUMNAS_TARIFA_VFP, describirFila, marcaDeOrigen,
   codigosDeNomina, conceptoDeCostoAdmtivo, marcaQueCabe, MAX_INT10, noEscritoEnLaOferta, patronDeSolicitud, planDeCargos, planDeCostosAdministrativos, planDeInsumosOferta,
   claveDeSubtipo, dtiposDeEquipos, planDeEquipos, planDeNoContinuos, planDeOfertaAdjudicada, planDePreciosOferta, planDeTarifa, planDeValoresAgregados, TIPO_VALOR_AGREGADO, tipoDeActividad, USUARIO_PUENTE,
@@ -34,11 +34,11 @@ describe('aiuComoFraccion', () => {
 });
 
 describe('planDeTarifa', () => {
-  it('escribe EXACTAMENTE las 30 columnas del INSERT de cmdGrabar.Click, en su orden, más los 4 componentes históricos', () => {
+  it('escribe las 30 columnas del INSERT de cmdGrabar.Click más «tipo» (F, como las ofertas a mano), en su orden, y los 4 componentes históricos', () => {
     const { fila, errores } = planDeTarifa(datos(), { cliente: CLIENTE, numOferta: 937, huella: HUELLA });
     assert.deepEqual(errores, []);
     assert.deepEqual(Object.keys(fila), [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS]);
-    assert.equal(COLUMNAS_TARIFA_VFP.length, 30);
+    assert.equal(COLUMNAS_TARIFA_VFP.length, 31);
   });
 
   it('cada valor va a la columna que le corresponde', () => {
@@ -47,7 +47,7 @@ describe('planDeTarifa', () => {
       { ...fila, fadd: fila.fadd === AHORA ? 'NOW()' : fila.fadd },
       {
         empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', nit: '900123456-8', rsocial: 'CLIENTE DE PRUEBA S.A.S.', consec: 1,
-        codservicio: 'ASE', descripcion: 'Aseo y cafetería', tipo_adm: 'A',
+        codservicio: 'ASE', descripcion: 'Aseo y cafetería', tipo_adm: 'A', tipo: 'F',
         tarifa: 61155743 + 1000000 + 500000 + 5000000 + 700000 + 250000,
         tar_manoobra: 61155743, tar_examenes: 0, tar_dotacion: 0, tar_impuestos: 5000000,
         aiu: '0.1232', aiu_examenes: 0, aiu_dotacion: 0,
@@ -96,7 +96,7 @@ describe('planDeTarifa', () => {
 
   it('no escribe columnas que el formulario no escribe ni toca las del contrato', () => {
     const { fila } = planDeTarifa(datos(), { cliente: CLIENTE, huella: HUELLA });
-    for (const prohibida of ['tipo', 'tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'sector_economico', 'personas', 'id_oferta_adjudicada', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
+    for (const prohibida of ['tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'sector_economico', 'personas', 'id_oferta_adjudicada', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
       assert.ok(!(prohibida in fila), prohibida);
     }
   });
@@ -304,7 +304,7 @@ describe('planDeEquipos (pestaña Equipos)', () => {
     assert.deepEqual(describirFila(filas[0]), {
       empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo_servicio: '', codmun: '', punto_entrega: '0000000000',
       nom_punto_entrega: 'CLIENTE DE PRUEBA S.A.S.', tipo_equipo: '004', subtipo_equipo: '096', codigo: '', descrip_equipo: 'Aspiradora industrial',
-      precio_costo: 1190000, porc_vlr_compra: 0.82, cantidad: 1, frecuencia: 12, valor: 1190000, cant_facturar: 2, valor_inicial: 1190000,
+      precio_costo: 1190000, porc_vlr_compra: 0.82, cantidad: 1, frecuencia: 12, valor: 975800, cant_facturar: 2, valor_inicial: 1190000,
       user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: marcaDeOrigen(42, HUELLA), dtipo_equipo: '', vlr_mes_mantenimiento: 23000, vlr_mes_otr_rubros: 0, clase: 1, valor_inicial_va: 0,
     });
     cabeEnLaTabla('fc_contratos_equipos_iniciales', filas[0]);
@@ -566,13 +566,23 @@ describe('planDeCargos', () => {
   });
 
   it('avisa (sin bloquear) si los cargos no suman lo que equivale la mano de obra de la tarifa; cuadran con 1 peso por cargo de holgura', () => {
-    const cuadra = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA });
+    const conHorario = (e) => { e.cargos.forEach((c) => { c.codigoHorario = '941'; }); };
+    const cuadra = planDeCargos(conCargos(conHorario), { numOferta: 937, huella: HUELLA });
     assert.deepEqual(cuadra.advertencias, []);
-    const descuadra = planDeCargos(conCargos((e) => { e.cargos.pop(); }), { numOferta: 937, huella: HUELLA });
+    const descuadra = planDeCargos(conCargos((e) => { conHorario(e); e.cargos.pop(); }), { numOferta: 937, huella: HUELLA });
     assert.deepEqual(descuadra.advertencias.map((a) => a.campo), ['cargos']);
     assert.match(descuadra.advertencias[0].mensaje, /Los cargos suman 69\.000\.001 sin A\.I\.U\./);
-    const sinAIU = planDeCargos(conCargos((e) => { e.contrato.porcentajeAIU = null; }), { numOferta: 937, huella: HUELLA });
+    const sinAIU = planDeCargos(conCargos((e) => { conHorario(e); e.contrato.porcentajeAIU = null; }), { numOferta: 937, huella: HUELLA });
     assert.deepEqual(sinAIU.advertencias, [], 'sin A.I.U. no hay con qué comparar');
+  });
+
+  it('avisa (sin bloquear) qué cargos van sin horario de Contratos: las ofertas a mano siempre lo llevan', () => {
+    const r = planDeCargos(conCargos(), { numOferta: 937, huella: HUELLA });
+    assert.equal(r.errores.length, 0);
+    assert.equal(r.filas.length, 4);
+    assert.deepEqual(r.advertencias.map((a) => a.mensaje), [
+      'Sin horario de Contratos: cargo 2 «ASEADOR», 3 «Aseador», 4 «Supervisor». Elija el horario del cargo en Mano de Obra antes de enviar (o digítelo en Contratos).',
+    ]);
   });
 
   it('sin cargos (o sin la clave de la oferta) no hay filas', () => {
@@ -585,5 +595,20 @@ describe('planDeCargos', () => {
     const campos = noEscritoEnLaOferta(conCargos()).map((n) => n.campo);
     assert.ok(campos.includes('cargos'));
     assert.ok(!noEscritoEnLaOferta(datos()).some((n) => n.campo === 'cargos'));
+  });
+});
+
+describe('datos que las ofertas a mano siempre llevan', () => {
+  it('jornada: la de LiciColba; si no viene, horas de la semana ÷ 6 como a mano (44 → 7,33)', () => {
+    assert.equal(jornadaDeCargo({ jornada: 8, horasSemana: 48 }), 8);
+    assert.equal(jornadaDeCargo({ jornada: 0, horasSemana: 44 }), 7.33);
+    assert.equal(jornadaDeCargo({ jornada: null, horasSemana: 42 }), 7);
+    assert.equal(jornadaDeCargo({ jornada: 0, horasSemana: null }), 0);
+  });
+
+  it('municipio: solo llena las filas con codmun vacío; sin municipio no cambia nada', () => {
+    const filas = [{ codmun: '' }, { codmun: '13001' }, { otra: 1 }];
+    assert.deepEqual(conMunicipio(filas, '08001'), [{ codmun: '08001' }, { codmun: '13001' }, { otra: 1 }]);
+    assert.equal(conMunicipio(filas, ''), filas);
   });
 });

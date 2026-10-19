@@ -44,7 +44,7 @@ describe('sentenciasDePermisos', () => {
     assert.equal(MODULO_IMPLEMENTADO, 7);
     const sentencias = sentenciasDePermisos(esquema, { usuario: 'puente', base: 'almacen', hastaModulo: MODULO_IMPLEMENTADO });
     assert.equal(sentencias.length, 22);
-    assert.ok(sentencias.includes("GRANT SELECT (codigo, empresa, dbnomina) ON `almacen`.`gl_undnegocios` TO 'puente'@'%';"), 'qué nómina tiene cada UEN');
+    assert.ok(sentencias.includes("GRANT SELECT (codigo, empresa, dbnomina, codmun) ON `almacen`.`gl_undnegocios` TO 'puente'@'%';"), 'qué nómina tiene cada UEN');
     for (const nomina of ['nominabq', 'nominamn', 'nominatmb', 'nominatmb2', 'nominatr']) {
       assert.ok(sentencias.includes(`GRANT SELECT ON \`${nomina}\`.\`cargos\` TO 'puente'@'%';`), `códigos de cargo de ${nomina}`);
     }

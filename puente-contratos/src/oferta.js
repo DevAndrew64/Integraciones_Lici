@@ -19,9 +19,12 @@ const PREFIJO_MARCA = 'LICICOLBA:';
 export const MAX_INT10 = 2_147_483_647;
 
 /** Las 30 columnas del INSERT de tarifa de `cmdGrabar.Click`, en su orden. */
+/** «Tipo F/V» de la tarifa: F (fija), como 40 de las 41 ofertas digitadas a mano de 01/BAQ. */
+export const TIPO_TARIFA = 'F';
+
 export const COLUMNAS_TARIFA_VFP = [
   'empresa', 'undnegocio', 'num_oferta', 'ncontrato', 'nit', 'rsocial', 'consec', 'codservicio', 'descripcion', 'tipo_adm',
-  'tarifa', 'tar_manoobra', 'tar_examenes', 'tar_dotacion', 'tar_impuestos', 'aiu', 'aiu_examenes', 'aiu_dotacion',
+  'tipo', 'tarifa', 'tar_manoobra', 'tar_examenes', 'tar_dotacion', 'tar_impuestos', 'aiu', 'aiu_examenes', 'aiu_dotacion',
   'exa_medico_vta', 'venta_dotacion', 'dot_epp_factur', 'costos_reembol', 'aplica_dotacion', 'aplica_examen', 'aplica_curso', 'curso_vta',
   'origen_proceso', 'user_add', 'fadd', 'pc_add',
 ];
@@ -97,6 +100,7 @@ export function planDeTarifa(datos, { cliente, numOferta = null, huella = '' }) 
     codservicio: oferta.codServicio,
     descripcion: oferta.descripcionServicio ?? '',
     tipo_adm: oferta.tipoAdm,
+    tipo: TIPO_TARIFA, // «Tipo F/V» de la pantalla: las ofertas a mano van con F (fija)
     tarifa: total,
     // «Vr. Mano Obra» de LiciColba ya incluye turnantes, dotación/EPP y exámenes: no se venden aparte (los indicadores quedan en 0).
     tar_manoobra: t.manoObra,
@@ -415,6 +419,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
   const sinValor = [];
   const sinGrupo = [];
   const sinTipo = [];
+  const unMes = [];
   const filas = [];
   equipos.forEach((e, i) => {
     const comprar = e.cantidadComprar ?? 0;
@@ -424,6 +429,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
       return;
     }
     if (!e.codigoGrupo || !e.codigoSubtipo) sinGrupo.push(e.descripcion || `#${i + 1}`);
+    if (comprar > 0 && (e.mesesDepreciacion ?? 1) <= 1) unMes.push(e.descripcion || `#${i + 1}`);
     const dtipo = e.codigoGrupo && e.codigoSubtipo ? (dtipos?.get(claveDeSubtipo(e.codigoGrupo, e.codigoSubtipo)) ?? '') : '';
     if (dtipos && e.codigoGrupo && e.codigoSubtipo && !dtipo) sinTipo.push(e.descripcion || `#${i + 1}`);
     const precio = dosDecimales(e.valorUnitario ?? 0);
@@ -446,7 +452,8 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
       porc_vlr_compra: PORC_VLR_COMPRA,
       cantidad: dosDecimales(comprar),
       frecuencia: e.mesesDepreciacion ?? 1,
-      valor: precio,
+      // Como en todas las ofertas a mano: valor = precio × porc_vlr_compra, redondeado al peso.
+      valor: Math.round(precio * PORC_VLR_COMPRA),
       cant_facturar: dosDecimales(e.cantidadRequerida ?? comprar),
       valor_inicial: precio,
       user_add: USUARIO_PUENTE,
@@ -462,6 +469,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
   if (sinValor.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Sin compra ni mantenimiento (no van a la pestaña Equipos): ${sinValor.join(', ')}.` });
   if (sinGrupo.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Sin grupo o subtipo del activo (se completan en Contratos): ${sinGrupo.join(', ')}.` });
   if (sinTipo.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Subtipo sin «Tipo» en el catálogo de activos de Contratos (se completa en Contratos): ${sinTipo.join(', ')}.` });
+  if (unMes.length > 0) advertencias.push({ campo: 'equipos', mensaje: `Depreciación a 1 mes (el equipo se cobra completo en un mes; las ofertas a mano usan de 12 a 60): ${unMes.join(', ')}. Revise los meses de depreciación en Maquinaria y Equipos.` });
   return { errores, advertencias, filas };
 }
 
@@ -823,6 +831,25 @@ export function cruceDeCargos(cargos, filasNomina, contexto) {
  *   no reservado (modo prueba); `codigosNomina[i]` = código de nómina de la línea i
  * @returns {{errores: {campo: string, mensaje: string}[], advertencias: {campo: string, mensaje: string}[], filas: Record<string, unknown>[]}}
  */
+/**
+ * Municipio de la oferta (`codmun`) en las filas que lo llevan vacío. LiciColba no tiene la sede del contrato, así que se usa
+ * el municipio de la UEN (`gl_undnegocios.codmun`, p. ej. 08001 Barranquilla), que es el que llevan casi todas las ofertas
+ * a mano de esa UEN. Sin él, la pantalla deja vacías la ciudad y otros datos que dependen de ella.
+ */
+export function conMunicipio(filas, codmun) {
+  if (!codmun) return filas;
+  return filas.map((f) => (f && 'codmun' in f && !f.codmun ? { ...f, codmun } : f));
+}
+
+/**
+ * Horas por día de la línea («Jorn.»). Si LiciColba no la trae (línea sin días programados), se calcula como en las ofertas
+ * a mano: horas de la semana ÷ 6 (44 → 7,33; 42 → 7,00; 12 → 2,00).
+ */
+export function jornadaDeCargo(c) {
+  if (c.jornada > 0) return c.jornada;
+  return c.horasSemana > 0 ? Math.round((c.horasSemana / 6) * 100) / 100 : 0;
+}
+
 export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomina = null } = {}) {
   const errores = [];
   const advertencias = [];
@@ -845,7 +872,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
       tipo_cargo: TIPO_CARGO,
       item: i + 1,
       cargo: codigosNomina?.[i] ?? null,
-      jornada: c.jornada,
+      jornada: jornadaDeCargo(c),
       horassem: c.horasSemana,
       cantidad: c.cantidad,
       vlr_unitario: c.valorUnitario,
@@ -878,6 +905,17 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
     if (c.codigoHorario) fila[COLUMNA_CARGO_HORARIO] = c.codigoHorario;
     return fila;
   });
+
+  // Todas las ofertas a mano llevan horario en cada cargo; sin él la línea queda incompleta en Contratos.
+  // El turnante automático de LiciColba no tiene horario que elegir: ese se digita en Contratos.
+  const esTurnanteAutomatico = (c) => comparable(c.nombre ?? '').startsWith('TURNANTE');
+  const sinHorario = cargos.map((c, i) => (c.codigoHorario || esTurnanteAutomatico(c) ? null : `${i + 1} «${c.nombre}»`)).filter(Boolean);
+  if (sinHorario.length > 0) {
+    advertencias.push({
+      campo: 'cargos',
+      mensaje: `Sin horario de Contratos: cargo ${sinHorario.join(', ')}. Elija el horario del cargo en Mano de Obra antes de enviar (o digítelo en Contratos).`,
+    });
+  }
 
   const aiu = contrato?.porcentajeAIU;
   if (aiu && tarifa?.manoObra !== null && tarifa?.manoObra !== undefined) {

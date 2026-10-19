@@ -36,7 +36,7 @@ export function sentenciasDePermisos(esquema, { usuario, base, host = '%', hasta
   // nómina y `<base>.cargos` trae los códigos (se lee completa: sus columnas cambian de una nómina a otra).
   return [
     ...deTablas,
-    `GRANT SELECT (codigo, empresa, dbnomina) ON \`${base}\`.\`gl_undnegocios\` TO '${usuario}'@'${host}';`,
+    `GRANT SELECT (codigo, empresa, dbnomina, codmun) ON \`${base}\`.\`gl_undnegocios\` TO '${usuario}'@'${host}';`,
     ...BASES_DE_NOMINA.map((nomina) => `GRANT SELECT ON \`${nomina}\`.\`cargos\` TO '${usuario}'@'${host}';`),
   ];
 }
