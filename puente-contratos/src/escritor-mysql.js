@@ -159,12 +159,19 @@ const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1146]);
 /**
  * La tabla `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
  * `nominamn`), en el mismo servidor de Contratos. Devuelve sus filas o el error que impide escribir los cargos.
+ *
+ * `gl_undnegocios` registra cada UEN con UNA empresa (BAQ con Aseocolba, 01), pero Tempocolba (02) y Transcolba (03) usan
+ * las mismas UEN y la misma nómina (`nominabq.cargos` separa sus cargos con su columna `empresa`). Así que se usa la fila de
+ * la empresa si existe y, si no, la de la UEN en cualquier empresa, siempre que todas apunten a la misma base.
  */
 async function leerCargosDeNomina(conexion, empresa, undnegocio) {
-  const [unidades] = await conexion.query('SELECT dbnomina FROM gl_undnegocios WHERE codigo = ? AND empresa = ?', [undnegocio, empresa]);
-  const bases = [...new Set(unidades.map((u) => texto(u.dbnomina)).filter(Boolean))];
+  const [unidades] = await conexion.query('SELECT empresa, dbnomina FROM gl_undnegocios WHERE codigo = ?', [undnegocio]);
+  const propias = unidades.filter((u) => texto(u.empresa) === texto(empresa));
+  const elegidas = propias.length > 0 ? propias : unidades;
+  const bases = [...new Set(elegidas.map((u) => texto(u.dbnomina)).filter(Boolean))];
   if (bases.length !== 1 || !NOMBRE_DE_BASE.test(bases[0])) {
-    return { error: `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina). Avise a Contratos.` };
+    const detalle = bases.length > 1 ? ` (la UEN apunta a varias: ${bases.join(', ')})` : '';
+    return { error: `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina)${detalle}. Avise a Contratos.` };
   }
   const base = bases[0];
   try {

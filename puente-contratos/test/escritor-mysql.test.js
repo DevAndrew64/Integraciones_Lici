@@ -246,7 +246,7 @@ describe('escritor MySQL — cargos', () => {
   it('el código de cargo es el de la nómina de la UEN: la base sale de gl_undnegocios y se lee antes de reservar el número', async () => {
     const f = falso();
     const r = await escribir(f.pool, conCargos());
-    assert.deepEqual(f.de(/FROM gl_undnegocios/)[0].params, ['BAQ', '01']);
+    assert.deepEqual(f.de(/FROM gl_undnegocios/)[0].params, ['BAQ']);
     assert.ok(f.indice(/FROM `nominabq`\.cargos/) < f.indice(/^UPDATE fc_control/));
     assert.match(r.advertencias[0].mensaje, /nominabq\.cargos .*códigos 104, 339.*se escribió el 339/);
   });
@@ -257,6 +257,22 @@ describe('escritor MySQL — cargos', () => {
     assert.deepEqual(error.extra.errores.map((e) => e.campo), ['cargos[1].nombre']);
     assert.match(error.extra.errores[0].mensaje, /«Conductor» no existe en la nómina de la UEN BAQ \(nominabq\.cargos\)/);
     assert.ok(!f.hubo(/^UPDATE/) && !f.hubo(/^INSERT/));
+  });
+
+  it('Tempocolba y Transcolba usan la nómina de la UEN aunque gl_undnegocios la registre con Aseocolba; la fila de la empresa manda si existe', async () => {
+    const tempocolba = (unidades) => falso({
+      [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[{ empresa: '02', undnegocio: 'BAQ' }]],
+      [/FROM gl_undnegocios/.source]: [unidades],
+    });
+    const f = tempocolba([{ empresa: '01', dbnomina: 'nominabq' }]);
+    await escribir(f.pool, conCargos((e) => { e.oferta.empresa = '02'; }));
+    assert.ok(f.hubo(/FROM `nominabq`\.cargos/));
+    const propia = tempocolba([{ empresa: '01', dbnomina: 'nominabq' }, { empresa: '02', dbnomina: 'nominatempo' }]);
+    await escribir(propia.pool, conCargos((e) => { e.oferta.empresa = '02'; })).catch(() => {}); // la prueba solo sirve nominabq
+    assert.ok(propia.hubo(/FROM `nominatempo`\.cargos/) && !propia.hubo(/FROM `nominabq`\.cargos/));
+    const varias = tempocolba([{ empresa: '01', dbnomina: 'nominabq' }, { empresa: '12', dbnomina: 'nominatempor' }]);
+    const ambigua = await rechaza(escribir(varias.pool, conCargos((e) => { e.oferta.empresa = '02'; })), 422, 'DATOS_INVALIDOS');
+    assert.match(ambigua.extra.errores[0].mensaje, /varias: nominabq, nominatempor/);
   });
 
   it('sin base de nómina para la UEN, o sin permiso para leerla, no escribe y dice qué falta', async () => {
