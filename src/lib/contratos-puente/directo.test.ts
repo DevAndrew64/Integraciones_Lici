@@ -39,7 +39,7 @@ describe('enviarAContratos', () => {
     const motor = { enviar: vi.fn().mockResolvedValue({ estado: 200, cuerpo: { ok: true, modo: 'escritura', huella: 'abc', advertencias: [], noEscrito: [], escrito: { empresa: '01', undnegocio: 'BOG', numOferta: 931 } } }) };
     const r = await enviarAContratos(payload, {}, motor);
     expect(motor.enviar).toHaveBeenCalledWith(payload);
-    expect(r).toEqual({ ok: true, modo: 'escritura', huella: 'abc', advertencias: [], noEscrito: [], oferta: { empresa: '01', undnegocio: 'BOG', numOferta: 931 } });
+    expect(r).toEqual({ ok: true, modo: 'escritura', huella: 'abc', advertencias: [], noEscrito: [], oferta: { empresa: '01', undnegocio: 'BOG', numOferta: 931 }, filasEscritas: { cargos: 0, insumos: 0, equipos: 0, costosAdministrativos: 0, serviciosNoContinuos: 0, valoresAgregados: 0, listaDePrecios: 0 } });
   });
 
   it('una base sin conexión llega como un rechazo legible', async () => {

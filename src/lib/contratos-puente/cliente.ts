@@ -66,12 +66,37 @@ export interface NoEscrito {
 }
 
 export type ResultadoPuente =
-  | { ok: true; modo: string; huella: string; advertencias: ErrorCampo[]; oferta: OfertaContratos | null; noEscrito: NoEscrito[] }
+  | { ok: true; modo: string; huella: string; advertencias: ErrorCampo[]; oferta: OfertaContratos | null; noEscrito: NoEscrito[]; filasEscritas?: FilasEscritas | null }
   | { ok: false; tipo: 'NO_CONFIGURADO' }
   | { ok: false; tipo: 'DATOS_INVALIDOS'; errores: ErrorCampo[] }
   | { ok: false; tipo: 'YA_ENVIADA'; oferta: OfertaContratos | null; sinCambios: boolean }
   | { ok: false; tipo: 'CONFLICTO'; codigo: string; mensaje: string }
   | { ok: false; tipo: 'NO_DISPONIBLE' | 'TIMEOUT' | 'RECHAZADO' | 'ERROR_PUENTE'; mensaje: string };
+
+/** Cuántas filas quedaron en cada pestaña de la Oferta Inicial (solo en modo escritura; en modo prueba es null). */
+export interface FilasEscritas {
+  cargos: number;
+  insumos: number;
+  equipos: number;
+  costosAdministrativos: number;
+  serviciosNoContinuos: number;
+  valoresAgregados: number;
+  listaDePrecios: number;
+}
+
+const largo = (v: unknown): number => (Array.isArray(v) ? v.length : 0);
+function aFilasEscritas(escrito: Record<string, unknown> | undefined): FilasEscritas | null {
+  if (!escrito || typeof escrito.numOferta !== 'number') return null;
+  return {
+    cargos: largo(escrito.cargos),
+    insumos: largo(escrito.insumosOferta),
+    equipos: largo(escrito.equipos),
+    costosAdministrativos: largo(escrito.costosAdministrativos),
+    serviciosNoContinuos: largo(escrito.serviciosNoContinuos),
+    valoresAgregados: largo(escrito.valoresAgregados),
+    listaDePrecios: largo(escrito.preciosOferta),
+  };
+}
 
 type Entorno = Readonly<Record<string, string | undefined>>;
 
@@ -129,6 +154,7 @@ export function interpretarRespuesta(estado: number, cuerpo: Record<string, unkn
       advertencias: aErrores(cuerpo.advertencias),
       oferta: aOferta(escrito),
       noEscrito: aNoEscrito(cuerpo.noEscrito),
+      filasEscritas: aFilasEscritas(escrito),
     };
   }
   if (estado === 422 && cuerpo?.error === 'DATOS_INVALIDOS') return { ok: false, tipo: 'DATOS_INVALIDOS', errores: aErrores(cuerpo.errores) };

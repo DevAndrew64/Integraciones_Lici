@@ -50,20 +50,21 @@ describe('enviarAlPuente', () => {
   it('envía el JSON con el token y devuelve modo, huella y advertencias', async () => {
     comportamiento = responder(200, { ok: true, modo: 'dry-run', huella: 'abc', advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato' }], escribiria: {} });
     const r = await enviarAlPuente(payload, entorno());
-    expect(r).toEqual({ ok: true, modo: 'dry-run', huella: 'abc', advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato' }], oferta: null, noEscrito: [] });
+    expect(r).toEqual({ ok: true, modo: 'dry-run', huella: 'abc', advertencias: [{ campo: 'cliente.direccion', mensaje: 'Sin dato' }], oferta: null, noEscrito: [], filasEscritas: null });
     expect(ultimaPeticion).toEqual({ auth: 'Bearer token-de-prueba-0123456789', tipo: 'application/json', cuerpo: payload });
   });
 
   it('en modo escritura devuelve la oferta creada (empresa, UEN y número) y lo que no se escribió', async () => {
     comportamiento = responder(200, {
       ok: true, modo: 'escritura', huella: 'abc', advertencias: [],
-      escrito: { empresa: '01', undnegocio: 'BAQ', numOferta: 937, tarifa: { nit: '900123456-8' } },
+      escrito: { empresa: '01', undnegocio: 'BAQ', numOferta: 937, tarifa: { nit: '900123456-8' }, cargos: [{}, {}], equipos: [{}], costosAdministrativos: [{}, {}, {}] },
       noEscrito: [{ campo: 'contrato.plazoMeses', motivo: 'Va en las fechas del contrato.' }],
     });
     expect(await enviarAlPuente(payload, entorno())).toEqual({
       ok: true, modo: 'escritura', huella: 'abc', advertencias: [],
       oferta: { empresa: '01', undnegocio: 'BAQ', numOferta: 937 },
       noEscrito: [{ campo: 'contrato.plazoMeses', motivo: 'Va en las fechas del contrato.' }],
+      filasEscritas: { cargos: 2, insumos: 0, equipos: 1, costosAdministrativos: 3, serviciosNoContinuos: 0, valoresAgregados: 0, listaDePrecios: 0 },
     });
   });
 

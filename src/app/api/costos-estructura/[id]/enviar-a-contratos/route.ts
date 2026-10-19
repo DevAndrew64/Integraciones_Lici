@@ -137,7 +137,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
 
     if (r.ok) {
-      const creada = r.oferta ? `Oferta ${r.oferta.numOferta} creada en Contratos (empresa ${r.oferta.empresa}, UEN ${r.oferta.undnegocio}).` : null;
+      const f = r.filasEscritas ?? null;
+      const filas = f
+        ? ` Filas escritas: tarifa 1, mano de obra ${f.cargos}, insumos ${f.insumos}, equipos ${f.equipos}, costos admtivos ${f.costosAdministrativos}, servs. no continuos ${f.serviciosNoContinuos}, valores agregados ${f.valoresAgregados}, lista de precios ${f.listaDePrecios}.`
+        : '';
+      const creada = r.oferta ? `Oferta ${r.oferta.numOferta} creada en Contratos (empresa ${r.oferta.empresa}, UEN ${r.oferta.undnegocio}).${filas}` : null;
       const nota = r.modo === 'dry-run' ? ' (modo prueba: aún no se escribe en Contratos)' : '';
       const avisos = r.advertencias.length > 0 ? ` Quedan por revisar: ${r.advertencias.map((a) => describirCampo(a.campo, payload.cargos)).join(', ')}.` : '';
       const etiquetaNoEscrito = (campo: string) => (campo === 'cargos' ? 'sección, estudios, dotación, bonos y recargos de los cargos' : etiquetaCampo(campo));
@@ -149,6 +153,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         advertencias: r.advertencias,
         oferta: r.oferta,
         noEscrito: r.noEscrito,
+        filasEscritas: r.filasEscritas,
         mensaje: `${creada ?? `Datos validados para Contratos${nota}.`}${avisos}${aparte}${avisosGrupos.length > 0 ? ` Grupos que se eligen en Contratos (Contratos guarda uno por cargo): ${avisosGrupos.join('; ')}.` : ''}`,
       });
     }
