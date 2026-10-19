@@ -390,13 +390,15 @@ const dosDecimales = (n) => Math.round(n * 100) / 100;
 const NOMBRE_PUNTO_EQUIPOS_MAX = 50; // fc_contratos_equipos_iniciales.nom_punto_entrega char(50)
 const DESCRIPCION_EQUIPO_MAX = 50; // descrip_equipo varchar(50)
 
+/** `porc_vlr_compra` de las ofertas de equipos digitadas en Contratos. */
+export const PORC_VLR_COMPRA = 0.82;
+
 /**
  * Pestaña «Equipos» de la Oferta Inicial — filas de `fc_contratos_equipos_iniciales`, una por máquina de la pestaña
  * Maquinaria de LiciColba (las de Valor agregado van a su pestaña). Grupo y subtipo del activo son los del catálogo de
  * activos fijos (los mismos códigos de Contratos: `tipo_equipo`/`subtipo_equipo`). Como en las ofertas hechas a mano:
  * `cantidad` = a comprar, `cant_facturar` = requeridas, `frecuencia` = meses de depreciación. El precio va CON IVA y
- * `porc_vlr_compra` en 1, así `valor × cantidad ÷ frecuencia` + el mantenimiento mensual suman lo de «Vr. Maquinaria» de la
- * tarifa, sin A.I.U. (las ofertas a mano usan 0,82; se ajusta en Contratos si aplica).
+ * `porc_vlr_compra` en 0,82, el mismo de las ofertas digitadas en Contratos (John, 2026-10-19: igual que a mano).
  *
  * @param {object} datos contrato v1 ya validado
  * El «Tipo» intermedio (`dtipo_equipo`, entre Grupo y Subtipo) sale de `act_subtipos` (ver `dtiposDeEquipos`); sin
@@ -441,7 +443,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
       codigo: '',
       descrip_equipo: recortar(e.descripcion, DESCRIPCION_EQUIPO_MAX),
       precio_costo: precio,
-      porc_vlr_compra: 1,
+      porc_vlr_compra: PORC_VLR_COMPRA,
       cantidad: dosDecimales(comprar),
       frecuencia: e.mesesDepreciacion ?? 1,
       valor: precio,

@@ -304,7 +304,7 @@ describe('planDeEquipos (pestaña Equipos)', () => {
     assert.deepEqual(describirFila(filas[0]), {
       empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo_servicio: '', codmun: '', punto_entrega: '0000000000',
       nom_punto_entrega: 'CLIENTE DE PRUEBA S.A.S.', tipo_equipo: '004', subtipo_equipo: '096', codigo: '', descrip_equipo: 'Aspiradora industrial',
-      precio_costo: 1190000, porc_vlr_compra: 1, cantidad: 1, frecuencia: 12, valor: 1190000, cant_facturar: 2, valor_inicial: 1190000,
+      precio_costo: 1190000, porc_vlr_compra: 0.82, cantidad: 1, frecuencia: 12, valor: 1190000, cant_facturar: 2, valor_inicial: 1190000,
       user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: marcaDeOrigen(42, HUELLA), dtipo_equipo: '', vlr_mes_mantenimiento: 23000, vlr_mes_otr_rubros: 0, clase: 1, valor_inicial_va: 0,
     });
     cabeEnLaTabla('fc_contratos_equipos_iniciales', filas[0]);
