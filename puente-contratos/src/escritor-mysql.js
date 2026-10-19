@@ -157,10 +157,19 @@ const NOMBRE_DE_BASE = /^[A-Za-z0-9_]{1,64}$/;
 const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1146]);
 
 /**
+ * Bases de nómina por empresa confirmadas por Contratos (2026-10-19), en orden de preferencia: Tempocolba (02) usa
+ * `nominatmb` (quincenal) y `nominatmb2` (mensual); Transcolba (03) usa `nominatr`. Aseocolba (01) sigue con
+ * `gl_undnegocios`, que para ella está bien. Vigicolba está en otra base de datos y no se envía.
+ */
+const NOMINAS_DE_EMPRESA = Object.freeze({ '02': ['nominatmb', 'nominatmb2'], '03': ['nominatr'] });
+
+/**
  * Las tablas `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
  * `nominamn`), en el mismo servidor de Contratos. Devuelve las bases leídas, en el orden de `gl_undnegocios`, o el error.
  *
- * - Manda la fila de la empresa. Si la empresa no tiene fila para la UEN, se usa la de la UEN en otra empresa.
+ * - Tempocolba y Transcolba usan las nóminas que confirmó Contratos (`NOMINAS_DE_EMPRESA`), no las de `gl_undnegocios`
+ *   (allí Tempocolba tiene `NOMINATMB`/`nominatmbe` y Transcolba la base vacía).
+ * - Las demás: manda la fila de la empresa. Si la empresa no tiene fila para la UEN, se usa la de la UEN en otra empresa.
  * - Una fila de la empresa con `dbnomina` vacío (Transcolba en BAQ) es que esa UEN no tiene nómina: no se adivina otra.
  * - Con varias bases (Tempocolba en BAQ: `NOMINATMB` y `nominatmbe`, las dos existen) se leen todas las que existen con
  *   tabla `cargos`; quien llama usa la primera donde están todos los cargos de la oferta (`elegirNomina`).
@@ -169,7 +178,7 @@ async function leerCargosDeNomina(conexion, empresa, undnegocio) {
   const [unidades] = await conexion.query('SELECT empresa, dbnomina FROM gl_undnegocios WHERE codigo = ?', [undnegocio]);
   const propias = unidades.filter((u) => texto(u.empresa) === texto(empresa));
   const elegidas = propias.length > 0 ? propias : unidades;
-  let bases = [...new Set(elegidas.map((u) => texto(u.dbnomina)).filter((b) => NOMBRE_DE_BASE.test(b)))];
+  let bases = NOMINAS_DE_EMPRESA[texto(empresa)] ?? [...new Set(elegidas.map((u) => texto(u.dbnomina)).filter((b) => NOMBRE_DE_BASE.test(b)))];
   const sinBase = `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina)`;
   if (bases.length === 0) return { error: `${sinBase}. Avise a Contratos.` };
   if (bases.length > 1) {

@@ -262,32 +262,54 @@ describe('escritor MySQL — cargos', () => {
   });
 
   it('la base de nómina: manda la fila de la empresa; si no tiene, la de la UEN; con varias, la primera que tiene todos los cargos', async () => {
-    const tempocolba = (unidades, existentes = []) => falso({
-      [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[{ empresa: '02', undnegocio: 'BAQ' }]],
+    const empresa04 = (unidades, existentes = []) => falso({
+      [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[{ empresa: '04', undnegocio: 'BAQ' }]],
       [/FROM gl_undnegocios/.source]: [unidades],
       [/FROM information_schema\.TABLES WHERE TABLE_NAME = 'cargos'/.source]: [existentes.map((base) => ({ base }))],
     });
-    const enviar = (f) => escribir(f.pool, conCargos((e) => { e.oferta.empresa = '02'; }));
+    const enviar = (f) => escribir(f.pool, conCargos((e) => { e.oferta.empresa = '04'; }));
     // Sin fila de la empresa: la de la UEN.
-    const otra = tempocolba([{ empresa: '01', dbnomina: 'nominabq' }]);
+    const otra = empresa04([{ empresa: '01', dbnomina: 'nominabq' }]);
     await enviar(otra);
     assert.ok(otra.hubo(/FROM `nominabq`\.cargos/) && !otra.hubo(/information_schema/));
-    // Dos bases para 02/BAQ y existen las dos (como en Contratos): la primera no tiene los cargos, la segunda sí → la segunda.
-    const dos = tempocolba([{ empresa: '01', dbnomina: 'otra' }, { empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominabq' }], ['nominatmb', 'nominabq']);
+    // Dos bases para 04/BAQ y existen las dos (como en Contratos): la primera no tiene los cargos, la segunda sí → la segunda.
+    const dos = empresa04([{ empresa: '01', dbnomina: 'otra' }, { empresa: '04', dbnomina: 'NOMINATMB' }, { empresa: '04', dbnomina: 'nominabq' }], ['nominatmb', 'nominabq']);
     const r = await enviar(dos);
     assert.deepEqual(dos.de(/information_schema/)[0].params, [['NOMINATMB', 'nominabq']]);
     assert.ok(dos.hubo(/FROM `nominatmb`\.cargos/), 'usa el nombre real que da el servidor');
     assert.equal(r.escrito.numOferta, 937);
     assert.ok(r.advertencias.some((a) => /varias bases de nómina \(nominatmb, nominabq\): los códigos de cargo se tomaron de nominabq/.test(a.mensaje)));
     // Ninguna tiene todos los cargos: los errores de la primera.
-    const sinCargos = await rechaza(enviar(tempocolba([{ empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }], ['nominatmb', 'nominatmbe'])), 422, 'DATOS_INVALIDOS');
+    const sinCargos = await rechaza(enviar(empresa04([{ empresa: '04', dbnomina: 'NOMINATMB' }, { empresa: '04', dbnomina: 'nominatmbe' }], ['nominatmb', 'nominatmbe'])), 422, 'DATOS_INVALIDOS');
     assert.match(sinCargos.extra.errores[0].mensaje, /no existe en la nómina de la UEN BAQ \(nominatmb\.cargos\)/);
     // Ninguna existe en el servidor.
-    const ninguna = await rechaza(enviar(tempocolba([{ empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }])), 422, 'DATOS_INVALIDOS');
+    const ninguna = await rechaza(enviar(empresa04([{ empresa: '04', dbnomina: 'NOMINATMB' }, { empresa: '04', dbnomina: 'nominatmbe' }])), 422, 'DATOS_INVALIDOS');
     assert.match(ninguna.extra.errores[0].mensaje, /ninguna de NOMINATMB, nominatmbe tiene tabla cargos/);
-    // La empresa tiene fila pero sin base (Transcolba en BAQ): no toma la de otra empresa.
-    const vacia = await rechaza(enviar(tempocolba([{ empresa: '01', dbnomina: 'nominabq' }, { empresa: '02', dbnomina: '' }])), 422, 'DATOS_INVALIDOS');
-    assert.match(vacia.extra.errores[0].mensaje, /empresa 02 y la UEN BAQ/);
+    // La empresa tiene fila pero sin base (como Transcolba en gl_undnegocios): no toma la de otra empresa.
+    const vacia = await rechaza(enviar(empresa04([{ empresa: '01', dbnomina: 'nominabq' }, { empresa: '04', dbnomina: '' }])), 422, 'DATOS_INVALIDOS');
+    assert.match(vacia.extra.errores[0].mensaje, /empresa 04 y la UEN BAQ/);
+  });
+
+  it('Tempocolba usa nominatmb (quincenal) y luego nominatmb2 (mensual); Transcolba nominatr; gl_undnegocios no cuenta para ellas', async () => {
+    const renumerada = (suma) => [NOMINA().map((f) => ({ ...f, codigo: f.codigo + suma }))];
+    const de = (empresa, bases) => falso({
+      [/^SELECT empresa, undnegocio FROM fc_control/.source]: [[{ empresa, undnegocio: 'BAQ' }]],
+      [/FROM gl_undnegocios/.source]: [[{ empresa: '02', dbnomina: 'NOMINATMB' }, { empresa: '02', dbnomina: 'nominatmbe' }, { empresa: '03', dbnomina: '' }]],
+      [/FROM information_schema\.TABLES WHERE TABLE_NAME = 'cargos'/.source]: [Object.keys(bases).map((base) => ({ base }))],
+      [/FROM `nomina\w+`\.cargos/.source]: (_, sql) => bases[/FROM `(\w+)`/.exec(sql)[1]] ?? [[]],
+    });
+    const enviar = (f, empresa) => escribir(f.pool, conCargos((e) => { e.oferta.empresa = empresa; }));
+    const codigos = (f) => JSON.stringify(f.de(/^INSERT INTO fc_contratos_cargos_iniciales/).map((x) => x.params));
+
+    const quincenal = de('02', { nominatmb: renumerada(1000), nominatmb2: renumerada(2000) });
+    await enviar(quincenal, '02');
+    assert.ok(codigos(quincenal).includes('1099') && !quincenal.hubo(/nominatmbe/));
+    const mensual = de('02', { nominatmb: [[{ id: 1, empresa: '', undnegocio: '', codigo: 7, nombre: 'CONDUCTOR' }]], nominatmb2: renumerada(2000) });
+    await enviar(mensual, '02');
+    assert.ok(codigos(mensual).includes('2099'));
+    const transcolba = de('03', { nominatr: renumerada(3000) });
+    await enviar(transcolba, '03');
+    assert.ok(codigos(transcolba).includes('3099'));
   });
 
   it('sin base de nómina para la UEN, o sin permiso para leerla, no escribe y dice qué falta', async () => {
