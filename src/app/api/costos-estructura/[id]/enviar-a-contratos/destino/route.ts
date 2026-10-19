@@ -28,6 +28,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, empresa: r.destino.empresa, uens: r.destino.uens, origenProceso: r.origenProceso });
   } catch (e) {
     console.error('[GET /api/costos-estructura/[id]/enviar-a-contratos/destino]', e);
-    return NextResponse.json({ ok: false, error: 'ERROR_DESTINO_CONTRATOS', mensaje: 'No se pudo leer de Contratos la empresa y las UEN.' }, { status: 500 });
+    // El código del error (p. ej. ER_HOST_IS_BLOCKED) dice la causa sin exponer datos de la conexión.
+    const codigo = (e as { code?: unknown })?.code;
+    const causa = typeof codigo === 'string' && /^[A-Z0-9_]{1,40}$/.test(codigo) ? ` (código ${codigo})` : '';
+    return NextResponse.json({ ok: false, error: 'ERROR_DESTINO_CONTRATOS', mensaje: `No se pudo leer de Contratos la empresa y las UEN${causa}. El detalle está en la consola del servidor.` }, { status: 500 });
   }
 }

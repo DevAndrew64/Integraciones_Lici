@@ -11354,7 +11354,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       .then(async r=>({ok:r.ok,d:await r.json().catch(()=>({}))}))
       .then(({ok,d})=>{
         if(!vigente)return;
-        if(!ok||!d?.ok){setErrorDestinoContratos(String(d?.mensaje||'No se pudo leer de Contratos la empresa y las UEN.'));return;}
+        if(!ok||!d?.ok){setErrorDestinoContratos(String(d?.mensaje||'No se pudo leer de Contratos la empresa y las UEN: el servidor de LiciColba respondió con un error (revise la consola donde corre).'));return;}
         setDestinoLeidoContratos({empresa:d.empresa,uens:d.uens,origenProceso:d.origenProceso});
         let preferida:string|null=null;
         try{preferida=window.localStorage.getItem('contratosUen');}catch{/* sin almacenamiento local */}
