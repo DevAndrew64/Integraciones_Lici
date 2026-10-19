@@ -71,4 +71,18 @@ describe('crearMotor', () => {
       assert.deepEqual([r.estado, r.cuerpo.error], [503, codigo]);
     }
   });
+
+  it('destino: si la conexión del pool ya estaba cerrada, repite la lectura una vez con otra', async () => {
+    let caidas = 1;
+    const pool = { async query(sql) {
+      if (caidas > 0) { caidas -= 1; throw Object.assign(new Error("Can't add new command when connection is in closed state"), { fatal: true }); }
+      if (/fc_empresas/.test(sql)) return [[{ codigo: '02', undnegocio: 'BAQ', rsocial: 'Tempocolba S.A.S.' }]];
+      if (/fc_control/.test(sql)) return [[{ empresa: '02', undnegocio: 'BAQ' }]];
+      return [[]];
+    } };
+    const motor = crearMotor({ modo: 'dry-run', configMySQL: config, esquemaEsperado: cargarEsquemaEsperado(), crearPoolFn: () => pool });
+    const r = await motor.destino('TEMPOCOLBA');
+    assert.equal(r.estado, 200);
+    assert.equal(r.cuerpo.empresa.codigo, '02');
+  });
 });

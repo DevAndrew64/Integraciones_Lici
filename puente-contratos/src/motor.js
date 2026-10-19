@@ -16,6 +16,20 @@ const ERRORES_DE_CONEXION = new Set(['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', '
 /** Sin permiso de lectura sobre una tabla o base (o no existe). */
 const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1143, 1146]);
 
+/**
+ * Una lectura que falla porque la conexión del pool ya estaba muerta (el servidor la cerró, la red se cortó) se repite UNA vez:
+ * el pool descarta la conexión rota y abre otra. Lo demás sube tal cual.
+ */
+async function reintentarSiSeCayo(leer) {
+  try {
+    return await leer();
+  } catch (error) {
+    const caida = error?.fatal === true || ERRORES_DE_CONEXION.has(error?.code) || /closed state/i.test(String(error?.message ?? ''));
+    if (!caida) throw error;
+    return leer();
+  }
+}
+
 const respuesta = (estado, error, mensaje) => ({ estado, cuerpo: { ok: false, error, mensaje } });
 
 /**
@@ -54,7 +68,7 @@ export function crearMotor({ modo, configMySQL, esquemaEsperado, crearPoolFn = c
     async destino(nombreEmpresa) {
       try {
         pool ??= crearPoolFn(configMySQL);
-        return { estado: 200, cuerpo: { ok: true, ...(await leerDestino(pool, nombreEmpresa)) } };
+        return { estado: 200, cuerpo: { ok: true, ...(await reintentarSiSeCayo(() => leerDestino(pool, nombreEmpresa))) } };
       } catch (error) {
         if (ERRORES_DE_ACCESO.has(error?.errno)) {
           console.error(JSON.stringify({ evento: 'destino-sin-permiso', codigo: error.errno }));
@@ -85,7 +99,7 @@ export function crearMotor({ modo, configMySQL, esquemaEsperado, crearPoolFn = c
       const baseNomina = typeof pedido.baseNomina === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(pedido.baseNomina.trim()) ? pedido.baseNomina.trim() : null;
       try {
         pool ??= crearPoolFn(configMySQL);
-        const vista = await vistaDeNomina(pool, { empresa: pedido.empresa.trim(), undnegocio: pedido.undnegocio.trim(), cargos: limpios, baseNomina });
+        const vista = await reintentarSiSeCayo(() => vistaDeNomina(pool, { empresa: pedido.empresa.trim(), undnegocio: pedido.undnegocio.trim(), cargos: limpios, baseNomina }));
         if (!vista.ok) return respuesta(422, 'SIN_NOMINA', vista.mensaje);
         return { estado: 200, cuerpo: vista };
       } catch (error) {
