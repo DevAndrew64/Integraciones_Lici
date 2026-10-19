@@ -160,18 +160,30 @@ const ERRORES_DE_ACCESO = new Set([1044, 1049, 1142, 1146]);
  * La tabla `cargos` de la nómina de (empresa, UEN): la base sale de `gl_undnegocios.dbnomina` (p. ej. `nominabq`,
  * `nominamn`), en el mismo servidor de Contratos. Devuelve sus filas o el error que impide escribir los cargos.
  *
- * `gl_undnegocios` registra cada UEN con UNA empresa (BAQ con Aseocolba, 01), pero Tempocolba (02) y Transcolba (03) usan
- * las mismas UEN y la misma nómina (`nominabq.cargos` separa sus cargos con su columna `empresa`). Así que se usa la fila de
- * la empresa si existe y, si no, la de la UEN en cualquier empresa, siempre que todas apunten a la misma base.
+ * - Manda la fila de la empresa. Si la empresa no tiene fila para la UEN, se usa la de la UEN en otra empresa.
+ * - Una fila de la empresa con `dbnomina` vacío (Transcolba en BAQ) es que esa UEN no tiene nómina: no se adivina otra.
+ * - Si quedan varias bases (Tempocolba en BAQ: `NOMINATMB` y `nominatmbe`), se usa la única que de verdad existe en el
+ *   servidor con su tabla `cargos`; si existen varias o ninguna, no se escribe y se dice cuáles son.
  */
 async function leerCargosDeNomina(conexion, empresa, undnegocio) {
   const [unidades] = await conexion.query('SELECT empresa, dbnomina FROM gl_undnegocios WHERE codigo = ?', [undnegocio]);
   const propias = unidades.filter((u) => texto(u.empresa) === texto(empresa));
   const elegidas = propias.length > 0 ? propias : unidades;
-  const bases = [...new Set(elegidas.map((u) => texto(u.dbnomina)).filter(Boolean))];
-  if (bases.length !== 1 || !NOMBRE_DE_BASE.test(bases[0])) {
-    const detalle = bases.length > 1 ? ` (la UEN apunta a varias: ${bases.join(', ')})` : '';
-    return { error: `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina)${detalle}. Avise a Contratos.` };
+  let bases = [...new Set(elegidas.map((u) => texto(u.dbnomina)).filter((b) => NOMBRE_DE_BASE.test(b)))];
+  const sinBase = `Contratos no tiene una base de nómina para la empresa ${empresa} y la UEN ${undnegocio} (gl_undnegocios.dbnomina)`;
+  if (bases.length === 0) return { error: `${sinBase}. Avise a Contratos.` };
+  if (bases.length > 1) {
+    const [existentes] = await conexion.query(
+      "SELECT TABLE_SCHEMA AS base FROM information_schema.TABLES WHERE TABLE_NAME = 'cargos' AND TABLE_SCHEMA IN (?)",
+      [bases],
+    );
+    // Se compara sin mayúsculas (en Windows MySQL guarda los nombres en minúsculas) y se usa el nombre real de la base.
+    const reales = [...new Set(existentes.map((e) => texto(e.base)).filter((b) => NOMBRE_DE_BASE.test(b) && bases.some((x) => x.toLowerCase() === b.toLowerCase())))];
+    if (reales.length !== 1) {
+      const porque = reales.length > 1 ? `existen varias: ${reales.join(', ')}` : `ninguna de ${bases.join(', ')} tiene tabla cargos visible para el usuario de la conexión`;
+      return { error: `${sinBase}: ${porque}. Avise a Contratos.` };
+    }
+    bases = reales;
   }
   const base = bases[0];
   try {
