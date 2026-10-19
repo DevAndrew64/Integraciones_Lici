@@ -380,10 +380,17 @@ describe('planDeValoresAgregados (pestaña Valores Agregados)', () => {
       { tipo: 'SNC', valorMensual: 0 },
     ])), { numOferta: 937, huella: HUELLA });
     assert.deepEqual(filas.map(describirFila), [
-      { empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo: TIPO_VALOR_AGREGADO.REINVERSION, valor: 291666.67, tipo_reinv: 2, frec_reinv: 12, porc_reinv: 1.5, fproc: 'NOW()', usuario: 'LICICOLBA', pc: marcaDeOrigen(42, HUELLA) },
-      { empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo: TIPO_VALOR_AGREGADO.MAQUINARIA, valor: 1000, tipo_reinv: 1, frec_reinv: 1, porc_reinv: 0, fproc: 'NOW()', usuario: 'LICICOLBA', pc: marcaDeOrigen(42, HUELLA) },
+      { empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo: 1, valor: 291666.67, tipo_reinv: 2, frec_reinv: 12, porc_reinv: 1.5, fproc: 'NOW()', usuario: 'LICICOLBA', pc: marcaDeOrigen(42, HUELLA) },
+      { empresa: '01', undnegocio: 'BAQ', num_oferta: 937, ncontrato: '', consec: 1, concepto: 'ASE', tipo: 4, valor: 1000, tipo_reinv: 0, frec_reinv: 0, porc_reinv: 0, fproc: 'NOW()', usuario: 'LICICOLBA', pc: marcaDeOrigen(42, HUELLA) },
     ]);
     cabeEnLaTabla('fc_contratos_vlrs_agregs_iniciales', filas[0]);
+  });
+
+  it('los tipos son los de la plantilla de Contratos (1 a 5); EPP no existe allí y va como Insumos con aviso', () => {
+    assert.deepEqual({ ...TIPO_VALOR_AGREGADO }, { REINVERSION: 1, MANO_DE_OBRA: 2, INSUMOS: 3, MAQUINARIA: 4, SNC: 5, EPP: 3 });
+    const r = planDeValoresAgregados(datos((e) => (e.valoresAgregados = [{ tipo: 'EPP', valorMensual: 500 }, { tipo: 'SNC', valorMensual: 380536.33 }])), { numOferta: 937, huella: HUELLA });
+    assert.deepEqual(r.filas.map((f) => [f.tipo, f.valor, f.tipo_reinv, f.frec_reinv, f.porc_reinv]), [[3, 500, 0, 0, 0], [5, 380536.33, 0, 0, 0]]);
+    assert.match(r.advertencias[0].mensaje, /EPP: se envió como Insumos/);
   });
 });
 

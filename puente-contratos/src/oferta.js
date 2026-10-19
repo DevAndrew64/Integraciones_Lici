@@ -571,16 +571,18 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
 }
 
 /**
- * Tipo de valor agregado en Contratos (`fc_contratos_vlrs_agregs_iniciales.tipo`) para cada tipo de LiciColba.
- * POR CONFIRMAR con Contratos: se tomó el orden de los tipos de la pestaña Valor Agregado de LiciColba.
+ * Tipo de valor agregado en Contratos (`fc_contratos_vlrs_agregs_iniciales.tipo`) para cada tipo de LiciColba. Son los
+ * códigos de la plantilla que importa Contratos (hoja «Vlrs Agregs»): 1 Reinversión, 2 Mano de Obra, 3 Insumos,
+ * 4 Maquinaria, 5 Serv. No Continuos. Contratos no tiene tipo para EPP: va como Insumos y se avisa.
  */
-export const TIPO_VALOR_AGREGADO = Object.freeze({ REINVERSION: 1, MANO_DE_OBRA: 2, INSUMOS: 3, MAQUINARIA: 4, SNC: 5, EPP: 6 });
+export const TIPO_VALOR_AGREGADO = Object.freeze({ REINVERSION: 1, MANO_DE_OBRA: 2, INSUMOS: 3, MAQUINARIA: 4, SNC: 5, EPP: 3 });
 
 /**
  * Pestaña «Valores Agregados» de la Oferta Inicial — filas de `fc_contratos_vlrs_agregs_iniciales`, una por fila de la
  * pestaña Valor Agregado de LiciColba (reinversiones y recursos marcados como valor agregado), con su valor MENSUAL sin
- * A.I.U. (la suma es «Vr. Valor Agregado» de la tarifa), el tipo de reinversión (1 valor, 2 porcentaje), su frecuencia
- * (código de Grupo Colba) y el porcentaje. Esta tabla no tiene `user_add`/`pc_add`: la marca va en `usuario`/`pc`.
+ * A.I.U. (la suma es «Vr. Valor Agregado» de la tarifa). Solo la reinversión lleva tipo (1 valor, 2 porcentaje),
+ * frecuencia y porcentaje; en las demás van en 0, como en la plantilla y las ofertas de Contratos. Esta tabla no tiene
+ * `user_add`/`pc_add`: la marca va en `usuario`/`pc`.
  *
  * @param {object} datos contrato v1 ya validado
  * @param {{numOferta?: number | null, huella?: string}} contexto
@@ -591,6 +593,9 @@ export function planDeValoresAgregados(datos, { numOferta = null, huella = '' } 
   const valores = datos.valoresAgregados ?? [];
   if (valores.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
   const { oferta, origen } = datos;
+  if (valores.some((v) => v.tipo === 'EPP' && v.valorMensual > 0)) {
+    advertencias.push({ campo: 'valoresAgregados', mensaje: 'Contratos no tiene tipo de valor agregado para EPP: se envió como Insumos (tipo 3).' });
+  }
   const filas = valores
     .filter((v) => v.valorMensual > 0)
     .map((v) => ({
@@ -602,9 +607,9 @@ export function planDeValoresAgregados(datos, { numOferta = null, huella = '' } 
       concepto: oferta.codServicio,
       tipo: TIPO_VALOR_AGREGADO[v.tipo],
       valor: dosDecimales(v.valorMensual),
-      tipo_reinv: v.tipoReinversion === 'PORCENTAJE' ? 2 : 1,
-      frec_reinv: v.frecuencia ?? 1,
-      porc_reinv: Math.round((v.porcentaje ?? 0) * 1e4) / 1e4,
+      ...(v.tipo === 'REINVERSION'
+        ? { tipo_reinv: v.tipoReinversion === 'PORCENTAJE' ? 2 : 1, frec_reinv: v.frecuencia ?? 1, porc_reinv: Math.round((v.porcentaje ?? 0) * 1e4) / 1e4 }
+        : { tipo_reinv: 0, frec_reinv: 0, porc_reinv: 0 }),
       fproc: AHORA,
       usuario: USUARIO_PUENTE,
       pc: marcaDeOrigen(origen.solicitudId, huella),
