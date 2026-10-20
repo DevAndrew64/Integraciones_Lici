@@ -2,7 +2,8 @@ import { porcentajeAIU, valorConAIU, type ResultadoGuardado } from '@/lib/costos
 import type {
   AdministrativosPantallaDto, FilaInsumoPantallaDto, FilaMaquinariaPantallaDto, FilaValorAgregadoPantallaDto, ServicioNoContinuoPantallaDto, TotalesPantallaDto,
 } from '@/lib/costos-estructura/exportacion/costos-pantalla';
-import type { CargoPayload } from './cargos';
+import { enOtraTarifa, type CargoPayload } from './cargos';
+import type { TarifaPayload } from './tarifas';
 import type { ErrorCampo, PayloadContratosV1 } from './cliente';
 
 export interface SolicitudParaPuente {
@@ -76,12 +77,16 @@ export interface InsumoPayload {
   cantidad: number;
   frecuenciaMeses: number;
   valorUnitarioConIva: number;
+  /** Consecutivo de su tarifa, solo cuando no es la 1. */
+  tarifa?: number;
 }
 
 /** Costo administrativo mensual de la oferta, sin A.I.U. (pestaña Costos Admtivos de Contratos). */
 export interface CostoAdministrativoPayload {
   concepto: string;
   valorMensual: number;
+  /** Consecutivo de su tarifa, solo cuando no es la 1. */
+  tarifa?: number;
 }
 
 /**
@@ -100,6 +105,7 @@ export function insumosParaPuente(filas: FilaInsumoPantallaDto[] | null | undefi
       // La pantalla trata una frecuencia vacía o en 0 como mensual.
       frecuenciaMeses: Number.isFinite(f.frecuenciaMeses) && f.frecuenciaMeses > 0 ? f.frecuenciaMeses : 1,
       valorUnitarioConIva: Number.isFinite(f.valorUnitarioConIva) && f.valorUnitarioConIva >= 0 ? f.valorUnitarioConIva : 0,
+      ...otraTarifa(f.tarifa),
     }));
 }
 
@@ -127,6 +133,8 @@ export interface EquipoPayload {
   cantidadComprar: number;
   mesesDepreciacion: number;
   valorMesMantenimiento: number;
+  /** Consecutivo de su tarifa, solo cuando no es la 1. */
+  tarifa?: number;
 }
 
 /** Servicio no continuo (pestaña Servs. No Continuos de Contratos): código y UEN del catálogo, frecuencia y costos sin A.I.U. */
@@ -145,6 +153,8 @@ export interface ServicioNoContinuoPayload {
   diasServicio: number | null;
   horasServicio: number | null;
   operarios: number | null;
+  /** Consecutivo de su tarifa, solo cuando no es la 1. */
+  tarifa?: number;
 }
 
 /** Fila de la pestaña Valores Agregados de Contratos: valor mensual sin A.I.U., frecuencia y, en reinversiones, su tipo y porcentaje. */
@@ -155,6 +165,8 @@ export interface ValorAgregadoPayload {
   frecuencia: number | null;
   tipoReinversion: 'VALOR' | 'PORCENTAJE' | null;
   porcentaje: number | null;
+  /** Consecutivo de su tarifa, solo cuando no es la 1. */
+  tarifa?: number;
 }
 
 /** Texto que Contratos (latin1) puede guardar: lo demás se cambia por un espacio; sin dobles espacios y hasta `max` caracteres. */
@@ -166,6 +178,7 @@ const codigoCorto = (v: string | null | undefined, max: number) => {
 };
 const positivo = (v: number | undefined | null) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
 const enteroHasta = (v: number | null | undefined, max: number) => (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= max ? v : null);
+const otraTarifa = (t: unknown) => (enOtraTarifa(t) ? { tarifa: t as number } : {});
 const frecuenciaValida = (v: number | null | undefined) => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 15 ? v : null);
 
 /** Las máquinas de la pantalla que van a la pestaña Equipos (sin las de Valor agregado, que van a su pestaña). */
@@ -181,6 +194,7 @@ export function equiposParaPuente(filas: FilaMaquinariaPantallaDto[] | null | un
       cantidadComprar: positivo(f.cantidadComprar),
       mesesDepreciacion: Math.min(999, Math.max(1, Math.round(positivo(f.mesesDepreciacion) || 1))),
       valorMesMantenimiento: positivo(f.valorMesMantenimiento),
+      ...otraTarifa(f.tarifa),
     }));
 }
 
@@ -204,6 +218,7 @@ export function serviciosNoContinuosParaPuente(servicios: ServicioNoContinuoPant
         diasServicio: enteroHasta(s.diasServicio, 999),
         horasServicio: positivo(s.horasServicio) > 0 && positivo(s.horasServicio) <= 24 ? Math.round(positivo(s.horasServicio) * 100) / 100 : null,
         operarios: enteroHasta(s.operarios, 9999),
+        ...otraTarifa(s.tarifa),
       };
     });
 }
@@ -219,6 +234,7 @@ export function valoresAgregadosParaPuente(filas: FilaValorAgregadoPantallaDto[]
       frecuencia: frecuenciaValida(f.frecuencia),
       tipoReinversion: f.tipoReinversion,
       porcentaje: typeof f.porcentaje === 'number' && Number.isFinite(f.porcentaje) && f.porcentaje >= 0 && f.porcentaje <= 100 ? f.porcentaje : null,
+      ...otraTarifa(f.tarifa),
     }));
 }
 
@@ -245,6 +261,8 @@ export function armarPayloadContratos(d: {
   valoresAgregados?: ValorAgregadoPayload[] | null;
   /** Base de nómina de donde salen los códigos de cargo (la de la vista previa); sin ella el puente elige. */
   baseNomina?: string | null;
+  /** Varias tarifas (`tarifasDelCosteo`); con una sola, nada. */
+  tarifas?: TarifaPayload[] | null;
 }): PayloadContratosV1 {
   const { solicitud: s, resultado: r, totales: t, destino: dest, cargos, insumos, costosAdministrativos, equipos, serviciosNoContinuos, valoresAgregados } = d;
   const aiu = porcentajeAIU(r?.porcentajeIU);
@@ -276,6 +294,7 @@ export function armarPayloadContratos(d: {
       valorAgregado: conAIU(t?.valorAgregado),
       serviciosNoContinuos: conAIU(t?.serviciosNoContinuos),
     },
+    ...(d.tarifas && d.tarifas.length > 1 ? { tarifas: d.tarifas } : {}),
     ...(cargos && cargos.length > 0 ? { cargos } : {}),
     ...(insumos && insumos.length > 0 ? { insumos } : {}),
     ...(costosAdministrativos && costosAdministrativos.length > 0 ? { costosAdministrativos } : {}),

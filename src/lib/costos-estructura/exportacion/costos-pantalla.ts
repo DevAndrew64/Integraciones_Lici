@@ -29,6 +29,8 @@ export interface VariableAdministrativaPantallaDto {
   cantidad: number;
   valorUnitario: number;
   valorMensual: number;
+  /** Tarifa de Contratos a la que va (1, 2, …) cuando la oferta lleva varias; sin ella, la 1. */
+  tarifa?: number | null;
 }
 
 export interface AdministrativosPantallaDto {
@@ -87,6 +89,8 @@ export interface FilaInsumoPantallaDto {
   valorMensual: number;
   /** Marcado como Valor agregado: se lista, pero NO suma en el total de Insumos. */
   valorAgregado: boolean;
+  /** Tarifa de Contratos a la que va (1, 2, …) cuando la oferta lleva varias; sin ella, la 1. */
+  tarifa?: number | null;
 }
 
 export interface FilaMaquinariaPantallaDto {
@@ -105,6 +109,8 @@ export interface FilaMaquinariaPantallaDto {
   codigoSubtipo?: string;
   mesesDepreciacion?: number;
   valorConIva?: number;
+  /** Tarifa de Contratos a la que va (1, 2, …) cuando la oferta lleva varias; sin ella, la 1. */
+  tarifa?: number | null;
 }
 
 /** Un servicio no continuo tal como lo muestra la pantalla (para «Enviar a Contratos»). Valores sin A.I.U. */
@@ -128,6 +134,8 @@ export interface ServicioNoContinuoPantallaDto {
   diasServicio?: number | null;
   horasServicio?: number | null;
   operarios?: number | null;
+  /** Tarifa de Contratos a la que va (1, 2, …) cuando la oferta lleva varias; sin ella, la 1. */
+  tarifa?: number | null;
 }
 
 /** Una fila de la pestaña Valor Agregado (para «Enviar a Contratos»): ya mensualizada, sin A.I.U. */
@@ -138,6 +146,8 @@ export interface FilaValorAgregadoPantallaDto {
   frecuencia: number | null;
   tipoReinversion: 'VALOR' | 'PORCENTAJE' | null;
   porcentaje: number | null;
+  /** Tarifa de Contratos a la que va (1, 2, …) cuando la oferta lleva varias; sin ella, la 1. */
+  tarifa?: number | null;
 }
 
 export interface CostosPantallaDto {

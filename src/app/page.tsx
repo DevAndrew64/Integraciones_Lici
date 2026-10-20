@@ -90,6 +90,8 @@ import { CATALOGO_VACUNAS, type VacunaCatalogo } from '@/data/costos-estructura/
 import type { ExportacionManoObraDto, FichaManoObraExportDto, DetalleUnitarioExportDto } from '@/lib/costos-mano-obra/exportacion/tipos-exportacion';
 import type { CargoPantallaDto, GruposCargoDto } from '@/lib/contratos-puente/cargos';
 import { conceptoAutomatico, tipoTarifaContratos, uenSugerida, type UenContratos } from '@/lib/contratos-puente/destino';
+import { costoPorTarifa, leerTarifasGuardadas, lineasParaTarifas, ponerTarifas, quitarTarifa, tarifaElegida, TARIFAS_VACIAS, type TarifasGuardadas } from '@/lib/contratos-puente/tarifas-pantalla';
+import { MAX_TARIFAS } from '@/lib/contratos-puente/tarifas';
 import { horasDeProgramacion } from '@/lib/contratos-puente/horas-cargo';
 import { aplicarEleccionNomina, cargosParaVista, cargosSinNomina, claveCargo, ELECCION_VACIA, leerEleccionNomina, leerVistaNomina, type EleccionNomina, type VistaNomina } from '@/lib/contratos-puente/nomina';
 import type { CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
@@ -14742,10 +14744,14 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     if(!destinoContratos.codServicio){setEnvioContratos({ok:false,texto:`Seleccione el concepto de facturación de la UEN ${destinoContratos.undnegocio}.`});return;}
     if(leyendoNomina){setEnvioContratos({ok:false,texto:'Espere a que termine la revisión de los cargos en la nómina.'});return;}
     if(cargosPendientesNomina.length>0){setEnvioContratos({ok:false,texto:`Elija en «Cargos en nómina» el cargo que corresponde a: ${cargosPendientesNomina.join(', ')}.`});return;}
+    const sinConcepto=tarifasContratos.conceptos.findIndex(c=>!c);
+    if(sinConcepto>=0){setEnvioContratos({ok:false,texto:`Elija el concepto de facturación de la tarifa ${sinConcepto+2}.`});return;}
+    const conTarifas=ponerTarifas(construirCostosPantallaDto(),aplicarEleccionNomina(construirCargosContratosDto(),eleccionNomina),tarifasContratos.lineas,cuantasTarifasContratos);
+    const tarifas=cuantasTarifasContratos>1?[destinoContratos.codServicio,...tarifasContratos.conceptos].map((codServicio,i)=>({consec:i+1,codServicio})):undefined;
     setEnviandoContratos(true);
     try{
       const res=await fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos`,{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:construirCostosPantallaDto(),contratos:{...destinoContratos,baseNomina:vistaNomina?.base??eleccionNomina.baseNomina},cargos:aplicarEleccionNomina(construirCargosContratosDto(),eleccionNomina)}),
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({solicitudId:solicitudProceso.id,costosDto:conTarifas.dto,contratos:{...destinoContratos,baseNomina:vistaNomina?.base??eleccionNomina.baseNomina,...(tarifas?{tarifas}:{})},cargos:conTarifas.cargos}),
       });
       const d=await res.json().catch(()=>({}));
       setEnvioContratos({ok:res.ok,texto:String(d.mensaje||(res.ok?'Datos enviados a Contratos.':'No se pudo enviar a Contratos.'))});
@@ -15431,6 +15437,20 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     setEleccionNomina(nueva);
     if(claveEleccionNomina){try{window.localStorage.setItem(claveEleccionNomina,JSON.stringify(nueva));}catch{/* sin almacenamiento local */}}
   }
+  // Varias tarifas en la oferta: la 1 lleva el concepto de arriba; las 2, 3… su propio concepto, y cada línea del costeo
+  // dice a cuál va (de entrada a la 1). Se recuerda en este navegador por costeo y UEN.
+  const claveTarifasContratos=costoEstructuraIdActual&&destinoContratos.undnegocio?`contratosTarifas:${costoEstructuraIdActual}:${destinoContratos.undnegocio}`:null;
+  const [tarifasContratos,setTarifasContratos]=useState<TarifasGuardadas>(TARIFAS_VACIAS);
+  useEffect(()=>{
+    let guardadas:TarifasGuardadas=TARIFAS_VACIAS;
+    if(claveTarifasContratos){try{guardadas=leerTarifasGuardadas(JSON.parse(window.localStorage.getItem(claveTarifasContratos)??'null'));}catch{/* sin almacenamiento local */}}
+    setTarifasContratos(guardadas);
+  },[claveTarifasContratos]);
+  function guardarTarifasContratos(nuevas:TarifasGuardadas){
+    setTarifasContratos(nuevas);
+    if(claveTarifasContratos){try{window.localStorage.setItem(claveTarifasContratos,JSON.stringify(nuevas));}catch{/* sin almacenamiento local */}}
+  }
+  const cuantasTarifasContratos=1+tarifasContratos.conceptos.length;
   const [vistaNomina,setVistaNomina]=useState<VistaNomina|null>(null);
   const [errorVistaNomina,setErrorVistaNomina]=useState<string|null>(null);
   const [leyendoNomina,setLeyendoNomina]=useState(false);
@@ -20608,6 +20628,55 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                                     <option value="">Seleccione…</option>
                                     {uenSel.conceptos.map(c=><option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}{c.veces?` (${c.veces} tarifa${c.veces===1?'':'s'})`:''}</option>)}
                                   </select></div>)}
+                            {uenSel&&uenSel.conceptos.length>0&&(()=>{
+                              const n=cuantasTarifasContratos;
+                              const lineas=n>1?lineasParaTarifas(construirCostosPantallaDto(),construirCargosContratosDto()):[];
+                              const costos=n>1?costoPorTarifa(lineas,tarifasContratos.lineas,n):[];
+                              const nota={fontSize:10.5,color:'#475569',fontFamily:F,lineHeight:1.4};
+                              const enlace={border:'none',background:'none',padding:0,color:NAVY,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:F};
+                              const opcionesConcepto=uenSel.conceptos.map(c=><option key={c.codigo} value={c.codigo}>{c.codigo} · {c.descripcion}</option>);
+                              const grupos=Array.from(new Set(lineas.map(l=>l.grupo)));
+                              return(<div style={{display:'grid',gap:5}}>
+                                <div style={lbl}>Tarifas de la oferta</div>
+                                {n===1
+                                  ?<div style={nota}>Una sola tarifa, con el concepto de arriba. Si el contrato factura por separado (por ejemplo aseo y cafetería), agregue otra tarifa y diga qué va en cada una.</div>
+                                  :<>
+                                    <div style={nota}><b>Tarifa 1</b> · concepto {destinoContratos.codServicio||'—'} (el de arriba) · líneas por {cop(costos[0]??0)}</div>
+                                    {tarifasContratos.conceptos.map((c,i)=>(
+                                      <div key={i} style={{display:'grid',gap:3}}>
+                                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                          <span style={{fontSize:11,fontWeight:700,color:'#0f172a',fontFamily:F,whiteSpace:'nowrap' as const}}>Tarifa {i+2}</span>
+                                          <select style={inp} value={c} aria-label={`Concepto de la tarifa ${i+2}`}
+                                            onChange={e=>guardarTarifasContratos({...tarifasContratos,conceptos:tarifasContratos.conceptos.map((x,j)=>j===i?e.target.value:x)})}>
+                                            <option value="">Concepto…</option>{opcionesConcepto}
+                                          </select>
+                                          <button type="button" style={enlace} title={`Quitar la tarifa ${i+2}: sus líneas vuelven a la 1`} onClick={()=>guardarTarifasContratos(quitarTarifa(tarifasContratos,i+2))}>Quitar</button>
+                                        </div>
+                                        <div style={nota}>Líneas por {cop(costos[i+1]??0)}</div>
+                                      </div>))}
+                                    <div style={nota}>Valores sin A.I.U.; al enviar, pólizas e impuestos se reparten según lo que pesa cada tarifa y todas suman la oferta.</div>
+                                  </>}
+                                {n<MAX_TARIFAS&&<div><button type="button" style={enlace} onClick={()=>guardarTarifasContratos({...tarifasContratos,conceptos:[...tarifasContratos.conceptos,'']})}>+ Agregar otra tarifa</button></div>}
+                                {n>1&&(
+                                  <details open style={{border:'1px solid #e5e7eb',borderRadius:6,padding:'6px 8px'}}>
+                                    <summary style={{fontSize:11,fontWeight:700,color:'#0f172a',cursor:'pointer',fontFamily:F}}>Qué va en cada tarifa ({lineas.length} líneas)</summary>
+                                    <div style={{display:'grid',gap:6,marginTop:6}}>
+                                      {grupos.map(g=>(
+                                        <div key={g} style={{display:'grid',gap:3}}>
+                                          <div style={lbl}>{g}</div>
+                                          {lineas.filter(l=>l.grupo===g).map(l=>(
+                                            <div key={l.clave} style={{display:'flex',alignItems:'center',gap:6}}>
+                                              <span style={{flex:1,minWidth:0,fontSize:11,color:'#0f172a',fontFamily:F,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const}} title={`${l.nombre} · ${cop(l.valor)}`}>{l.nombre||'—'}</span>
+                                              <select style={{...inp,width:64,flex:'0 0 64px'}} value={tarifaElegida(tarifasContratos.lineas,l.clave,n)} aria-label={`Tarifa de ${l.nombre}`}
+                                                onChange={e=>{const t=Number(e.target.value);const lineasT={...tarifasContratos.lineas};if(t>1)lineasT[l.clave]=t;else delete lineasT[l.clave];guardarTarifasContratos({...tarifasContratos,lineas:lineasT});}}>
+                                                {Array.from({length:n},(_,k)=><option key={k} value={k+1}>T{k+1}</option>)}
+                                              </select>
+                                            </div>))}
+                                        </div>))}
+                                    </div>
+                                  </details>)}
+                              </div>);
+                            })()}
                             {uenSel&&cargosOfertaParaNomina.some(c=>c.cantidad>0)&&(
                               <div>
                                 <div style={lbl}>Cargos en nómina{vistaNomina?` · ${vistaNomina.base}`:''}</div>

@@ -37,6 +37,8 @@ export interface CargoPantallaDto {
   grupos?: GruposCargoDto;
   /** Código del cargo en la nómina de la UEN, si quien envía lo eligió (si no, el puente lo cruza por el nombre). */
   codigoNomina?: number | null;
+  /** Tarifa de Contratos a la que va la línea (1, 2, …) cuando la oferta lleva varias; sin ella, la 1. */
+  tarifa?: number | null;
 }
 
 /** Forma que recibe el puente (`cargos[]` del contrato v1). */
@@ -58,6 +60,8 @@ export interface CargoPayload {
   grupoCurso: string | null;
   /** Solo si quien envía eligió el cargo de nómina (`<base de nómina>.cargos.codigo`). */
   codigoNomina?: number;
+  /** Consecutivo de su tarifa, solo cuando no es la 1. */
+  tarifa?: number;
 }
 
 /** Formato de cada código de grupo en Contratos (columnas dotm char(4), dotf char(4), epp, examen y cod_grupo_curso char(5)). */
@@ -165,6 +169,9 @@ const texto = (v: string) => (v.trim() ? v.trim() : null);
  * esa escala. El valor unitario es el total de la línea ÷ sus trabajadores, así `unitario × cantidad = total` siempre.
  * Las líneas sin trabajadores (costo 0) no se envían.
  */
+/** La línea va a una tarifa distinta de la 1 (solo entonces viaja el dato). */
+export const enOtraTarifa = (t: unknown) => typeof t === 'number' && Number.isInteger(t) && t > 1;
+
 export function cargosParaPuente(cargos: CargoPantallaDto[]): CargoPayload[] {
   return cargos
     .filter((c) => c.cantidad > 0)
@@ -187,6 +194,7 @@ export function cargosParaPuente(cargos: CargoPantallaDto[]): CargoPayload[] {
         grupoExamen: grupoUnico(c.grupos?.examenes, 'examenes'),
         grupoCurso: grupoUnico(c.grupos?.cursos, 'cursos'),
         ...(typeof c.codigoNomina === 'number' ? { codigoNomina: c.codigoNomina } : {}),
+        ...(enOtraTarifa(c.tarifa) ? { tarifa: c.tarifa as number } : {}),
       };
     });
 }

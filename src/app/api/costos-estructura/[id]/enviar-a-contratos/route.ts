@@ -7,7 +7,9 @@ import { CLAVES_MODULO_NO_APLICA, obtenerModulo, resolverPendientesModulos } fro
 import type { ClaveModulo, EstadoModuloResultado } from '@/lib/costos-estructura/guardado-modular';
 import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
-import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla } from '@/lib/contratos-puente/cargos';
+import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla, type CargoPantallaDto } from '@/lib/contratos-puente/cargos';
+import { costosAdministrativosEnTarifas, leerTarifasElegidas, normalizarTarifasDeLineas, tarifasDelCosteo } from '@/lib/contratos-puente/tarifas';
+import { porcentajeAIU } from '@/lib/costos-estructura/exportacion/contratos';
 import { enviarAContratos } from '@/lib/contratos-puente/directo';
 import { tipoTarifaContratos, validarEleccion } from '@/lib/contratos-puente/destino';
 import { destinoDeSolicitud } from '@/lib/contratos-puente/destino-solicitud';
@@ -60,12 +62,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!validacion.ok) return NextResponse.json({ ok: false, error: 'COSTOS_DTO_INVALIDO', mensaje: 'Los totales de la pantalla no son válidos. Recargue e intente de nuevo.' }, { status: 400 });
 
     // Módulo 5: las líneas de cargo de la pantalla deben sumar la Mano de Obra del panel; si no, no se envía nada.
-    let cargos: ReturnType<typeof cargosParaPuente> | null = null;
+    let cargosPantalla: CargoPantallaDto[] | null = null;
     let avisosGrupos: string[] = [];
     if (body?.cargos !== undefined && body.cargos !== null) {
       const vc = validarCargosPantalla(body.cargos, (body.costosDto as CostosPantallaDto).totales.manoObra);
       if (!vc.ok) return NextResponse.json({ ok: false, error: 'CARGOS_INVALIDOS', mensaje: `Los cargos de la pantalla no son válidos: ${vc.errores.join(' ')} Recargue e intente de nuevo.` }, { status: 400 });
-      cargos = cargosParaPuente(vc.cargos);
+      cargosPantalla = vc.cargos;
       avisosGrupos = avisosGruposCargos(vc.cargos);
     }
 
@@ -97,12 +99,38 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const elegido = leerDestino(body?.contratos);
     const eleccion = validarEleccion(leido.destino, elegido.undnegocio, elegido.codServicio);
     if (!eleccion.ok) return NextResponse.json({ ok: false, error: 'DESTINO_INVALIDO', mensaje: eleccion.mensaje }, { status: 422 });
-    const concepto = leido.destino.uens.find((u) => u.codigo === eleccion.undnegocio)?.conceptos.find((c) => c.codigo === eleccion.codServicio);
+    const conceptosUen = leido.destino.uens.find((u) => u.codigo === eleccion.undnegocio)?.conceptos ?? [];
+    const concepto = conceptosUen.find((c) => c.codigo === eleccion.codServicio);
+
+    // Varias tarifas: la 1 es la del concepto elegido; cada una con un concepto de la UEN. Cada línea dice a cuál va.
+    const elegidas = leerTarifasElegidas((body?.contratos as Record<string, unknown> | undefined)?.tarifas);
+    if (!elegidas.ok) return NextResponse.json({ ok: false, error: 'TARIFAS_INVALIDAS', mensaje: elegidas.mensaje }, { status: 422 });
+    const tarifasElegidas = elegidas.tarifas.length > 1 ? elegidas.tarifas : [];
+    if (tarifasElegidas.length > 0) {
+      if (tarifasElegidas[0].codServicio !== eleccion.codServicio) {
+        return NextResponse.json({ ok: false, error: 'TARIFAS_INVALIDAS', mensaje: 'La tarifa 1 debe llevar el concepto de facturación elegido.' }, { status: 422 });
+      }
+      const ajena = tarifasElegidas.find((t) => !conceptosUen.some((c) => c.codigo === t.codServicio));
+      if (ajena) return NextResponse.json({ ok: false, error: 'TARIFAS_INVALIDAS', mensaje: `El concepto ${ajena.codServicio} de la tarifa ${ajena.consec} no es de la UEN ${eleccion.undnegocio} en Contratos.` }, { status: 422 });
+    }
+    const lineas = normalizarTarifasDeLineas(Math.max(1, tarifasElegidas.length), body?.costosDto as CostosPantallaDto, cargosPantalla ?? []);
+    if (!lineas.ok) return NextResponse.json({ ok: false, error: 'TARIFAS_INVALIDAS', mensaje: lineas.mensaje }, { status: 422 });
+    const dto = lineas.dto;
+    const cargos = cargosPantalla ? cargosParaPuente(lineas.cargos) : null;
+    const resultado = obtenerModulo<ResultadoGuardado>(registro.datos, 'resultado')?.datos ?? null;
+    const tarifas = tarifasElegidas.length > 0
+      ? tarifasDelCosteo({
+        tarifas: tarifasElegidas.map((t) => ({ ...t, descripcion: conceptosUen.find((c) => c.codigo === t.codServicio)?.descripcion ?? null })),
+        dto,
+        cargos: lineas.cargos,
+        aiu: porcentajeAIU(resultado?.porcentajeIU),
+      })
+      : null;
 
     const payload = armarPayloadContratos({
       solicitud,
       procesoCodigo: registro.procesoCodigo,
-      resultado: obtenerModulo<ResultadoGuardado>(registro.datos, 'resultado')?.datos ?? null,
+      resultado,
       totales,
       destino: {
         empresa: leido.destino.empresa.codigo,
@@ -113,11 +141,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         descripcionServicio: concepto?.descripcion || null,
       },
       cargos,
-      insumos: insumosParaPuente((body?.costosDto as CostosPantallaDto).insumos?.filas),
-      costosAdministrativos: costosAdministrativosParaPuente((body?.costosDto as CostosPantallaDto).administrativos),
-      equipos: equiposParaPuente((body?.costosDto as CostosPantallaDto).maquinaria.filas),
-      serviciosNoContinuos: serviciosNoContinuosParaPuente((body?.costosDto as CostosPantallaDto).serviciosNoContinuos),
-      valoresAgregados: valoresAgregadosParaPuente((body?.costosDto as CostosPantallaDto).valoresAgregados),
+      tarifas,
+      insumos: insumosParaPuente(dto.insumos?.filas),
+      costosAdministrativos: tarifas ? costosAdministrativosEnTarifas(tarifas.length, dto, lineas.cargos) : costosAdministrativosParaPuente(dto.administrativos),
+      equipos: equiposParaPuente(dto.maquinaria.filas),
+      serviciosNoContinuos: serviciosNoContinuosParaPuente(dto.serviciosNoContinuos),
+      valoresAgregados: valoresAgregadosParaPuente(dto.valoresAgregados),
       // La base de nómina de la vista previa de cargos (el puente comprueba que sea de la UEN).
       baseNomina: cargos && cargos.length > 0 ? baseNominaValida((body?.contratos as Record<string, unknown> | undefined)?.baseNomina) : null,
     });
@@ -139,7 +168,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (r.ok) {
       const f = r.filasEscritas ?? null;
       const filas = f
-        ? ` Filas escritas: tarifa 1, mano de obra ${f.cargos}, insumos ${f.insumos}, equipos ${f.equipos}, costos admtivos ${f.costosAdministrativos}, servs. no continuos ${f.serviciosNoContinuos}, valores agregados ${f.valoresAgregados}, lista de precios ${f.listaDePrecios}.`
+        ? ` Filas escritas: tarifas ${tarifas?.length ?? 1}, mano de obra ${f.cargos}, insumos ${f.insumos}, equipos ${f.equipos}, costos admtivos ${f.costosAdministrativos}, servs. no continuos ${f.serviciosNoContinuos}, valores agregados ${f.valoresAgregados}, lista de precios ${f.listaDePrecios}.`
         : '';
       const creada = r.oferta ? `Oferta ${r.oferta.numOferta} creada en Contratos (empresa ${r.oferta.empresa}, UEN ${r.oferta.undnegocio}).${filas}` : null;
       const nota = r.modo === 'dry-run' ? ' (modo prueba: aún no se escribe en Contratos)' : '';

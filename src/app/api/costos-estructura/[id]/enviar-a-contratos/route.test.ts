@@ -156,6 +156,46 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
     expect('baseNomina' in mocks.enviar.mock.calls[1][0].oferta).toBe(false);
   });
 
+  it('dos tarifas (aseo y cafetería): cada línea va a la suya, las tarifas suman la oferta con A.I.U. y cada concepto debe ser de la UEN', async () => {
+    const [aseador, turnante] = CARGOS();
+    const dto = costosDto();
+    dto.administrativos!.variables[0] = { ...dto.administrativos!.variables[0], tarifa: 2 };
+    const contratos = { ...DESTINO, tarifas: [{ consec: 1, codServicio: '460' }, { consec: 2, codServicio: '461' }] };
+    const { res } = await llamar({ solicitudId: 7, costosDto: dto, cargos: [aseador, { ...turnante, tarifa: 2 }], contratos });
+    expect(res.status).toBe(200);
+    const enviado = mocks.enviar.mock.calls[0][0];
+    expect(enviado.tarifas).toEqual([
+      { consec: 1, codServicio: '460', descripcion: 'SERVICIO DE ASEO', manoObra: 9871200, insumos: 0, maquinaria: 0, administrativos: 0, valorAgregado: 0, serviciosNoContinuos: 0 },
+      { consec: 2, codServicio: '461', descripcion: 'SERVICIO DE CAFETERIA', manoObra: 3240000, insumos: 0, maquinaria: 0, administrativos: 5400, valorAgregado: 0, serviciosNoContinuos: 0 },
+    ]);
+    expect(enviado.tarifas.reduce((s: number, t: { manoObra: number }) => s + t.manoObra, 0)).toBe(enviado.tarifa.manoObra);
+    expect(enviado.cargos.map((c: { tarifa?: number }) => c.tarifa)).toEqual([undefined, 2]);
+    expect(enviado.costosAdministrativos).toEqual([{ concepto: 'Papelería', valorMensual: 5000, tarifa: 2 }]);
+
+    for (const [tarifas, texto] of [
+      [[{ consec: 1, codServicio: '460' }, { consec: 2, codServicio: '470' }], 'El concepto 470 de la tarifa 2 no es de la UEN BAQ'],
+      [[{ consec: 1, codServicio: '461' }, { consec: 2, codServicio: '460' }], 'La tarifa 1 debe llevar el concepto'],
+      [[{ consec: 1, codServicio: '460' }, { consec: 3, codServicio: '461' }], 'sin saltos'],
+    ] as const) {
+      mocks.enviar.mockClear();
+      const r = await llamar({ solicitudId: 7, costosDto: dto, cargos: CARGOS(), contratos: { ...DESTINO, tarifas } });
+      expect(r.res.status).toBe(422);
+      expect(String(r.json.mensaje)).toContain(texto);
+      expect(mocks.enviar).not.toHaveBeenCalled();
+    }
+    // Una línea que pide una tarifa que no existe tampoco se envía.
+    mocks.enviar.mockClear();
+    const mala = await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: [aseador, { ...turnante, tarifa: 3 }], contratos });
+    expect(mala.res.status).toBe(422);
+    expect(String(mala.json.mensaje)).toContain('cargo 2');
+    // Con una sola tarifa nada cambia: no viaja «tarifas» ni la tarifa de cada línea.
+    mocks.enviar.mockClear();
+    await llamar({ solicitudId: 7, costosDto: dto, cargos: [aseador, { ...turnante, tarifa: 2 }] });
+    const una = mocks.enviar.mock.calls[0][0];
+    expect('tarifas' in una).toBe(false);
+    expect(una.cargos.map((c: { tarifa?: number }) => c.tarifa)).toEqual([undefined, undefined]);
+  });
+
   it('cargos que no suman la Mano de Obra del panel: 400 y no se envía nada a Contratos', async () => {
     const r = await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: [CARGOS()[0]] });
     expect(r.res.status).toBe(400);
