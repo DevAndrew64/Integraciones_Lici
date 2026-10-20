@@ -366,8 +366,9 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       },
     );
     assert.match(f.pc_add, /^LICICOLBA:1001:[0-9a-f]{12}$/);
-    const [[tarifa]] = await admin.query('SELECT sector_economico FROM fc_contratos_tarifa_inicial WHERE pc_add = ?', [f.pc_add]);
+    const [[tarifa]] = await admin.query('SELECT sector_economico, id_oferta_adjudicada FROM fc_contratos_tarifa_inicial WHERE pc_add = ?', [f.pc_add]);
     assert.equal(tarifa.sector_economico, 'Comercial', 'el sector que más llevan las tarifas a mano del cliente (las de LiciColba no cuentan)');
+    assert.equal(tarifa.id_oferta_adjudicada, f.id, 'la tarifa apunta a la oferta adjudicada que se creó con ella');
     const [[reciente]] = await admin.query(`SELECT TIMESTAMPDIFF(SECOND, fadd, NOW()) AS seg FROM ${OFERTAS} WHERE id = ?`, [f.id]);
     assert.ok(Number(reciente.seg) >= 0 && Number(reciente.seg) < 60, 'fadd lo pone el servidor con NOW()');
   });
@@ -517,6 +518,9 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     assert.deepEqual(costos.map((c) => [Number(c.consec), c.concepto]), [[1, 'ASE'], [1, 'ASE'], [2, '453']]);
     const [[oferta]] = await admin.query(`SELECT vlr_manoobra, vlr_impuestos FROM ${OFERTAS} WHERE pc_add LIKE ?`, ['LICICOLBA:8801:%']);
     assert.deepEqual([oferta.vlr_manoobra, oferta.vlr_impuestos], [13111200, 5400], 'la oferta adjudicada lleva el total de las dos');
+    const [enlaces] = await admin.query('SELECT DISTINCT id_oferta_adjudicada FROM fc_contratos_tarifa_inicial WHERE empresa = ? AND undnegocio = ? AND num_oferta = ?', clave);
+    const [[{ id: idOferta }]] = await admin.query(`SELECT id FROM ${OFERTAS} WHERE pc_add LIKE ?`, ['LICICOLBA:8801:%']);
+    assert.deepEqual(enlaces.map((e) => e.id_oferta_adjudicada), [idOferta], 'las dos tarifas apuntan a la misma oferta adjudicada');
     // Un concepto de tarifa que no existe detiene el envío sin reservar número.
     archivo.origen.solicitudId = 8802;
     archivo.tarifas[1].codServicio = '999';
@@ -617,6 +621,8 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       await enviar(7601, {}, crearEscritorMySQL(minimo, opciones));
       const [f] = await filasDe(7601);
       assert.equal(f.id, Number(maximo) + 1);
+      const [[tarifa]] = await admin.query('SELECT id_oferta_adjudicada FROM fc_contratos_tarifa_inicial WHERE pc_add = ?', [f.pc_add]);
+      assert.equal(tarifa.id_oferta_adjudicada, f.id, 'con id manual también se enlaza');
     } finally {
       await raiz.query(`ALTER TABLE ${OFERTAS} MODIFY id int(18) NOT NULL AUTO_INCREMENT`);
     }

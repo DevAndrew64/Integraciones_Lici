@@ -36,8 +36,12 @@ export const COLUMNAS_TARIFA_VFP = [
  */
 export const COLUMNAS_TARIFA_HISTORICAS = ['tar_insumos', 'tar_maquinaria', 'tar_otros', 'tar_nocontinuos'];
 
-/** «Sector Econom.» de la pantalla: lo llevan todas las tarifas digitadas a mano (Comercial, Industrial, Sanitario…). */
-export const COLUMNAS_TARIFA_PANTALLA = ['sector_economico'];
+/**
+ * Columnas de la tarifa fuera del INSERT de «Guardar oferta»: «Sector Econom.» (lo llevan todas las tarifas digitadas a mano)
+ * y el enlace con la oferta adjudicada que el puente crea en la misma transacción
+ * (`fc_ofertas_adjudicadas.id`; sin él la tarifa queda con el 0 por defecto, como si no estuviera adjudicada).
+ */
+export const COLUMNAS_TARIFA_PANTALLA = ['sector_economico', 'id_oferta_adjudicada'];
 
 /**
  * Marca de origen que queda en `pc_add` (el equipo que creó el registro). Identifica la fila como creada por LiciColba y
@@ -100,11 +104,12 @@ export function claveDeTarifa(datos, consec) {
  * el A.I.U. no puede ser 0 ("Falta el AIU de la Tarifa.") y cada valor debe caber en su columna.
  *
  * @param {object} datos contrato v1 ya validado, con las secciones `oferta` y `tarifa`
- * @param {{cliente: {nit: string, rsocial: string}, numOferta?: number | null, huella?: string}} contexto
- *   `cliente` es el de Contratos (NIT tal como está guardado); `numOferta` null = aún no reservado (modo prueba)
+ * @param {{cliente: {nit: string, rsocial: string}, numOferta?: number | null, huella?: string, sectorEconomico?: string, idOfertaAdjudicada?: number | null}} contexto
+ *   `cliente` es el de Contratos (NIT tal como está guardado); `numOferta` null = aún no reservado (modo prueba);
+ *   `idOfertaAdjudicada` = id de la fila de `fc_ofertas_adjudicadas` ya insertada (null = todavía no existe)
  * @returns {{errores: {campo: string, mensaje: string}[], fila: Record<string, unknown> | null}}
  */
-export function planDeTarifa(datos, { cliente, numOferta = null, huella = '', sectorEconomico = '' }) {
+export function planDeTarifa(datos, { cliente, numOferta = null, huella = '', sectorEconomico = '', idOfertaAdjudicada = null }) {
   const errores = [];
   const { oferta, tarifa: t, contrato, origen } = datos;
   const aiu = contrato.porcentajeAIU;
@@ -164,6 +169,7 @@ export function planDeTarifa(datos, { cliente, numOferta = null, huella = '', se
       tar_otros: v.valorAgregado,
       tar_nocontinuos: v.serviciosNoContinuos,
       sector_economico: recortar(oferta.sectorEconomico || sectorEconomico, 20),
+      ...(idOfertaAdjudicada ? { id_oferta_adjudicada: idOfertaAdjudicada } : {}),
     };
   });
   return { errores, fila: filas[0], filas };

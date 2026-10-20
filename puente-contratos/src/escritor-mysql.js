@@ -377,7 +377,6 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
 
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
-        const { filas: filasDeTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico });
         const filasDeCargos = conMunicipio(planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina }).filas, codmun);
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
@@ -388,10 +387,14 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         const filasDeValores = sinValoresAgregados ? [] : planDeValoresAgregados(datosDeContratos, { numOferta, huella }).filas;
         let insumosEscritos = false;
         await conexion.beginTransaction();
+        let filasDeTarifa = [];
         try {
+          // Primero la oferta adjudicada: la tarifa guarda su id en id_oferta_adjudicada.
+          const [insercion] = await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
+          const idOfertaAdjudicada = idManual ? fila.id : Number(insercion.insertId);
+          filasDeTarifa = planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico, idOfertaAdjudicada }).filas;
           for (const filaDeTarifa of filasDeTarifa) await insertar(conexion, TABLA_TARIFA, filaDeTarifa, comoTarifa);
           for (const filaDeCargo of filasDeCargos) await insertar(conexion, TABLA_CARGOS, filaDeCargo, comoCargo);
-          await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
           for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);
           for (const filaDeCosto of filasDeCostos) await insertar(conexion, TABLA_COSTOS_ADMTIVOS, filaDeCosto, comoCosto);
           for (const filaDeEquipo of filasDeEquipos) await insertar(conexion, TABLA_EQUIPOS, filaDeEquipo, comoEquipo);

@@ -59,7 +59,7 @@ function falso(respuestas = {}) {
     [/MAX\(id\)/, [[{ id: '501' }]]],
     [/^INSERT INTO fc_contratos_tarifa_inicial/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_contratos_cargos_iniciales/, [{ affectedRows: 1 }]],
-    [/^INSERT INTO fc_ofertas_adjudicadas/, [{ affectedRows: 1 }]],
+    [/^INSERT INTO fc_ofertas_adjudicadas/, [{ affectedRows: 1, insertId: 77 }]],
     [/^INSERT INTO fc_preciosventas_oferta/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_contratos_costos_admtivos_iniciales/, [{ affectedRows: 1 }]],
     [/^INSERT INTO fc_elemxcont/, [{ affectedRows: 1 }]],
@@ -125,11 +125,11 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     assert.equal(r.escrito.columnasOmitidas, undefined);
   });
 
-  it('las sentencias salen en orden: candado, reenvío, validaciones, contador, número libre, BEGIN, tarifa, oferta, COMMIT, candado', async () => {
+  it('las sentencias salen en orden: candado, reenvío, validaciones, contador, número libre, BEGIN, oferta, tarifa, COMMIT, candado', async () => {
     const f = falso();
     await escribir(f.pool);
     const orden = [/GET_LOCK/, /pc_add LIKE/, /FROM fc_clientes/, /^SELECT empresa, undnegocio FROM fc_control/, /FROM fc_conceptos/, /^UPDATE fc_control/, /LAST_INSERT_ID\(\)/,
-      /AS n$/, /^BEGIN$/, /^INSERT INTO fc_contratos_tarifa_inicial/, /^INSERT INTO fc_ofertas_adjudicadas/, /^COMMIT$/, /RELEASE_LOCK/, /^RELEASE$/];
+      /AS n$/, /^BEGIN$/, /^INSERT INTO fc_ofertas_adjudicadas/, /^INSERT INTO fc_contratos_tarifa_inicial/, /^COMMIT$/, /RELEASE_LOCK/, /^RELEASE$/];
     const posiciones = orden.map((p) => f.indice(p));
     assert.ok(posiciones.every((i) => i >= 0), `faltan sentencias: ${posiciones}`);
     assert.deepEqual([...posiciones].sort((a, b) => a - b), posiciones, 'fuera de orden');
@@ -161,10 +161,10 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     await escribir(f.pool);
     const insert = f.de(/^INSERT INTO fc_contratos_tarifa_inicial/)[0];
     assert.match(insert.sql, /^INSERT INTO fc_contratos_tarifa_inicial \(empresa, undnegocio, num_oferta, ncontrato, nit, rsocial,/);
-    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos, sector_economico\) VALUES \(/);
+    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos, sector_economico, id_oferta_adjudicada\) VALUES \(/);
     assert.equal((insert.sql.match(/\?/g) ?? []).length, insert.params.length);
-    assert.equal(insert.params.length, 35, '36 columnas menos fadd, que es NOW()');
-    assert.equal(insert.params.at(-1), 'Comercial', 'el sector que más llevan las tarifas a mano del cliente');
+    assert.equal(insert.params.length, 36, '37 columnas menos fadd, que es NOW()');
+    assert.deepEqual(insert.params.slice(-2), ['Comercial', 77], 'sector del cliente y el id de la oferta adjudicada recién creada');
     const sector = f.de(/AS sector, COUNT/)[0];
     assert.deepEqual(sector.params, ['900123456', 'LICICOLBA'], 'por la base del NIT y sin contar los envíos de LiciColba');
     assert.ok(insert.params.includes('LICICOLBA:42:ab12cd34ef56'));
@@ -184,7 +184,7 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     const f = falso();
     await escribir(f.pool, datos(), { idManual: true, idManualPorTabla: { fc_contratos_tarifa_inicial: true } });
     const maximos = f.de(/MAX\(id\)/);
-    assert.deepEqual(maximos.map((s) => /FROM (\w+)/.exec(s.sql)[1]), ['fc_contratos_tarifa_inicial', 'fc_ofertas_adjudicadas']);
+    assert.deepEqual(maximos.map((s) => /FROM (\w+)/.exec(s.sql)[1]), ['fc_ofertas_adjudicadas', 'fc_contratos_tarifa_inicial']);
     assert.ok(maximos.every((s) => /FOR UPDATE$/.test(s.sql)));
     assert.ok(f.indice(/^BEGIN$/) < f.indice(/MAX\(id\)/));
     assert.match(f.de(/^INSERT INTO fc_ofertas_adjudicadas/)[0].sql, /, id\) VALUES/);
@@ -371,7 +371,8 @@ describe('escritor MySQL — cargos', () => {
     const error = await rechaza(escribir(f.pool, conCargos()), 422, 'DATOS_INVALIDOS');
     assert.equal(error.extra.numeroPerdido, 937);
     assert.ok(f.hubo(/^ROLLBACK$/) && !f.hubo(/^COMMIT$/));
-    assert.ok(!f.hubo(/^INSERT INTO fc_ofertas_adjudicadas/), 'no sigue después del fallo');
+    const fallido = f.sentencias.findLastIndex((x) => /^INSERT INTO fc_contratos_cargos_iniciales/.test(x.sql));
+    assert.ok(!f.sentencias.slice(fallido + 1).some((x) => /^INSERT/.test(x.sql)), 'no sigue después del fallo');
   });
 
   it('avisa si los cargos no suman lo que equivale la mano de obra, pero escribe', async () => {

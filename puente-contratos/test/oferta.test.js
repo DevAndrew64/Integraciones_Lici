@@ -103,9 +103,22 @@ describe('planDeTarifa', () => {
 
   it('no escribe columnas que el formulario no escribe ni toca las del contrato', () => {
     const { fila } = planDeTarifa(datos(), { cliente: CLIENTE, huella: HUELLA });
-    for (const prohibida of ['tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'personas', 'id_oferta_adjudicada', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
+    for (const prohibida of ['tfa_global', 'marco', 'hay_cargos_recorrido', 'control_st', 'personas', 'user_mod', 'fmod', 'pc_mod', 'nro_factura']) {
       assert.ok(!(prohibida in fila), prohibida);
     }
+  });
+
+  it('cada tarifa apunta a la oferta adjudicada cuando ya existe (id_oferta_adjudicada); antes de crearla no se escribe', () => {
+    assert.ok(!('id_oferta_adjudicada' in planDeTarifa(datos(), { cliente: CLIENTE, huella: HUELLA }).fila));
+    const varias = datos((e) => {
+      e.tarifas = [
+        { consec: 1, codServicio: 'ASE', descripcion: 'Aseo', ...e.tarifa, manoObra: e.tarifa.manoObra - 1000 },
+        { consec: 2, codServicio: '453', descripcion: 'Cafetería', manoObra: 1000, insumos: 0, maquinaria: 0, administrativos: 0, valorAgregado: 0, serviciosNoContinuos: 0 },
+      ];
+    });
+    const { filas, errores } = planDeTarifa(varias, { cliente: CLIENTE, huella: HUELLA, idOfertaAdjudicada: 4410 });
+    assert.deepEqual(errores, []);
+    assert.deepEqual(filas.map((f) => [f.consec, f.id_oferta_adjudicada]), [[1, 4410], [2, 4410]]);
   });
 });
 
