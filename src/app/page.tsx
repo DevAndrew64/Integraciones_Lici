@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import LicyTopbar from '@/components/licycolba/LicyTopbar';
 import ProcesosCardsView from '@/components/licycolba/ProcesosCardsView';
 import NitEntidad from '@/components/licycolba/NitEntidad';
+import { esAdjudicada } from '@/lib/solicitudes/adjudicada';
 import { nitVerificado, validarNitConDv } from '@/lib/solicitudes/nit-entidad';
 import '@/components/licycolba/procesos-cards.css';
 import { puedeConBD, puedeVerModuloConBD, esSoloLectura } from '@/lib/licycolba/permisos';
@@ -7741,7 +7742,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   // elegir uno (máx. 1) y traer Entidad/N.° de proceso/Objeto desde ahí.
   interface SolicitudCosteoInfo{
     id:number;entidad:string|null;codigoProceso:string|null;objeto:string|null;nombreProceso:string|null;perfil?:string|null;
-    estadoFuente?:string|null;estadoSolicitud?:string|null;resultadoFinal?:string|null;valor?:number|null;modalidad?:string|null;fuente?:string|null;aliasFuente?:string|null;
+    estadoFuente?:string|null;estadoSolicitud?:string|null;resultadoFinal?:string|null;adjudicada?:boolean;valor?:number|null;modalidad?:string|null;fuente?:string|null;aliasFuente?:string|null;
     departamento?:string|null;ciudad?:string|null;fechaVencimiento?:string|null;
     nitContacto?:string|null;direccionContacto?:string|null;correoContacto?:string|null;personaContacto?:string|null;telefonoContacto?:string|null;
     linkSecop?:string|null;linkDetalle?:string|null;linkSecopReg?:string|null;
@@ -7958,7 +7959,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       if(!d.ok||!sol){setErrorProcesos(d.error??'Error al cargar la solicitud');return null;}
       setSolicitudProceso({
         id:sol.id,entidad:sol.entidad??null,codigoProceso:sol.codigoProceso??null,objeto:sol.objeto??null,nombreProceso:sol.nombreProceso??null,
-        perfil:sol.perfil??null,estadoFuente:sol.estadoFuente??null,estadoSolicitud:sol.estadoSolicitud??null,resultadoFinal:sol.resultadoFinal??null,valor:sol.valor??null,modalidad:sol.modalidad??null,
+        perfil:sol.perfil??null,estadoFuente:sol.estadoFuente??null,estadoSolicitud:sol.estadoSolicitud??null,resultadoFinal:sol.resultadoFinal??null,adjudicada:esAdjudicada(sol),valor:sol.valor??null,modalidad:sol.modalidad??null,
         fuente:sol.fuente??null,aliasFuente:sol.aliasFuente??null,departamento:sol.departamento??null,ciudad:sol.ciudad??null,
         fechaVencimiento:sol.fechaVencimiento??null,nitContacto:sol.nitContacto??null,direccionContacto:sol.direccionContacto??null,
         correoContacto:sol.correoContacto??null,personaContacto:sol.personaContacto??null,telefonoContacto:sol.telefonoContacto??null,
@@ -11334,14 +11335,14 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   useEffect(()=>{
     setOfertaEnviada(null);
     const solId=solicitudProceso?.id;
-    if(!costoEstructuraIdActual||!solId||solicitudProceso?.resultadoFinal!=='Adjudicado')return;
+    if(!costoEstructuraIdActual||!solId||!solicitudProceso?.adjudicada)return;
     let vigente=true;
     fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos?solicitudId=${solId}`)
       .then(r=>r.json())
       .then(d=>{if(vigente&&d?.ok&&d.enviada)setOfertaEnviada({numOferta:d.oferta?.numOferta??null,empresa:d.oferta?.empresa??null,undnegocio:d.oferta?.undnegocio??null});})
       .catch(()=>{/* sin consulta: el servidor igual rechaza un reenvío */});
     return()=>{vigente=false;};
-  },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.resultadoFinal]);
+  },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.adjudicada]);
   // A dónde va la oferta en Contratos: la empresa sale del perfil de la solicitud y las UEN (con sus conceptos de
   // facturación) se leen de Contratos; quien envía solo elige la UEN, y el concepto si la UEN tiene varios. La última UEN
   // usada se recuerda en este navegador. El tipo de tarifa y el origen se calculan (el servidor los vuelve a calcular).
@@ -11350,7 +11351,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   const [destinoContratos,setDestinoContratos]=useState({undnegocio:'',codServicio:''});
   useEffect(()=>{
     setDestinoLeidoContratos(null);setErrorDestinoContratos(null);
-    if(!costoEstructuraIdActual||!solicitudProceso?.id||solicitudProceso.resultadoFinal!=='Adjudicado')return;
+    if(!costoEstructuraIdActual||!solicitudProceso?.id||!solicitudProceso.adjudicada)return;
     let vigente=true;
     fetch(`/api/costos-estructura/${costoEstructuraIdActual}/enviar-a-contratos/destino?solicitudId=${solicitudProceso.id}`)
       .then(async r=>({ok:r.ok,d:await r.json().catch(()=>({}))}))
@@ -11365,7 +11366,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
       })
       .catch(()=>{if(vigente)setErrorDestinoContratos('No se pudo conectar para leer la empresa y las UEN de Contratos.');});
     return()=>{vigente=false;};
-  },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.resultadoFinal]);
+  },[costoEstructuraIdActual,solicitudProceso?.id,solicitudProceso?.adjudicada]);
   function elegirUenContratos(codigo:string){
     const uen=destinoLeidoContratos?.uens.find(u=>u.codigo===codigo);
     setDestinoContratos({undnegocio:codigo,codServicio:conceptoAutomatico(uen)??''});
@@ -14738,7 +14739,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
     if(!solicitudProceso?.id){setEnvioContratos({ok:false,texto:'Abre los costos desde la ficha de la solicitud para enviarlos a Contratos.'});return;}
     if(modulosConCambiosSinGuardar.length>0){setEnvioContratos({ok:false,texto:`Guarde los cambios de ${modulosConCambiosSinGuardar.join(', ')} antes de enviar a Contratos.`});return;}
     if(ofertaEnviada){setEnvioContratos({ok:false,texto:'Este proceso adjudicado ya se envió a Contratos.'});return;}
-    if(solicitudProceso.resultadoFinal!=='Adjudicado'){setEnvioContratos({ok:false,texto:'Solo se puede enviar a Contratos un proceso Adjudicado.'});return;}
+    if(!solicitudProceso.adjudicada){setEnvioContratos({ok:false,texto:'Solo se puede enviar a Contratos un proceso Adjudicado.'});return;}
     if(errorDestinoContratos){setEnvioContratos({ok:false,texto:errorDestinoContratos});return;}
     if(!destinoContratos.undnegocio){setEnvioContratos({ok:false,texto:'Seleccione la UEN de Contratos.'});return;}
     if(!destinoContratos.codServicio){setEnvioContratos({ok:false,texto:`Seleccione el concepto de facturación de la UEN ${destinoContratos.undnegocio}.`});return;}
@@ -15455,7 +15456,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
   const [errorVistaNomina,setErrorVistaNomina]=useState<string|null>(null);
   const [leyendoNomina,setLeyendoNomina]=useState(false);
   const pedidoVistaNomina=JSON.stringify({undnegocio:destinoContratos.undnegocio,baseNomina:eleccionNomina.baseNomina,cargos:cargosParaVista(cargosOfertaParaNomina,eleccionNomina)});
-  const panelNominaVisible=!!(costoEstructuraIdActual&&solicitudProceso?.id&&solicitudProceso.resultadoFinal==='Adjudicado'&&!ofertaEnviada&&destinoLeidoContratos&&destinoContratos.undnegocio);
+  const panelNominaVisible=!!(costoEstructuraIdActual&&solicitudProceso?.id&&!!solicitudProceso.adjudicada&&!ofertaEnviada&&destinoLeidoContratos&&destinoContratos.undnegocio);
   useEffect(()=>{
     setErrorVistaNomina(null);
     const pedido=JSON.parse(pedidoVistaNomina) as {undnegocio:string;baseNomina:string|null;cargos:{nombre:string;codigoNomina:number|null}[]};
@@ -20444,7 +20445,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                       <span style={{fontSize:11,fontWeight:700,color:'#374151',fontFamily:F}}>Entidad contratante</span>
                     </div>
                     <div style={{display:'flex',flexDirection:'column' as const,gap:8}}>
-                      <NitEntidad solicitudId={solicitudProceso.id} nit={solicitudProceso.nitContacto} adjudicado={solicitudProceso.resultadoFinal==='Adjudicado'} fontFamily={F} onNit={(n)=>setSolicitudProceso(p=>p?{...p,nitContacto:n}:p)}/>
+                      <NitEntidad solicitudId={solicitudProceso.id} nit={solicitudProceso.nitContacto} adjudicado={!!solicitudProceso.adjudicada} fontFamily={F} onNit={(n)=>setSolicitudProceso(p=>p?{...p,nitContacto:n}:p)}/>
                       <div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Organización</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.entidad||'—'}</div></div>
                       {solicitudProceso.direccionContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Dirección</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.direccionContacto}</div></div>)}
                       {solicitudProceso.ciudad&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Ciudad</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solicitudProceso.ciudad}</div></div>)}
@@ -20593,7 +20594,7 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                 {puedeEditarCostosUI&&solicitudProceso?.id!=null&&(
                   <>
                     {/* Clave de la oferta en Contratos: empresa, tarifa y origen salen solos; la UEN se elige entre las de Contratos. */}
-                    {!ofertaEnviada&&solicitudProceso?.resultadoFinal==='Adjudicado'&&(errorDestinoContratos
+                    {!ofertaEnviada&&!!solicitudProceso?.adjudicada&&(errorDestinoContratos
                       ?<div style={{marginTop:8,fontSize:11,fontWeight:600,color:RED,fontFamily:F,lineHeight:1.5}}>{errorDestinoContratos}</div>
                       :!destinoLeidoContratos
                         ?<div style={{marginTop:8,fontSize:11,color:'#94a3b8',fontFamily:F}}>Leyendo empresa y UEN de Contratos…</div>
@@ -20716,8 +20717,8 @@ function ModuloEstructuraCostos({sesion,modoEmbebido=false,solicitudIdEmbebida}:
                     {ofertaEnviada&&<div style={{marginTop:8,padding:'9px 12px',borderRadius:8,border:'1px solid #86efac',background:'#f0fdf4',color:'#15803d',fontSize:11.5,fontWeight:700,fontFamily:F,lineHeight:1.5}}>
                       Este proceso adjudicado ya se envió a Contratos{ofertaEnviada.numOferta!=null?` como la oferta ${ofertaEnviada.numOferta}${ofertaEnviada.empresa?` (empresa ${ofertaEnviada.empresa}, UEN ${ofertaEnviada.undnegocio??''})`:''}`:''}. Lo enviado queda pactado: cualquier cambio se hace en Contratos.
                     </div>}
-                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||ofertaEnviada!==null||solicitudProceso?.resultadoFinal!=='Adjudicado'} title={ofertaEnviada?'Este proceso adjudicado ya se envió a Contratos':solicitudProceso?.resultadoFinal==='Adjudicado'?'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número). Lo enviado queda pactado y no se cambia desde aquí':'Solo se puede enviar a Contratos cuando el proceso está Adjudicado'}
-                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos||ofertaEnviada||solicitudProceso?.resultadoFinal!=='Adjudicado')?'default':'pointer',opacity:(saving||enviandoContratos||ofertaEnviada||solicitudProceso?.resultadoFinal!=='Adjudicado')?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
+                    <button onClick={enviarAContratos} disabled={saving||enviandoContratos||ofertaEnviada!==null||!solicitudProceso?.adjudicada} title={ofertaEnviada?'Este proceso adjudicado ya se envió a Contratos':!!solicitudProceso?.adjudicada?'Envía esta oferta a Contratos a través del puente (en modo prueba solo valida; en modo escritura crea la oferta y responde su número). Lo enviado queda pactado y no se cambia desde aquí':'Solo se puede enviar a Contratos cuando el proceso está Adjudicado'}
+                      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,width:'100%',marginTop:8,padding:'10px 16px',borderRadius:8,border:`1.5px solid ${NAVY}`,background:'white',color:NAVY,fontSize:12.5,fontWeight:700,cursor:(saving||enviandoContratos||ofertaEnviada||!solicitudProceso?.adjudicada)?'default':'pointer',opacity:(saving||enviandoContratos||ofertaEnviada||!solicitudProceso?.adjudicada)?0.6:1,fontFamily:F,whiteSpace:'nowrap' as const}}>
                       {enviandoContratos?'Enviando…':'Enviar a Contratos'}
                     </button>
                     {envioContratos&&<div style={{fontSize:11,fontWeight:600,color:envioContratos.ok?'#16a34a':RED,fontFamily:F}}>{envioContratos.texto}</div>}
@@ -31492,7 +31493,7 @@ function VistFicha({sol,sesion,variante,onVolver,onGuardado}:{sol:Solicitud;sesi
                   <span style={{fontSize:11,fontWeight:700,color:'#374151',fontFamily:F}}>Entidad contratante</span>
                 </div>
                 <div style={{display:'flex',flexDirection:'column' as const,gap:8}}>
-                  <NitEntidad solicitudId={solActual.id||null} nit={solE.nitContacto} adjudicado={solActual.resultadoFinal==='Adjudicado'} fontFamily={F} puedeDigitar={!esMercadeo(sesion?.rol)} onNit={(n)=>setSolActual(p=>({...p,nitContacto:n}))}/>
+                  <NitEntidad solicitudId={solActual.id||null} nit={solE.nitContacto} adjudicado={esAdjudicada(solActual)} fontFamily={F} puedeDigitar={!esMercadeo(sesion?.rol)} onNit={(n)=>setSolActual(p=>({...p,nitContacto:n}))}/>
                   <div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Organización</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solActual.entidad||'—'}</div></div>
                   {solE.direccionContacto&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Dirección</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solE.direccionContacto}</div></div>)}
                   {solActual.ciudad&&(<div><div style={{fontSize:10,fontWeight:700,color:'#374151',fontFamily:F,marginBottom:2}}>Ciudad</div><div style={{fontSize:12.5,color:'#0f172a',fontFamily:F}}>{solActual.ciudad}</div></div>)}

@@ -5,6 +5,7 @@ import { requireEditarCostos } from '@/lib/authz';
 import { auditFromRequest } from '@/lib/audit';
 import { CLAVES_MODULO_NO_APLICA, obtenerModulo, resolverPendientesModulos } from '@/lib/costos-estructura/guardado-modular';
 import type { ClaveModulo, EstadoModuloResultado } from '@/lib/costos-estructura/guardado-modular';
+import { esAdjudicada } from '@/lib/solicitudes/adjudicada';
 import { validarCostosPantallaDto, type CostosPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import type { ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 import { avisosGruposCargos, cargosParaPuente, validarCargosPantalla, type CargoPantallaDto } from '@/lib/contratos-puente/cargos';
@@ -75,12 +76,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const solicitud = await prisma.solicitud.findUnique({
       where: { id: solicitudId },
       select: {
-        id: true, codigoProceso: true, resultadoFinal: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true,
+        id: true, codigoProceso: true, resultadoFinal: true, asignaciones: true, entidad: true, objeto: true, nitContacto: true, direccionContacto: true,
         perfil: true, aliasFuente: true, linkSecop: true, linkSecopReg: true,
       },
     });
     if (!solicitud) return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ENCONTRADA', mensaje: 'La solicitud no existe.' }, { status: 404 });
-    if (solicitud.resultadoFinal !== 'Adjudicado') {
+    if (!esAdjudicada(solicitud)) {
       return NextResponse.json({ ok: false, error: 'SOLICITUD_NO_ADJUDICADA', mensaje: 'Solo se puede enviar a Contratos un proceso Adjudicado. Cierre la solicitud como Adjudicada y vuelva a intentarlo.' }, { status: 409 });
     }
     // El NIT decide a qué cliente de Contratos va la oferta: solo se envía el registrado al adjudicar, con DV correcto.

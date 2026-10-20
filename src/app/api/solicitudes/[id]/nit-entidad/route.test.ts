@@ -71,6 +71,13 @@ describe('POST /api/solicitudes/[id]/nit-entidad', () => {
     expect(solicitud!.nitContacto).toBeNull();
   });
 
+  it('un proceso cerrado como adjudicado antes del cierre nuevo (resultadoFinal vacío) también registra su NIT', async () => {
+    solicitud!.resultadoFinal = null;
+    solicitud!.asignaciones = [{ estadoRevision: 'CERRADO_ADJUDICADO' }];
+    expect((await llamar({ nit: '900123456-8' })).res.status).toBe(200);
+    expect(solicitud!.nitContacto).toBe('900123456-8');
+  });
+
   it('acceso: sin sesión 401, ajeno 403, inexistente 404; Mercadeo no digita', async () => {
     sesionActual = null;
     expect((await llamar({ nit: '900123456-8' })).res.status).toBe(401);

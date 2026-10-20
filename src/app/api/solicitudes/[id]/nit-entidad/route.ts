@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { esAdjudicada } from '@/lib/solicitudes/adjudicada';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { requireSession, isAdmin, canAccessSolicitud, esMercadeo } from '@/lib/authz';
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!solicitud) return NextResponse.json({ ok: false, error: 'No encontrada.' }, { status: 404 });
     if (!isAdmin(session!.rol) && !canAccessSolicitud(session!, solicitud)) return NextResponse.json({ ok: false, error: 'Sin acceso.' }, { status: 403 });
     if (esMercadeo(session!.rol)) return NextResponse.json({ ok: false, error: 'Mercadeo no puede digitar el NIT.' }, { status: 403 });
-    if (solicitud.resultadoFinal !== 'Adjudicado') {
+    if (!esAdjudicada(solicitud)) {
       return NextResponse.json({ ok: false, error: 'El NIT de la entidad se registra al marcar el proceso como Adjudicado.' }, { status: 409 });
     }
 

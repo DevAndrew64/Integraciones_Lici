@@ -28,6 +28,7 @@ vi.mock('@/lib/contratos-puente/directo', () => ({
 type Solicitud = {
   id: number; codigoProceso: string | null; resultadoFinal: string | null; entidad: string | null; objeto: string | null; nitContacto: string | null; direccionContacto: string | null;
   perfil: string | null; aliasFuente: string | null; linkSecop: string | null; linkSecopReg: string | null;
+  asignaciones?: unknown;
 };
 let registro: { id: number; procesoCodigo: string | null; datos: Record<string, unknown> } | null = null;
 let solicitud: Solicitud | null = null;
@@ -325,6 +326,13 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
       expect(json.error).toBe('SOLICITUD_NO_ADJUDICADA');
     }
     expect(mocks.enviar).not.toHaveBeenCalled();
+  });
+
+  it('un proceso cerrado como adjudicado antes del cierre nuevo (resultadoFinal vacío, última asignación CERRADO_ADJUDICADO) sí se envía', async () => {
+    solicitud = { ...solicitud!, resultadoFinal: null, asignaciones: [{ estadoRevision: 'EN_EJECUCION' }, { estadoRevision: 'CERRADO_ADJUDICADO' }] } as Solicitud;
+    const { res } = await llamar({ solicitudId: 7, costosDto: costosDto(), contratos: DESTINO });
+    expect(res.status).toBe(200);
+    expect(mocks.enviar).toHaveBeenCalledTimes(1);
   });
 
   it('sin NIT verificado (vacío, de antes sin DV o con DV que no corresponde) responde 409 y no llama al puente', async () => {
