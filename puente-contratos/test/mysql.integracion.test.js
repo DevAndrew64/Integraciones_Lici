@@ -366,9 +366,10 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       },
     );
     assert.match(f.pc_add, /^LICICOLBA:1001:[0-9a-f]{12}$/);
-    const [[tarifa]] = await admin.query('SELECT sector_economico, id_oferta_adjudicada FROM fc_contratos_tarifa_inicial WHERE pc_add = ?', [f.pc_add]);
+    const [[tarifa]] = await admin.query('SELECT sector_economico, id_oferta_adjudicada, codmun FROM fc_contratos_tarifa_inicial WHERE pc_add = ?', [f.pc_add]);
     assert.equal(tarifa.sector_economico, 'Comercial', 'el sector que más llevan las tarifas a mano del cliente (las de LiciColba no cuentan)');
     assert.equal(tarifa.id_oferta_adjudicada, f.id, 'la tarifa apunta a la oferta adjudicada que se creó con ella');
+    assert.equal(tarifa.codmun, '08001', 'el municipio de la UEN, como en las demás pestañas');
     const [[reciente]] = await admin.query(`SELECT TIMESTAMPDIFF(SECOND, fadd, NOW()) AS seg FROM ${OFERTAS} WHERE id = ?`, [f.id]);
     assert.ok(Number(reciente.seg) >= 0 && Number(reciente.seg) < 60, 'fadd lo pone el servidor con NOW()');
   });

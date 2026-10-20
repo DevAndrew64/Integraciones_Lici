@@ -161,10 +161,10 @@ describe('escritor MySQL — camino feliz (tarifa, cargos, oferta adjudicada y p
     await escribir(f.pool);
     const insert = f.de(/^INSERT INTO fc_contratos_tarifa_inicial/)[0];
     assert.match(insert.sql, /^INSERT INTO fc_contratos_tarifa_inicial \(empresa, undnegocio, num_oferta, ncontrato, nit, rsocial,/);
-    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos, sector_economico, id_oferta_adjudicada\) VALUES \(/);
+    assert.match(insert.sql, /user_add, fadd, pc_add, tar_insumos, tar_maquinaria, tar_otros, tar_nocontinuos, sector_economico, codmun, id_oferta_adjudicada\) VALUES \(/);
     assert.equal((insert.sql.match(/\?/g) ?? []).length, insert.params.length);
-    assert.equal(insert.params.length, 36, '37 columnas menos fadd, que es NOW()');
-    assert.deepEqual(insert.params.slice(-2), ['Comercial', 77], 'sector del cliente y el id de la oferta adjudicada recién creada');
+    assert.equal(insert.params.length, 37, '38 columnas menos fadd, que es NOW()');
+    assert.deepEqual(insert.params.slice(-3), ['Comercial', '08001', 77], 'sector del cliente, municipio de la UEN y el id de la oferta adjudicada recién creada');
     const sector = f.de(/AS sector, COUNT/)[0];
     assert.deepEqual(sector.params, ['900123456', 'LICICOLBA'], 'por la base del NIT y sin contar los envíos de LiciColba');
     assert.ok(insert.params.includes('LICICOLBA:42:ab12cd34ef56'));

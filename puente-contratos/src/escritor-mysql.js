@@ -392,7 +392,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
           // Primero la oferta adjudicada: la tarifa guarda su id en id_oferta_adjudicada.
           const [insercion] = await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
           const idOfertaAdjudicada = idManual ? fila.id : Number(insercion.insertId);
-          filasDeTarifa = planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico, idOfertaAdjudicada }).filas;
+          filasDeTarifa = conMunicipio(planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico, idOfertaAdjudicada }).filas, codmun);
           for (const filaDeTarifa of filasDeTarifa) await insertar(conexion, TABLA_TARIFA, filaDeTarifa, comoTarifa);
           for (const filaDeCargo of filasDeCargos) await insertar(conexion, TABLA_CARGOS, filaDeCargo, comoCargo);
           for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);

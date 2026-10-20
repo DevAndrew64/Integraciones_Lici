@@ -37,11 +37,11 @@ export const COLUMNAS_TARIFA_VFP = [
 export const COLUMNAS_TARIFA_HISTORICAS = ['tar_insumos', 'tar_maquinaria', 'tar_otros', 'tar_nocontinuos'];
 
 /**
- * Columnas de la tarifa fuera del INSERT de «Guardar oferta»: «Sector Econom.» (lo llevan todas las tarifas digitadas a mano)
- * y el enlace con la oferta adjudicada que el puente crea en la misma transacción
+ * Columnas de la tarifa fuera del INSERT de «Guardar oferta»: «Sector Econom.» (lo llevan todas las tarifas digitadas a mano),
+ * el municipio (como en las demás pestañas) y el enlace con la oferta adjudicada que el puente crea en la misma transacción
  * (`fc_ofertas_adjudicadas.id`; sin él la tarifa queda con el 0 por defecto, como si no estuviera adjudicada).
  */
-export const COLUMNAS_TARIFA_PANTALLA = ['sector_economico', 'id_oferta_adjudicada'];
+export const COLUMNAS_TARIFA_PANTALLA = ['sector_economico', 'codmun', 'id_oferta_adjudicada'];
 
 /**
  * Marca de origen que queda en `pc_add` (el equipo que creó el registro). Identifica la fila como creada por LiciColba y
@@ -169,6 +169,7 @@ export function planDeTarifa(datos, { cliente, numOferta = null, huella = '', se
       tar_otros: v.valorAgregado,
       tar_nocontinuos: v.serviciosNoContinuos,
       sector_economico: recortar(oferta.sectorEconomico || sectorEconomico, 20),
+      codmun: '',
       ...(idOfertaAdjudicada ? { id_oferta_adjudicada: idOfertaAdjudicada } : {}),
     };
   });

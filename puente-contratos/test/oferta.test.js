@@ -37,7 +37,7 @@ describe('planDeTarifa', () => {
   it('escribe las 30 columnas del INSERT de cmdGrabar.Click más «tipo» (F, como las ofertas a mano), en su orden, y los 4 componentes históricos', () => {
     const { fila, errores } = planDeTarifa(datos(), { cliente: CLIENTE, numOferta: 937, huella: HUELLA });
     assert.deepEqual(errores, []);
-    assert.deepEqual(Object.keys(fila), [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS, 'sector_economico']);
+    assert.deepEqual(Object.keys(fila), [...COLUMNAS_TARIFA_VFP, ...COLUMNAS_TARIFA_HISTORICAS, 'sector_economico', 'codmun']);
     assert.equal(COLUMNAS_TARIFA_VFP.length, 31);
   });
 
@@ -53,7 +53,7 @@ describe('planDeTarifa', () => {
         aiu: '0.1232', aiu_examenes: 0, aiu_dotacion: 0,
         exa_medico_vta: 0, venta_dotacion: 0, dot_epp_factur: 0, costos_reembol: 0, aplica_dotacion: 0, aplica_examen: 0, aplica_curso: 0, curso_vta: 0,
         origen_proceso: 'LIC', user_add: 'LICICOLBA', fadd: 'NOW()', pc_add: 'LICICOLBA:42:ab12cd34ef56',
-        tar_insumos: 1000000, tar_maquinaria: 500000, tar_otros: 700000, tar_nocontinuos: 250000, sector_economico: '',
+        tar_insumos: 1000000, tar_maquinaria: 500000, tar_otros: 700000, tar_nocontinuos: 250000, sector_economico: '', codmun: '',
       },
     );
   });
