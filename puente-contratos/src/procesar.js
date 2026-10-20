@@ -19,6 +19,7 @@ export const escritorPrueba = {
     if (datos.oferta && datos.tarifa) {
       const tarifa = planDeTarifa(datos, { cliente: { nit: nitCompleto, rsocial: datos.cliente.razonSocial }, huella });
       if (tarifa.fila) escribiria.tarifaInicial = describirFila(tarifa.fila);
+      if (tarifa.filas.length > 1) escribiria.tarifasIniciales = tarifa.filas.map(describirFila);
       advertencias.push(...tarifa.errores);
       const cargos = planDeCargos(datos, { huella });
       if (cargos.filas.length > 0) escribiria.cargosIniciales = cargos.filas.map(describirFila);

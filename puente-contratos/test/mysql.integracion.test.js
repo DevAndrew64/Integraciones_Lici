@@ -327,7 +327,7 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
     ]]);
     // Una fila por (empresa, UEN); num_oferta = el ÚLTIMO número usado. (03, XXX) está duplicada a propósito.
     await admin.query('INSERT INTO fc_control (empresa, undnegocio, num_oferta) VALUES ?', [[['01', 'BAQ', 936], ['01', 'BOG', 219], ['02', 'BAQ', 7], ['03', 'XXX', 1], ['03', 'XXX', 1]]]);
-    await admin.query('INSERT INTO fc_conceptos (empresa, undnegocio, codcpto) VALUES ?', [[['01', 'BAQ', 'ASE'], ['01', 'BOG', 'ASE'], ['02', 'BAQ', 'VIG']]]);
+    await admin.query('INSERT INTO fc_conceptos (empresa, undnegocio, codcpto) VALUES ?', [[['01', 'BAQ', 'ASE'], ['01', 'BAQ', '453'], ['01', 'BOG', 'ASE'], ['02', 'BAQ', 'VIG']]]);
     await admin.query('INSERT INTO fc_horarios (codigo, horario, snactivo) VALUES ?', [[['941', 'LUN-VIE 6-14', 1], ['942', 'LUN-SAB 14-22', 1]]]);
     await admin.query('DELETE FROM fc_conceptos_costos_admtivos');
     await admin.query("INSERT INTO fc_conceptos_costos_admtivos (id, descripcion) VALUES (1, 'POLIZAS'), (2, 'IMPUESTOS'), (9, 'OTROS')");
@@ -492,6 +492,38 @@ describe('Módulos 4 a 6 — oferta adjudicada y lista de precios en MySQL 5.5 r
       ['01', 'BAQ', antes + 1],
     );
     assert.deepEqual({ ...nc }, { cant_max_dias_servicio: 1, dias_habiles: 1, cant_max_hrs_servicio: 7, horas_jornada: '7.0000000', oper_fijos: '1', ciudad: '08001', codmun: '08001', punto_entrega: '' });
+  });
+
+  it('varias tarifas: una fila por consecutivo con su concepto, y cada cargo y costo con el de su tarifa, en la misma oferta', async () => {
+    const archivo = JSON.parse(readFileSync(new URL('./fixtures/payload-licicolba.json', import.meta.url), 'utf8'));
+    archivo.origen.solicitudId = 8801;
+    archivo.tarifas = [
+      { consec: 1, codServicio: 'ase', descripcion: 'Aseo', manoObra: 9871200, insumos: 0, maquinaria: 0, administrativos: 4320, valorAgregado: 0, serviciosNoContinuos: 0 },
+      { consec: 2, codServicio: '453', descripcion: 'Cafetería', manoObra: 3240000, insumos: 0, maquinaria: 0, administrativos: 1080, valorAgregado: 0, serviciosNoContinuos: 0 },
+    ];
+    archivo.cargos[1].tarifa = 2;
+    archivo.costosAdministrativos[1].tarifa = 2;
+    const r = validarContrato(archivo, { paraEscribir: true });
+    assert.equal(r.ok, true, JSON.stringify(r.errores));
+    const antes = await contador('01', 'BAQ');
+    const escrito = await escritor.escribir(r.datos, { huella: huella(r.datos) }).catch((e) => assert.fail(JSON.stringify(e.extra ?? e.message)));
+    assert.equal(escrito.escrito.numOferta, antes + 1);
+    const clave = ['01', 'BAQ', antes + 1];
+    const [tarifas] = await admin.query('SELECT consec, codservicio, tarifa, tar_manoobra FROM fc_contratos_tarifa_inicial WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? ORDER BY consec', clave);
+    assert.deepEqual(tarifas.map((t) => [t.consec, t.codservicio, String(t.tarifa), String(t.tar_manoobra)]), [[1, 'ASE', '9875520', '9871200'], [2, '453', '3241080', '3240000']]);
+    const [cargos] = await admin.query('SELECT consec, concepto FROM fc_contratos_cargos_iniciales WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? ORDER BY id', clave);
+    assert.deepEqual(cargos.map((c) => [Number(c.consec), c.concepto]), [[1, 'ASE'], [2, '453']]);
+    const [costos] = await admin.query('SELECT consec, concepto, valor FROM fc_contratos_costos_admtivos_iniciales WHERE empresa = ? AND undnegocio = ? AND num_oferta = ? ORDER BY id', clave);
+    assert.deepEqual(costos.map((c) => [Number(c.consec), c.concepto]), [[1, 'ASE'], [1, 'ASE'], [2, '453']]);
+    const [[oferta]] = await admin.query(`SELECT vlr_manoobra, vlr_impuestos FROM ${OFERTAS} WHERE pc_add LIKE ?`, ['LICICOLBA:8801:%']);
+    assert.deepEqual([oferta.vlr_manoobra, oferta.vlr_impuestos], [13111200, 5400], 'la oferta adjudicada lleva el total de las dos');
+    // Un concepto de tarifa que no existe detiene el envío sin reservar número.
+    archivo.origen.solicitudId = 8802;
+    archivo.tarifas[1].codServicio = '999';
+    const malo = validarContrato(archivo, { paraEscribir: true });
+    const error = await fallo(escritor.escribir(malo.datos, { huella: huella(malo.datos) }));
+    assert.deepEqual(error.extra.errores.map((e) => [e.campo, e.mensaje]), [['tarifas[1].codServicio', 'El concepto «999» no existe en Contratos.']]);
+    assert.equal(await contador('01', 'BAQ'), antes + 1);
   });
 
   it('Tempocolba: un cargo que no está en la nómina se ve antes (también en modo prueba), se elige el de nómina y se escribe ese código', async () => {

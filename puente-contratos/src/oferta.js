@@ -70,6 +70,31 @@ export function aiuComoFraccion(porcentaje) {
 
 const aEntero = (valor) => (valor === null || valor === undefined ? 0 : valor);
 
+/** Los seis valores de una tarifa (con A.I.U., antes de IVA), en el orden de «Operación del Contrato». */
+export const RUBROS_TARIFA = ['manoObra', 'insumos', 'maquinaria', 'administrativos', 'valorAgregado', 'serviciosNoContinuos'];
+
+/**
+ * Las tarifas de la oferta. Una oferta de Contratos puede llevar varias, cada una con su consecutivo (`consec`) y su
+ * concepto de facturación; cada fila de las demás pestañas va con el consecutivo y el concepto de su tarifa. Sin la lista
+ * `tarifas`, la oferta lleva una sola: consecutivo 1, el concepto de `oferta` y los valores de `tarifa`.
+ * @returns {{consec: number, codServicio: string, descripcion: string, valores: Record<string, number | null>}[]}
+ */
+export function tarifasDeOferta(datos) {
+  if (datos.tarifas?.length > 0) {
+    return [...datos.tarifas]
+      .sort((a, b) => a.consec - b.consec)
+      .map((t) => ({ consec: t.consec, codServicio: t.codServicio, descripcion: t.descripcion ?? '', valores: Object.fromEntries(RUBROS_TARIFA.map((r) => [r, t[r]])) }));
+  }
+  return [{ consec: 1, codServicio: datos.oferta?.codServicio ?? '', descripcion: datos.oferta?.descripcionServicio ?? '', valores: datos.tarifa ?? {} }];
+}
+
+/** Consecutivo y concepto con que va una fila: los de su tarifa (`tarifa` = consecutivo) o, si no dice, los de la primera. */
+export function claveDeTarifa(datos, consec) {
+  const tarifas = tarifasDeOferta(datos);
+  const t = tarifas.find((x) => x.consec === consec) ?? tarifas[0];
+  return { consec: t.consec, concepto: t.codServicio };
+}
+
 /**
  * Arma la fila de `fc_contratos_tarifa_inicial` y comprueba las reglas del formulario que no dependen de la base:
  * el A.I.U. no puede ser 0 ("Falta el AIU de la Tarifa.") y cada valor debe caber en su columna.
@@ -85,54 +110,63 @@ export function planDeTarifa(datos, { cliente, numOferta = null, huella = '', se
   const aiu = contrato.porcentajeAIU;
 
   if (!aiu) errores.push({ campo: 'contrato.porcentajeAIU', mensaje: 'El A.I.U. no puede estar vacío ni ser 0: Contratos no deja guardar una tarifa sin A.I.U.' });
-  if (t.valorAgregado !== null && t.valorAgregado > MAX_INT10) {
-    errores.push({ campo: 'tarifa.valorAgregado', mensaje: `Supera el máximo que admite Contratos en esta columna (${MAX_INT10.toLocaleString('es-CO')}).` });
-  }
-  const total = [t.manoObra, t.insumos, t.maquinaria, t.administrativos, t.valorAgregado, t.serviciosNoContinuos].reduce((suma, v) => suma + aEntero(v), 0);
-  if (!Number.isSafeInteger(total)) errores.push({ campo: 'tarifa', mensaje: 'La suma de la tarifa supera el máximo que admite Contratos.' });
-  if (errores.length > 0) return { errores, fila: null };
+  const tarifas = tarifasDeOferta(datos);
+  tarifas.forEach((tf) => {
+    const campo = datos.tarifas?.length > 0 ? `tarifas[consec ${tf.consec}]` : 'tarifa';
+    if (tf.valores.valorAgregado !== null && tf.valores.valorAgregado > MAX_INT10) {
+      errores.push({ campo: `${campo}.valorAgregado`, mensaje: `Supera el máximo que admite Contratos en esta columna (${MAX_INT10.toLocaleString('es-CO')}).` });
+    }
+    if (!Number.isSafeInteger(RUBROS_TARIFA.reduce((suma, r) => suma + aEntero(tf.valores[r]), 0))) {
+      errores.push({ campo, mensaje: 'La suma de la tarifa supera el máximo que admite Contratos.' });
+    }
+  });
+  if (datos.tarifas?.length > 0 && t && !Number.isSafeInteger(RUBROS_TARIFA.reduce((suma, r) => suma + aEntero(t[r]), 0))) errores.push({ campo: 'tarifa', mensaje: 'La suma de la tarifa supera el máximo que admite Contratos.' });
+  if (errores.length > 0) return { errores, fila: null, filas: [] };
 
-  const fila = {
-    empresa: oferta.empresa,
-    undnegocio: oferta.undnegocio,
-    num_oferta: numOferta,
-    ncontrato: '', // la oferta nace sin contrato; el contrato la enlaza después
-    nit: cliente.nit,
-    rsocial: cliente.rsocial,
-    consec: 1,
-    codservicio: oferta.codServicio,
-    descripcion: oferta.descripcionServicio ?? '',
-    tipo_adm: oferta.tipoAdm,
-    tipo: TIPO_TARIFA, // «Tipo F/V» de la pantalla: las ofertas a mano van con F (fija)
-    tarifa: total,
-    // «Vr. Mano Obra» de LiciColba ya incluye turnantes, dotación/EPP y exámenes: no se venden aparte (los indicadores quedan en 0).
-    tar_manoobra: t.manoObra,
-    tar_examenes: 0,
-    tar_dotacion: 0,
-    // «Costos Admtivos.»: la columna conserva su nombre antiguo (impuestos) pero guarda los costos administrativos.
-    tar_impuestos: t.administrativos,
-    aiu: aiuComoFraccion(aiu),
-    aiu_examenes: 0,
-    aiu_dotacion: 0,
-    exa_medico_vta: 0,
-    venta_dotacion: 0,
-    dot_epp_factur: 0,
-    costos_reembol: 0,
-    aplica_dotacion: 0,
-    aplica_examen: 0,
-    aplica_curso: 0,
-    curso_vta: 0,
-    origen_proceso: oferta.origenProceso,
-    user_add: USUARIO_PUENTE,
-    fadd: AHORA,
-    pc_add: marcaDeOrigen(origen.solicitudId, huella),
-    tar_insumos: t.insumos,
-    tar_maquinaria: t.maquinaria,
-    tar_otros: t.valorAgregado,
-    tar_nocontinuos: t.serviciosNoContinuos,
-    sector_economico: recortar(oferta.sectorEconomico || sectorEconomico, 20),
-  };
-  return { errores, fila };
+  const filas = tarifas.map((tf) => {
+    const v = tf.valores;
+    return {
+      empresa: oferta.empresa,
+      undnegocio: oferta.undnegocio,
+      num_oferta: numOferta,
+      ncontrato: '', // la oferta nace sin contrato; el contrato la enlaza después
+      nit: cliente.nit,
+      rsocial: cliente.rsocial,
+      consec: tf.consec,
+      codservicio: tf.codServicio,
+      descripcion: tf.descripcion,
+      tipo_adm: oferta.tipoAdm,
+      tipo: TIPO_TARIFA, // «Tipo F/V» de la pantalla: las ofertas a mano van con F (fija)
+      tarifa: RUBROS_TARIFA.reduce((suma, r) => suma + aEntero(v[r]), 0),
+      // «Vr. Mano Obra» de LiciColba ya incluye turnantes, dotación/EPP y exámenes: no se venden aparte (los indicadores quedan en 0).
+      tar_manoobra: v.manoObra,
+      tar_examenes: 0,
+      tar_dotacion: 0,
+      // «Costos Admtivos.»: la columna conserva su nombre antiguo (impuestos) pero guarda los costos administrativos.
+      tar_impuestos: v.administrativos,
+      aiu: aiuComoFraccion(aiu),
+      aiu_examenes: 0,
+      aiu_dotacion: 0,
+      exa_medico_vta: 0,
+      venta_dotacion: 0,
+      dot_epp_factur: 0,
+      costos_reembol: 0,
+      aplica_dotacion: 0,
+      aplica_examen: 0,
+      aplica_curso: 0,
+      curso_vta: 0,
+      origen_proceso: oferta.origenProceso,
+      user_add: USUARIO_PUENTE,
+      fadd: AHORA,
+      pc_add: marcaDeOrigen(origen.solicitudId, huella),
+      tar_insumos: v.insumos,
+      tar_maquinaria: v.maquinaria,
+      tar_otros: v.valorAgregado,
+      tar_nocontinuos: v.serviciosNoContinuos,
+      sector_economico: recortar(oferta.sectorEconomico || sectorEconomico, 20),
+    };
+  });
+  return { errores, fila: filas[0], filas };
 }
 
 /**
@@ -282,8 +316,7 @@ export function planDeInsumosOferta(datos, { numOferta = null, huella = '', clie
       vlr_unitario: cincoDecimales(valorUnitarioConIva),
       cantsoli: 0,
       num_oferta: numOferta,
-      consec: 1,
-      concepto: oferta.codServicio,
+      ...claveDeTarifa(datos, insumo.tarifa),
       codmun: '',
       fadd: AHORA,
       user_add: USUARIO_PUENTE,
@@ -366,22 +399,23 @@ export function planDeCostosAdministrativos(datos, { numOferta = null, huella = 
       return;
     }
     if (destino.esOtros && comparable(c.concepto) !== OTROS_COSTOS) aOtros.push(c.concepto);
-    const actual = porConcepto.get(destino.id) ?? { id: destino.id, valor: 0 };
+    const clave = claveDeTarifa(datos, c.tarifa);
+    const llave = `${clave.consec}|${destino.id}`;
+    const actual = porConcepto.get(llave) ?? { id: destino.id, clave, valor: 0 };
     actual.valor += c.valorMensual;
-    porConcepto.set(destino.id, actual);
+    porConcepto.set(llave, actual);
   });
   if (aOtros.length > 0) {
     advertencias.push({ campo: 'costosAdministrativos', mensaje: `Van en «OTROS» porque Contratos no tiene ese concepto: ${aOtros.join(', ')}.` });
   }
   const filas = [...porConcepto.values()]
-    .sort((a, b) => a.id - b.id)
-    .map(({ id, valor }) => ({
+    .sort((a, b) => a.clave.consec - b.clave.consec || a.id - b.id)
+    .map(({ id, clave, valor }) => ({
       empresa: oferta.empresa,
       undnegocio: oferta.undnegocio,
       num_oferta: numOferta,
       ncontrato: '',
-      consec: 1,
-      concepto: oferta.codServicio,
+      ...clave,
       punto_entrega: PUNTO_SIN_SEDE,
       nombre_punto: recortar(cliente?.rsocial, NOMBRE_PUNTO_MAX),
       codmun: '',
@@ -442,8 +476,7 @@ export function planDeEquipos(datos, { numOferta = null, huella = '', cliente = 
       undnegocio: oferta.undnegocio,
       num_oferta: numOferta,
       ncontrato: '',
-      consec: 1,
-      concepto: oferta.codServicio,
+      ...claveDeTarifa(datos, e.tarifa),
       tipo_servicio: '',
       codmun: '',
       punto_entrega: PUNTO_SIN_SEDE,
@@ -555,8 +588,7 @@ export function planDeNoContinuos(datos, { numOferta = null, huella = '', client
       undnegocio: oferta.undnegocio,
       num_oferta: numOferta,
       ncontrato: '',
-      consec: 1,
-      concepto: oferta.codServicio,
+      ...claveDeTarifa(datos, s.tarifa),
       UEN_Adm: s.uen ?? '',
       actividad: s.actividad ?? 0,
       tipo_actividad: tipoDeActividad({ manoObra, equipos }),
@@ -627,8 +659,7 @@ export function planDeValoresAgregados(datos, { numOferta = null, huella = '' } 
       undnegocio: oferta.undnegocio,
       num_oferta: numOferta,
       ncontrato: '',
-      consec: 1,
-      concepto: oferta.codServicio,
+      ...claveDeTarifa(datos, v.tarifa),
       tipo: TIPO_VALOR_AGREGADO[v.tipo],
       valor: dosDecimales(v.valorMensual),
       ...(v.tipo === 'REINVERSION'
@@ -875,7 +906,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
   const advertencias = [];
   const cargos = datos.cargos ?? [];
   if (cargos.length === 0 || !datos.oferta) return { errores, advertencias, filas: [] };
-  const { oferta, origen, contrato, tarifa } = datos;
+  const { oferta, origen, contrato } = datos;
 
   const filas = cargos.map((c, i) => {
     if (Math.abs(c.valorTotal - c.valorUnitario * c.cantidad) > 1) {
@@ -886,8 +917,7 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
       undnegocio: oferta.undnegocio,
       ncontrato: '',
       num_oferta: numOferta,
-      consec: 1,
-      concepto: oferta.codServicio,
+      ...claveDeTarifa(datos, c.tarifa),
       cod_seccion: 0, // la sección de nómina la digita Nómina en Contratos
       tipo_cargo: TIPO_CARGO,
       item: i + 1,
@@ -938,13 +968,18 @@ export function planDeCargos(datos, { numOferta = null, huella = '', codigosNomi
   }
 
   const aiu = contrato?.porcentajeAIU;
-  if (aiu && tarifa?.manoObra !== null && tarifa?.manoObra !== undefined) {
-    const sinAIU = cargos.reduce((suma, c) => suma + c.valorTotal, 0);
+  const tarifas = tarifasDeOferta(datos);
+  for (const tf of tarifas) {
+    const manoObra = tf.valores.manoObra;
+    if (!aiu || manoObra === null || manoObra === undefined) continue;
+    const deEsta = cargos.filter((c) => claveDeTarifa(datos, c.tarifa).consec === tf.consec);
+    const sinAIU = deEsta.reduce((suma, c) => suma + c.valorTotal, 0);
     const esperado = sinAIU * (1 + aiu / 100);
-    if (Math.abs(esperado - tarifa.manoObra) > cargos.length + 1) {
+    if (Math.abs(esperado - manoObra) > deEsta.length + 1) {
+      const deLaTarifa = tarifas.length > 1 ? ` ${tf.consec}` : '';
       advertencias.push({
         campo: 'cargos',
-        mensaje: `Los cargos suman ${pesos(sinAIU)} sin A.I.U. (${pesos(esperado)} con A.I.U.) y la mano de obra de la tarifa es ${pesos(tarifa.manoObra)}: revise que estén todos los cargos.`,
+        mensaje: `Los cargos${deLaTarifa ? ` de la tarifa${deLaTarifa}` : ''} suman ${pesos(sinAIU)} sin A.I.U. (${pesos(esperado)} con A.I.U.) y la mano de obra de la tarifa${deLaTarifa} es ${pesos(manoObra)}: revise que estén todos los cargos.`,
       });
     }
   }

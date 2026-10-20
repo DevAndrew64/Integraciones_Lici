@@ -63,6 +63,24 @@ const ESQUEMA = {
  * Los límites son los de la columna donde se escribe cada dato.
  */
 const LISTAS = {
+  // Varias tarifas en la misma oferta: cada una con su consecutivo, su concepto de facturación y sus seis valores (con
+  // A.I.U., antes de IVA, en pesos enteros, como `tarifa`). Cada fila de las demás listas dice en `tarifa` a cuál va.
+  // Sin esta lista la oferta lleva una sola tarifa: consecutivo 1, `oferta.codServicio` y `tarifa`.
+  tarifas: {
+    max: 20,
+    aviso: null,
+    campos: {
+      consec: { tipo: 'entero', min: 1, max: 99, requerido: true }, // consec int(5)
+      codServicio: { tipo: 'codigo', max: 3, requerido: true }, // codservicio char(3)
+      descripcion: { tipo: 'texto', max: 254, silencioso: true },
+      manoObra: { tipo: 'pesos', requerido: true },
+      insumos: { tipo: 'pesos', requerido: true },
+      maquinaria: { tipo: 'pesos', requerido: true },
+      administrativos: { tipo: 'pesos', requerido: true },
+      valorAgregado: { tipo: 'pesos', requerido: true },
+      serviciosNoContinuos: { tipo: 'pesos', requerido: true },
+    },
+  },
   // Módulo 5 — la mano de obra de la oferta: una fila por línea de cargo (cargo + horario). Los valores van SIN A.I.U. ni IVA
   // (así los guarda Contratos: el A.I.U. se aplica en la tarifa). El código del cargo lo toma el puente de la nómina de la UEN
   // por el nombre, salvo que quien envía haya elegido el cargo de nómina en la vista previa (`codigoNomina`).
@@ -70,6 +88,7 @@ const LISTAS = {
     max: 300,
     aviso: 'Sin cargos: la oferta se crea sin mano de obra y se completa en Contratos.',
     campos: {
+      tarifa: { tipo: 'entero', min: 1, max: 99, silencioso: true }, // consecutivo de su tarifa (`tarifas`); sin él, la primera
       nombre: { tipo: 'texto', max: 100, requerido: true },
       codigoNomina: { tipo: 'entero', min: 1, max: 99_999_999, silencioso: true }, // <base de nómina>.cargos.codigo
       cantidad: { tipo: 'entero', min: 1, max: 99999, requerido: true }, // personas
@@ -94,6 +113,7 @@ const LISTAS = {
     max: 2000,
     aviso: null, // sin insumos no hay nada que avisar: la oferta no los exige
     campos: {
+      tarifa: { tipo: 'entero', min: 1, max: 99, silencioso: true }, // consecutivo de su tarifa (`tarifas`); sin él, la primera
       codigo: { tipo: 'codigo', max: 10, requerido: true }, // fc_preciosventas_oferta.codigo char(10)
       nombre: { tipo: 'texto', max: 254, silencioso: true }, // solo para los mensajes: Contratos no lo guarda aquí
       valorUnitario: { tipo: 'monto', max: 99_999_999_999, requerido: true }, // decimal(15,4)
@@ -109,6 +129,7 @@ const LISTAS = {
     max: 100,
     aviso: null,
     campos: {
+      tarifa: { tipo: 'entero', min: 1, max: 99, silencioso: true }, // consecutivo de su tarifa (`tarifas`); sin él, la primera
       concepto: { tipo: 'texto', max: 150, requerido: true },
       valorMensual: { tipo: 'monto', max: 999_999_999_999, requerido: true }, // valor decimal(18,0): se redondea al peso
     },
@@ -119,6 +140,7 @@ const LISTAS = {
     max: 500,
     aviso: null,
     campos: {
+      tarifa: { tipo: 'entero', min: 1, max: 99, silencioso: true }, // consecutivo de su tarifa (`tarifas`); sin él, la primera
       codigoGrupo: { tipo: 'codigo', max: 3, silencioso: true }, // tipo_equipo char(3)
       codigoSubtipo: { tipo: 'codigo', max: 3, silencioso: true }, // subtipo_equipo char(3)
       descripcion: { tipo: 'texto', max: 254, requerido: true }, // descrip_equipo varchar(50): se recorta
@@ -136,6 +158,7 @@ const LISTAS = {
     max: 200,
     aviso: null,
     campos: {
+      tarifa: { tipo: 'entero', min: 1, max: 99, silencioso: true }, // consecutivo de su tarifa (`tarifas`); sin él, la primera
       actividad: { tipo: 'entero', min: 0, max: 999, silencioso: true }, // actividad int(3)
       uen: { tipo: 'codigo', max: 3, silencioso: true }, // UEN_Adm y uen_punto char(3)
       descripcion: { tipo: 'texto', max: 250, requerido: true },
@@ -158,6 +181,7 @@ const LISTAS = {
     max: 500,
     aviso: null,
     campos: {
+      tarifa: { tipo: 'entero', min: 1, max: 99, silencioso: true }, // consecutivo de su tarifa (`tarifas`); sin él, la primera
       tipo: { tipo: 'opcion', opciones: ['REINVERSION', 'MANO_DE_OBRA', 'INSUMOS', 'MAQUINARIA', 'SNC', 'EPP'], requerido: true },
       descripcion: { tipo: 'texto', max: 254, silencioso: true }, // solo para los mensajes
       valorMensual: { tipo: 'monto', max: 9_999_999_999_999, requerido: true }, // valor decimal(15,2)
@@ -305,7 +329,42 @@ export function validarContrato(entrada, { paraEscribir = false } = {}) {
       return null;
     });
   }
+  if (errores.length === 0) validarTarifas(datos, errores);
   return errores.length > 0 ? { ok: false, errores } : { ok: true, datos, advertencias };
+}
+
+const RUBROS = ['manoObra', 'insumos', 'maquinaria', 'administrativos', 'valorAgregado', 'serviciosNoContinuos'];
+const LISTAS_CON_TARIFA = ['cargos', 'insumos', 'costosAdministrativos', 'equipos', 'serviciosNoContinuos', 'valoresAgregados'];
+
+/**
+ * Varias tarifas: consecutivos sin repetir, cada fila apunta a una tarifa que existe y, rubro por rubro, las tarifas suman
+ * lo de `tarifa` (lo que va a la oferta adjudicada), con un peso de holgura por tarifa. Sin `tarifas`, ninguna fila puede
+ * pedir otra tarifa que la 1.
+ */
+function validarTarifas(datos, errores) {
+  const tarifas = datos.tarifas ?? [];
+  const consecs = new Set();
+  tarifas.forEach((t, i) => {
+    if (consecs.has(t.consec)) errores.push({ campo: `tarifas[${i}].consec`, mensaje: `El consecutivo ${t.consec} está repetido.` });
+    consecs.add(t.consec);
+  });
+  const validos = tarifas.length > 0 ? consecs : new Set([1]);
+  for (const lista of LISTAS_CON_TARIFA) {
+    (datos[lista] ?? []).forEach((fila, i) => {
+      if (fila?.tarifa !== null && fila?.tarifa !== undefined && !validos.has(fila.tarifa)) {
+        errores.push({ campo: `${lista}[${i}].tarifa`, mensaje: `La tarifa ${fila.tarifa} no está en la oferta (tarifas: ${[...validos].join(', ')}).` });
+      }
+    });
+  }
+  if (tarifas.length > 0 && datos.tarifa) {
+    for (const rubro of RUBROS) {
+      const suma = tarifas.reduce((s, t) => s + (t[rubro] ?? 0), 0);
+      const total = datos.tarifa[rubro] ?? 0;
+      if (Math.abs(suma - total) > tarifas.length) {
+        errores.push({ campo: `tarifas.${rubro}`, mensaje: `Las tarifas suman ${suma.toLocaleString('es-CO')} y la oferta dice ${total.toLocaleString('es-CO')}.` });
+      }
+    }
+  }
 }
 
 const canonico = (v) => {

@@ -293,15 +293,29 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         if (contadores.length > 1) throw new ErrorNegocio(409, 'CONTADOR_AMBIGUO', 'El contador de ofertas de esta empresa y UEN no es único en Contratos. Avise a Contratos.');
         if (contadores.length === 0) errores.push({ campo: 'oferta.undnegocio', mensaje: `Contratos no tiene contador de ofertas para la empresa ${datos.oferta.empresa} y la UEN ${datos.oferta.undnegocio}.` });
         const { empresa, undnegocio } = contadores[0] ?? datos.oferta;
-        const conceptos = await buscarConcepto(conexion, datos.oferta.codServicio);
-        let codServicio = datos.oferta.codServicio;
-        if (conceptos.length === 0) errores.push({ campo: 'oferta.codServicio', mensaje: `El concepto «${datos.oferta.codServicio}» no existe en Contratos.` });
-        else {
+        // Cada concepto de facturación (el de la oferta y el de cada tarifa) debe existir; se escribe como está en Contratos.
+        const comoEnContratos = new Map();
+        const pedidos = [{ campo: 'oferta.codServicio', codigo: datos.oferta.codServicio }, ...(datos.tarifas ?? []).map((t, i) => ({ campo: `tarifas[${i}].codServicio`, codigo: t.codServicio }))];
+        for (const { campo, codigo } of pedidos) {
+          const llave = String(codigo).toUpperCase();
+          if (comoEnContratos.has(llave)) continue;
+          const conceptos = await buscarConcepto(conexion, codigo);
+          if (conceptos.length === 0) {
+            errores.push({ campo, mensaje: `El concepto «${codigo}» no existe en Contratos.` });
+            comoEnContratos.set(llave, codigo);
+            continue;
+          }
           const delPar = conceptos.find((c) => c.empresa.toUpperCase() === empresa.toUpperCase() && c.undnegocio.toUpperCase() === undnegocio.toUpperCase());
-          codServicio = (delPar ?? conceptos[0]).codcpto;
-          if (!delPar) advertencias.push({ campo: 'oferta.codServicio', mensaje: `El concepto «${codServicio}» existe en Contratos, pero no para la empresa ${empresa} y la UEN ${undnegocio}.` });
+          const guardado = (delPar ?? conceptos[0]).codcpto;
+          comoEnContratos.set(llave, guardado);
+          if (!delPar) advertencias.push({ campo, mensaje: `El concepto «${guardado}» existe en Contratos, pero no para la empresa ${empresa} y la UEN ${undnegocio}.` });
         }
-        const datosDeContratos = { ...datos, oferta: { ...datos.oferta, empresa, undnegocio, codServicio } };
+        const codServicio = comoEnContratos.get(String(datos.oferta.codServicio).toUpperCase());
+        const datosDeContratos = {
+          ...datos,
+          oferta: { ...datos.oferta, empresa, undnegocio, codServicio },
+          ...(datos.tarifas ? { tarifas: datos.tarifas.map((t) => ({ ...t, codServicio: comoEnContratos.get(String(t.codServicio).toUpperCase()) })) } : {}),
+        };
         const clienteParaPlan = cliente ?? { nit: '', rsocial: '' };
         const contexto = { huella, largoUserAdd, largoPcAdd };
 
@@ -363,7 +377,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
 
         // 4. Número de oferta y 5. escritura (todo o nada).
         const { numero: numOferta, saltados } = await reservarNumero(conexion, empresa, undnegocio);
-        const { fila: filaTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico });
+        const { filas: filasDeTarifa } = planDeTarifa(datosDeContratos, { cliente, numOferta, huella, sectorEconomico });
         const filasDeCargos = conMunicipio(planDeCargos(datosDeContratos, { numOferta, huella, codigosNomina }).filas, codmun);
         const { fila } = planDeOfertaAdjudicada(datosDeContratos, { cliente, numOferta, ...contexto });
         const { filas: filasDePrecios } = planDePreciosOferta(datosDeContratos, { numOferta });
@@ -375,7 +389,7 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
         let insumosEscritos = false;
         await conexion.beginTransaction();
         try {
-          await insertar(conexion, TABLA_TARIFA, filaTarifa, comoTarifa);
+          for (const filaDeTarifa of filasDeTarifa) await insertar(conexion, TABLA_TARIFA, filaDeTarifa, comoTarifa);
           for (const filaDeCargo of filasDeCargos) await insertar(conexion, TABLA_CARGOS, filaDeCargo, comoCargo);
           await insertar(conexion, TABLA_OFERTAS, fila, { idManual });
           for (const filaDePrecio of filasDePrecios) await insertar(conexion, TABLA_PRECIOS, filaDePrecio);
@@ -407,7 +421,8 @@ export function crearEscritorMySQL(pool, { idManual = false, largoUserAdd = null
             numOferta,
             numerosSaltados: saltados,
             cliente,
-            tarifa: describirFila(filaTarifa),
+            tarifa: describirFila(filasDeTarifa[0]),
+            ...(filasDeTarifa.length > 1 ? { tarifas: filasDeTarifa.map((f) => ({ consec: f.consec, codservicio: f.codservicio, tarifa: f.tarifa })) } : {}),
             cargos: filasDeCargos.map((f) => ({ item: f.item, cargo: f.cargo, nombre: f.nom_cargo, cantidad: f.cantidad })),
             ofertaAdjudicada: describirFila(fila),
             preciosOferta: filasDePrecios.map((f) => ({ codigo: f.codigo, vr_costo: f.vr_costo, valor: f.valor })),
