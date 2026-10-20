@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TotalesPantallaDto } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import {
-  armarPayloadContratos, costosAdministrativosParaPuente, describirError, equiposParaPuente, insumosParaPuente, serviciosNoContinuosParaPuente, valoresAgregadosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
+  armarPayloadContratos, costosAdministrativosParaPuente, describirError, equiposParaPuente, insumosParaPuente, lineasQueNoLlegan, serviciosNoContinuosParaPuente, valoresAgregadosParaPuente, leerDestino, normalizarNit, type SolicitudParaPuente } from './payload';
 
 const solicitud = (o: Partial<SolicitudParaPuente> = {}): SolicitudParaPuente => ({
   id: 7, codigoProceso: 'SED-LP-2026-0091', entidad: ' Cliente SAS ', objeto: 'Aseo integral', nitContacto: '900.123.456-8', direccionContacto: 'Calle 1 # 2-3', ...o,
@@ -120,6 +120,26 @@ describe('insumosParaPuente (módulo 6)', () => {
       { codigo: '01050', valorUnitario: 1234.5, cantidad: 1, frecuenciaMeses: 1, valorUnitarioConIva: 29750 },
     ]);
     expect(insumosParaPuente(null)).toEqual([]);
+  });
+
+  it('los que no llegan a la pestaña Insumos ni a la lista de precios se nombran (no se pierden en silencio)', () => {
+    const dto = {
+      insumos: { total: 0, filas: [fila({}), fila({ codigo: '', nombre: 'Bolsa  negra' }), fila({ codigo: 'CON ESPACIO', nombre: 'Cloro' }), fila({ codigo: '', valorAgregado: true }), fila({ codigo: '33333', nombre: 'Escoba', valorUnitarioSinIva: Number.NaN })] },
+      maquinaria: { subtotalAdquisicion: 0, subtotalMantenimiento: 0, filas: [
+        { codigo: '', descripcion: '  ', categoria: '', cantidadRequerida: 1, cantidadComprar: 1, valorUnitario: 1, valorMesComprar: 1, valorMesMantenimiento: 0, valorAgregado: false },
+        { codigo: '', descripcion: 'X'.repeat(260), categoria: '', cantidadRequerida: 1, cantidadComprar: 1, valorUnitario: 1, valorMesComprar: 1, valorMesMantenimiento: 0, valorAgregado: false },
+      ] },
+      serviciosNoContinuos: [{ descripcion: 'Ñ'.repeat(251), valorAgregado: false }],
+    } as never;
+    expect(lineasQueNoLlegan(dto)).toEqual([
+      'insumo «Bolsa negra» sin código de elemento',
+      'insumo «Cloro» sin código de elemento',
+      'insumo «Escoba» sin valor unitario válido',
+      'equipo sin descripción',
+      `equipo «${'X'.repeat(60)}…» con descripción recortada a 254 caracteres`,
+      `no continuo «${'Ñ'.repeat(60)}…» con descripción recortada a 250 caracteres`,
+    ]);
+    expect(lineasQueNoLlegan({ insumos: { total: 0, filas: [fila({})] } } as never)).toEqual([]);
   });
 
   it('lleva cantidad, frecuencia y valor con IVA para la pestaña Insumos; una frecuencia vacía o en 0 es mensual', () => {

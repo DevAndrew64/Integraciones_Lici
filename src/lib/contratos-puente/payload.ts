@@ -1,6 +1,6 @@
 import { porcentajeAIU, valorConAIU, type ResultadoGuardado } from '@/lib/costos-estructura/exportacion/contratos';
 import type {
-  AdministrativosPantallaDto, FilaInsumoPantallaDto, FilaMaquinariaPantallaDto, FilaValorAgregadoPantallaDto, ServicioNoContinuoPantallaDto, TotalesPantallaDto,
+  AdministrativosPantallaDto, CostosPantallaDto, FilaInsumoPantallaDto, FilaMaquinariaPantallaDto, FilaValorAgregadoPantallaDto, ServicioNoContinuoPantallaDto, TotalesPantallaDto,
 } from '@/lib/costos-estructura/exportacion/costos-pantalla';
 import { enOtraTarifa, type CargoPayload } from './cargos';
 import type { TarifaPayload } from './tarifas';
@@ -221,6 +221,30 @@ export function serviciosNoContinuosParaPuente(servicios: ServicioNoContinuoPant
         ...otraTarifa(s.tarifa),
       };
     });
+}
+
+/**
+ * Líneas del costeo que no llegan a su pestaña de Contratos (su valor sí va en la tarifa), para avisarlo en vez de perderlas
+ * en silencio: insumos sin código de elemento del almacén (la pestaña Insumos y la lista de precios se cruzan por código) o
+ * con un valor que no es un número válido, equipos sin descripción, y textos más largos de lo que guarda su columna.
+ */
+export function lineasQueNoLlegan(dto: Pick<CostosPantallaDto, 'insumos' | 'maquinaria' | 'serviciosNoContinuos'>): string[] {
+  const lista: string[] = [];
+  const nombre = (v: string | null | undefined, porDefecto: string) => textoContratos(v, 60) || porDefecto;
+  for (const f of dto.insumos?.filas ?? []) {
+    if (f.valorAgregado) continue;
+    if (!/^[A-Za-z0-9]{1,10}$/.test(String(f.codigo ?? '').trim())) lista.push(`insumo «${nombre(f.nombre, 'sin nombre')}» sin código de elemento`);
+    else if (!(Number.isFinite(f.valorUnitarioSinIva) && f.valorUnitarioSinIva >= 0)) lista.push(`insumo «${nombre(f.nombre, f.codigo)}» sin valor unitario válido`);
+  }
+  for (const f of dto.maquinaria?.filas ?? []) {
+    if (f.valorAgregado) continue;
+    if (textoContratos(f.descripcion, 254) === '') lista.push('equipo sin descripción');
+    else if (Array.from(String(f.descripcion).trim()).length > 254) lista.push(`equipo «${nombre(f.descripcion, '')}…» con descripción recortada a 254 caracteres`);
+  }
+  for (const s of dto.serviciosNoContinuos ?? []) {
+    if (!s.valorAgregado && Array.from(String(s.descripcion ?? '').trim()).length > 250) lista.push(`no continuo «${nombre(s.descripcion, '')}…» con descripción recortada a 250 caracteres`);
+  }
+  return lista;
 }
 
 /** Las filas de la pestaña Valor Agregado con valor (reinversiones y recursos marcados como valor agregado). */

@@ -197,6 +197,17 @@ describe('POST /api/costos-estructura/[id]/enviar-a-contratos', () => {
     expect(una.cargos.map((c: { tarifa?: number }) => c.tarifa)).toEqual([undefined, undefined]);
   });
 
+  it('un insumo sin código de elemento no se pierde en silencio: el mensaje lo nombra y la respuesta lo lista', async () => {
+    const dto = costosDto();
+    dto.insumos = { total: 5000, filas: [{ codigo: '', nombre: 'Bolsa negra', unidad: 'UN', cantidad: 10, frecuenciaMeses: 1, valorUnitarioSinIva: 500, valorUnitarioConIva: 595, valorMensual: 5000, valorAgregado: false }] };
+    dto.totales = { ...dto.totales, insumos: 5000, total: dto.totales.total + 5000 };
+    const { res, json } = await llamar({ solicitudId: 7, costosDto: dto, contratos: DESTINO });
+    expect(res.status).toBe(200);
+    expect(json.lineasSinPestana).toEqual(['insumo «Bolsa negra» sin código de elemento']);
+    expect(String(json.mensaje)).toContain('No llegan a su pestaña en Contratos (su valor sí va en la tarifa): insumo «Bolsa negra» sin código de elemento.');
+    expect(mocks.enviar.mock.calls[0][0].insumos).toBeUndefined();
+  });
+
   it('cargos que no suman la Mano de Obra del panel: 400 y no se envía nada a Contratos', async () => {
     const r = await llamar({ solicitudId: 7, costosDto: costosDto(), cargos: [CARGOS()[0]] });
     expect(r.res.status).toBe(400);

@@ -18,7 +18,7 @@ import { nitVerificado } from '@/lib/solicitudes/nit-entidad';
 import { baseNominaValida } from '@/lib/contratos-puente/nomina';
 import {
   armarPayloadContratos, costosAdministrativosParaPuente, describirCampo, describirError, equiposParaPuente, etiquetaCampo, insumosParaPuente, leerDestino,
-  serviciosNoContinuosParaPuente, valoresAgregadosParaPuente,
+  lineasQueNoLlegan, serviciosNoContinuosParaPuente, valoresAgregadosParaPuente,
 } from '@/lib/contratos-puente/payload';
 
 /**
@@ -176,6 +176,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const avisos = r.advertencias.length > 0 ? ` Quedan por revisar: ${r.advertencias.map((a) => describirCampo(a.campo, payload.cargos)).join(', ')}.` : '';
       const etiquetaNoEscrito = (campo: string) => (campo === 'cargos' ? 'sección, estudios, dotación, bonos y recargos de los cargos' : etiquetaCampo(campo));
       const aparte = r.noEscrito.length > 0 ? ` Se digitan en Contratos: ${r.noEscrito.map((n) => etiquetaNoEscrito(n.campo)).join(', ')}.` : '';
+      const sinPestana = lineasQueNoLlegan(dto);
+      const fuera = sinPestana.length > 0 ? ` No llegan a su pestaña en Contratos (su valor sí va en la tarifa): ${sinPestana.join(', ')}.` : '';
       return NextResponse.json({
         ok: true,
         modo: r.modo,
@@ -184,7 +186,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         oferta: r.oferta,
         noEscrito: r.noEscrito,
         filasEscritas: r.filasEscritas,
-        mensaje: `${creada ?? `Datos validados para Contratos${nota}.`}${avisos}${aparte}${avisosGrupos.length > 0 ? ` Grupos que se eligen en Contratos (Contratos guarda uno por cargo): ${avisosGrupos.join('; ')}.` : ''}`,
+        lineasSinPestana: sinPestana,
+        mensaje: `${creada ?? `Datos validados para Contratos${nota}.`}${avisos}${aparte}${fuera}${avisosGrupos.length > 0 ? ` Grupos que se eligen en Contratos (Contratos guarda uno por cargo): ${avisosGrupos.join('; ')}.` : ''}`,
       });
     }
     switch (r.tipo) {
